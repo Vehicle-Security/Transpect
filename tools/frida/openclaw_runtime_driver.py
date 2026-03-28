@@ -28,6 +28,14 @@ EVENT_KEYS = [
     "blocked",
     "errno",
     "exit_code",
+    "resource",
+    "op",
+    "path",
+    "path2",
+    "family",
+    "address",
+    "port",
+    "rule_id",
 ]
 
 
@@ -54,6 +62,9 @@ class JsonlWriter:
 class RuntimeHookDriver:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
+        self.policy = load_policy(args)
+        self.enable_filesystem_hooks = args.enable_filesystem_hooks or bool(self.policy.get("filesystem"))
+        self.enable_network_hooks = args.enable_network_hooks or bool(self.policy.get("network"))
         self.device = frida.get_local_device()
         self.writer = JsonlWriter(Path(args.jsonl).expanduser() if args.jsonl else None)
         self.base_agent_source = AGENT_PATH.read_text(encoding="utf-8")
@@ -65,6 +76,9 @@ class RuntimeHookDriver:
         self.stop_event = threading.Event()
         self.root_detached = threading.Event()
         self.recursive_child_gating = args.child_gating == "on"
+        self.should_attach_child_sessions = (
+            args.mode == "observe" or self.enable_filesystem_hooks or self.enable_network_hooks
+        )
         self._lock = threading.Lock()
 
     def log(self, message: str) -> None:
@@ -90,6 +104,9 @@ class RuntimeHookDriver:
             "maxChunkBytes": self.args.max_chunk_bytes,
             "denyExeRegex": self.args.deny_exe_regex or "",
             "denyArgvRegex": self.args.deny_argv_regex or "",
+            "policy": self.policy,
+            "enableFilesystemHooks": self.enable_filesystem_hooks,
+            "enableNetworkHooks": self.enable_network_hooks,
         }
         return self.base_agent_source.replace("__HOOK_CONFIG__", json.dumps(config, ensure_ascii=False))
 
@@ -195,7 +212,7 @@ class RuntimeHookDriver:
         if child_pid is None:
             return
         self.emit_child_event("child_added", child)
-        if self.args.mode == "block":
+        if not self.should_attach_child_sessions:
             try:
                 self.device.resume(child_pid)
             except Exception:
@@ -321,6 +338,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--spawn-stdio", default="inherit", help="stdio passed to device.spawn (default: inherit)")
     parser.add_argument("--deny-exe-regex", help="regex applied to executable path in block mode")
     parser.add_argument("--deny-argv-regex", help="regex applied to joined argv in block mode")
+    parser.add_argument("--policy-file", help="JSON policy file for exec/filesystem/network rules")
+    parser.add_argument(
+        "--enable-filesystem-hooks",
+        action="store_true",
+        default=False,
+        help="enable filesystem hook instrumentation for child processes",
+    )
+    parser.add_argument(
+        "--enable-network-hooks",
+        action="store_true",
+        default=False,
+        help="enable network hook instrumentation for child processes",
+    )
     parser.add_argument("--jsonl", help="write normalized JSONL events to this file instead of stdout")
     parser.add_argument("--child-gating", choices=("on", "off"), default="on")
     parser.add_argument("--max-chunk-bytes", type=int, default=DEFAULT_MAX_CHUNK_BYTES)
@@ -339,5 +369,45 @@ def main() -> int:
     return driver.run()
 
 
+def load_policy(args: argparse.Namespace) -> dict[str, list[dict[str, Any]]]:
+    policy: dict[str, list[dict[str, Any]]] = {
+        "exec": [],
+        "filesystem": [],
+        "network": [],
+    }
+    if args.policy_file:
+        policy_path = Path(args.policy_file).expanduser()
+        raw_policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_policy, dict):
+            raise ValueError(f"policy file must contain a JSON object: {policy_path}")
+        for section in policy:
+            entries = raw_policy.get(section, [])
+            if entries is None:
+                entries = []
+            if not isinstance(entries, list):
+                raise ValueError(f"policy section '{section}' must be a list: {policy_path}")
+            normalized_entries: list[dict[str, Any]] = []
+            for index, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"policy section '{section}' entry {index} must be an object: {policy_path}")
+                if not entry.get("id"):
+                    raise ValueError(f"policy section '{section}' entry {index} is missing required field 'id': {policy_path}")
+                normalized_entries.append(dict(entry))
+            policy[section] = normalized_entries
+    if args.deny_exe_regex:
+        policy["exec"].append(
+            {
+                "id": "cli-exe-regex",
+                "exeRegex": args.deny_exe_regex,
+            }
+        )
+    if args.deny_argv_regex:
+        policy["exec"].append(
+            {
+                "id": "cli-argv-regex",
+                "argvRegex": args.deny_argv_regex,
+            }
+        )
+    return policy
 if __name__ == "__main__":
     raise SystemExit(main())

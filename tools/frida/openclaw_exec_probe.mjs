@@ -23,20 +23,20 @@ if (args.delayMs > 0) {
   await sleep(args.delayMs);
 }
 
-const sample = resolveSample(args.sample);
+const sample = resolveSample(args);
 console.error(`[probe] using runtime module: ${runtimeModulePath}`);
-console.error(`[probe] sample=${args.sample} argv=${JSON.stringify(sample.argv)}`);
+console.error(`[probe] sample=${sample.label} argv=${JSON.stringify(sample.argv)}`);
 
 try {
   const result = await runtimeModule.t(sample.argv, { timeoutMs: args.timeoutMs });
-  const blocked = args.sample === "block" && Number(result?.code) !== 0;
-  const ok = args.sample === "block" ? blocked : Number(result?.code) === 0;
+  const blocked = sample.expectBlock && Number(result?.code) !== 0;
+  const ok = sample.expectBlock ? blocked : Number(result?.code) === 0;
   console.log(
     JSON.stringify(
       {
         ok,
         blocked,
-        sample: args.sample,
+        sample: sample.label,
         runtimeModulePath,
         result,
       },
@@ -50,11 +50,11 @@ try {
 } catch (error) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const blockedBySpawnFailure =
-    args.sample === "block" && /\bspawn\b.*\b(ENOENT|EACCES|EPERM)\b/i.test(errorMessage);
+    sample.expectBlock && /\bspawn\b.*\b(ENOENT|EACCES|EPERM)\b/i.test(errorMessage);
   const payload = {
     ok: blockedBySpawnFailure,
     blocked: blockedBySpawnFailure,
-    sample: args.sample,
+    sample: sample.label,
     runtimeModulePath,
     error: errorMessage,
     stack: error instanceof Error ? error.stack : null,
@@ -69,9 +69,11 @@ try {
 function parseArgs(argv) {
   const parsed = {
     sample: "observe",
+    argvJson: undefined,
     runtimeModule: undefined,
     delayMs: 0,
     timeoutMs: 5000,
+    expectBlock: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -84,12 +86,20 @@ function parseArgs(argv) {
       parsed.runtimeModule = argv[++index];
       continue;
     }
+    if (current === "--argv-json") {
+      parsed.argvJson = argv[++index];
+      continue;
+    }
     if (current === "--delay-ms") {
       parsed.delayMs = Number(argv[++index] ?? parsed.delayMs);
       continue;
     }
     if (current === "--timeout-ms") {
       parsed.timeoutMs = Number(argv[++index] ?? parsed.timeoutMs);
+      continue;
+    }
+    if (current === "--expect-block") {
+      parsed.expectBlock = true;
       continue;
     }
     if (current === "--help" || current === "-h") {
@@ -102,18 +112,34 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function resolveSample(sample) {
-  if (sample === "observe") {
+function resolveSample(args) {
+  if (args.argvJson) {
+    const argv = JSON.parse(args.argvJson);
+    if (!Array.isArray(argv) || argv.length === 0 || !argv.every((item) => typeof item === "string")) {
+      throw new Error(`--argv-json must decode to a non-empty string array`);
+    }
     return {
+      label: args.sample === "observe" && args.expectBlock ? "custom-block" : args.sample === "observe" ? "custom" : args.sample,
+      argv,
+      expectBlock: args.expectBlock,
+    };
+  }
+
+  if (args.sample === "observe") {
+    return {
+      label: "observe",
       argv: ["/bin/sh", "-lc", "printf FRIDA_STDOUT; printf FRIDA_STDERR >&2"],
+      expectBlock: false,
     };
   }
-  if (sample === "block") {
+  if (args.sample === "block") {
     return {
+      label: "block",
       argv: ["/usr/bin/id"],
+      expectBlock: true,
     };
   }
-  throw new Error(`Unsupported sample: ${sample}`);
+  throw new Error(`Unsupported sample: ${args.sample}`);
 }
 
 async function resolveRuntimeModule(preferredPath) {
@@ -148,8 +174,10 @@ function printHelp() {
 
 Options:
   --sample <observe|block>   Probe scenario to run (default: observe)
+  --argv-json <json>         Override the command argv with a JSON string array
   --runtime-module <path>    Override the OpenClaw exec runtime module path
   --delay-ms <ms>            Sleep before executing the runtime helper
   --timeout-ms <ms>          Timeout passed to runCommandWithTimeout
+  --expect-block             Treat non-zero exit / spawn failure as success
 `);
 }
