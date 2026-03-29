@@ -1,6 +1,17 @@
 # OpenClaw Frida Runtime PoC
 
-这个仓库提供一个可重复执行的 OpenClaw Frida 验证闭环。默认不是手工拼命令，而是统一走仓库级 smoke runner：
+这个仓库提供两个并行入口：
+
+- 正式演示/直接使用入口：`scripts/start_openclaw_frida_chat.py`
+- 可重复验证入口：`scripts/verify_openclaw_frida.py`
+
+如果目标是“直接启动后和 OpenClaw 对话，并把 Frida 事件持续写进 JSONL”，优先使用：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py
+```
+
+如果目标是做回归验证或能力验收，再使用 smoke runner：
 
 ```bash
 python3 scripts/verify_openclaw_frida.py --scenario all
@@ -11,6 +22,8 @@ python3 scripts/verify_openclaw_frida.py --scenario sandbox-all
 
 ## 组件
 
+- `scripts/start_openclaw_frida_chat.py`
+  直接启动入口。负责拉起被 Frida 包裹的 OpenClaw gateway，提供交互式对话，并把事件持续写入 JSONL。
 - `scripts/verify_openclaw_frida.py`
   统一编排场景、落盘产物、解析 JSONL、执行断言。
 - `tools/frida/openclaw_runtime_driver.py`
@@ -83,6 +96,43 @@ python3 tools/frida/openclaw_runtime_driver.py --mode observe|block ...
 - `network` 规则按 `addressRegex + ports + ops`
 - 每条规则都必须有稳定的 `id`
 - 命中规则后会把 `rule_id` 写回 JSONL
+
+## 直接启动接口
+
+官方直接启动入口：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py
+```
+
+当前固定接口：
+
+- `--message`
+- `--json`
+- `--output-dir`
+- `--mode observe|block`
+- `--policy-file`
+- `--disable-filesystem-hooks`
+- `--disable-network-hooks`
+
+行为约定：
+
+- 默认模式是 `observe`
+- 默认会打开文件和网络 hook，但会对 gateway bootstrap 自身做稳定性豁免
+- `--mode block` 必须搭配 `--policy-file`
+- 默认产物目录是 `/tmp/transpect-openclaw-chat/<timestamp>/`
+- 每轮对话至少会落盘：
+  - `gateway.events.jsonl`
+  - `gateway.stdout`
+  - `gateway.stderr`
+  - `turn-XXX.agent.stdout`
+  - `turn-XXX.agent.stderr`
+
+抓取范围约定：
+
+- 对外承诺的是“被 hook 到的 OpenClaw 运行时进程树中的操作”
+- 默认覆盖进程创建、命令执行、子进程文件系统事件、子进程网络事件
+- 不把“OpenClaw 内部所有实现细节”作为对外承诺
 
 ## Hook 能力
 

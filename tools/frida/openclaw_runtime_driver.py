@@ -96,7 +96,14 @@ class RuntimeHookDriver:
     def emit_record(self, record: dict[str, Any]) -> None:
         self.writer.write(self.normalize_record(record))
 
-    def build_agent_source(self, *, role: str, parent_pid: int | None) -> str:
+    def build_agent_source(
+        self,
+        *,
+        role: str,
+        parent_pid: int | None,
+        target_path: str | None = None,
+        target_argv: list[str] | None = None,
+    ) -> str:
         config = {
             "mode": self.args.mode,
             "role": role,
@@ -107,6 +114,8 @@ class RuntimeHookDriver:
             "policy": self.policy,
             "enableFilesystemHooks": self.enable_filesystem_hooks,
             "enableNetworkHooks": self.enable_network_hooks,
+            "targetPath": target_path,
+            "targetArgv": target_argv or [],
         }
         return self.base_agent_source.replace("__HOOK_CONFIG__", json.dumps(config, ensure_ascii=False))
 
@@ -164,7 +173,16 @@ class RuntimeHookDriver:
             if self.args.exit_on_root_detach:
                 self.stop_event.set()
 
-    def attach_session(self, pid: int, *, role: str, parent_pid: int | None, auto_resume: bool) -> None:
+    def attach_session(
+        self,
+        pid: int,
+        *,
+        role: str,
+        parent_pid: int | None,
+        auto_resume: bool,
+        target_path: str | None = None,
+        target_argv: list[str] | None = None,
+    ) -> None:
         session = self.device.attach(pid)
         def _on_detached(reason: str, crash: Any) -> None:
             self.on_session_detached(pid, role, reason, crash)
@@ -173,7 +191,12 @@ class RuntimeHookDriver:
         if self.recursive_child_gating:
             session.enable_child_gating()
         script = session.create_script(
-            self.build_agent_source(role=role, parent_pid=parent_pid),
+            self.build_agent_source(
+                role=role,
+                parent_pid=parent_pid,
+                target_path=target_path,
+                target_argv=target_argv,
+            ),
             name=f"openclaw-runtime-{role}-{pid}",
         )
         script.on("message", lambda message, data, _pid=pid, _role=role: self.on_script_message(_pid, _role, message, data))
@@ -224,6 +247,8 @@ class RuntimeHookDriver:
                 role="child",
                 parent_pid=getattr(child, "parent_pid", self.root_pid),
                 auto_resume=True,
+                target_path=getattr(child, "path", None),
+                target_argv=list(getattr(child, "argv", []) or []),
             )
         except Exception as exc:  # pragma: no cover - depends on runtime timing
             self.emit_record(

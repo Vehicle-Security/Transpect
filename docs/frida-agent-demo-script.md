@@ -4,16 +4,16 @@
 
 这场展示建议控制在 10 到 15 分钟，重点不是展示“攻击效果”，而是展示工程进展：
 
-- 我们已经能稳定命中 OpenClaw runtime 工具链
-- 我们已经有可重复的 smoke 入口
-- 我们已经能做文件系统和网络阻断
+- 我们已经把 Frida 能力做成一个可直接启动的 OpenClaw 对话入口
+- 我们已经能稳定命中 OpenClaw runtime 工具链并持续留存 JSONL 证据
+- 我们已经能在不改 OpenClaw 代码的前提下阻断调用
 - 我们已经保留了结构化证据和复盘产物
 
 ## 2. 开场讲法
 
 建议开场 1 分钟这样讲：
 
-“这轮工作的目标，不是去改 OpenClaw 源码，而是用 Frida 在进程外做注入，先把 runtime 工具链观察清楚，再逐步扩成动态沙盒。现在我们已经把这件事做成可重复执行的工程闭环，默认 smoke 可以证明真实工具链命中，扩展 smoke 可以证明文件和网络阻断能力。”
+“这轮工作的目标，不是去改 OpenClaw 源码，而是用 Frida 在进程外做注入，把 OpenClaw 的真实运行时行为抓出来，并且在需要的时候阻断。现在这件事已经不是手工拼命令的 PoC，而是一个可以直接启动的对话入口。启动后我和 OpenClaw 正常对话，但所有被 hook 到的运行时行为都会持续写进 JSONL，后面就能继续往动态沙盒方向扩。”
 
 ## 3. 展示前检查
 
@@ -35,7 +35,7 @@ node --check tools/frida/openclaw_runtime_hook.js
 
 讲法：
 
-“我们要解决的不是单点 hook，而是要回答三件事：第一，OpenClaw runtime 真实调用工具的时候，我们能不能看见。第二，看见之后能不能留证据。第三，能不能在不改 OpenClaw 代码的前提下，基于策略直接阻断调用。”
+“我们要解决的不是单点 hook，而是要回答三件事：第一，OpenClaw runtime 真实调用工具的时候，我们能不能看见。第二，看见之后能不能持续留证据。第三，能不能在不改 OpenClaw 代码的前提下，基于策略直接阻断调用。”
 
 现场不需要敲命令。
 
@@ -44,139 +44,136 @@ node --check tools/frida/openclaw_runtime_hook.js
 建议直接打开这几个文件：
 
 ```bash
+sed -n '1,220p' scripts/start_openclaw_frida_chat.py
 sed -n '1,220p' tools/frida/openclaw_runtime_driver.py
 sed -n '1,220p' tools/frida/openclaw_runtime_hook.js
-sed -n '1,220p' scripts/verify_openclaw_frida.py
 ```
 
 讲法：
 
+- `start_openclaw_frida_chat.py` 是直接启动入口，负责拉起被 Frida 包裹的 gateway，并把每轮对话的产物落盘
 - `driver.py` 负责 Frida attach/spawn、child gating、策略文件加载和 JSONL 输出
 - `hook.js` 负责父进程 `uv_spawn` 和子进程 `exec` / 文件 / 网络 hook
-- `verify_openclaw_frida.py` 负责把这些能力变成可重复 smoke
+- 这里默认采用“稳定优先”策略：gateway bootstrap 自身跳过文件和网络 hook，后续真实 runtime 子进程仍继续抓
 
 你要强调的点：
 
-- 稳定基线 `all` 只打开进程级 hook
-- `sandbox-all` 再显式打开文件和网络 hook
-- 这样默认链路更稳，沙盒扩展又可以单独验证
+- 直接启动已经是官方入口，不需要先跑 smoke 才能展示
+- 默认承诺的是“被 hook 到的 OpenClaw 运行时进程树中的操作”
+- 这样直启链路更稳，同时又能抓到真实工具调用和子进程行为
 
-### 第三步：3 分钟，跑默认稳定 smoke
+### 第三步：3 分钟，直接启动并进入对话
 
 命令：
 
 ```bash
-python3 scripts/verify_openclaw_frida.py --scenario all
+python3 scripts/start_openclaw_frida_chat.py
 ```
 
 预期输出：
 
-- `isolated-observe` 通过
-- `isolated-block` 通过
-- `gateway-startup` 通过
+- 打印 gateway URL
+- 打印 `gateway.events.jsonl` 路径
+- 打印 `gateway.stdout` 和 `gateway.stderr` 路径
+- 出现 `openclaw>` 提示符
 
 你可以重点口播：
 
-- `isolated-observe` 证明我们能抓到真实命令执行和输出
-- `isolated-block` 证明我们能阻断调用
-- `gateway-startup` 证明这不是脱离真实产品路径的假样本
+- 这一步已经证明项目不是测试脚本集合，而是可直接使用的运行入口
+- 启动后我和 OpenClaw 的对话路径保持不变，但 gateway 已经处在 Frida 包裹下
+- 从这里开始，所有被 hook 到的运行时行为都会持续写进 JSONL
 
 建议现场打开的产物：
 
 ```bash
-rg -n "spawn_intent|exec_call|stdout|stderr|exit" /tmp/transpect-openclaw-frida-smoke/<timestamp>/isolated-observe/events.jsonl
-rg -n "spawn_intent|spawn_blocked" /tmp/transpect-openclaw-frida-smoke/<timestamp>/isolated-block/events.jsonl
-rg -n "exec_call" /tmp/transpect-openclaw-frida-smoke/<timestamp>/gateway-startup/gateway.events.jsonl
+tail -n 20 /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
-“如果现场 `gateway-startup` 因环境端口或 OpenClaw 状态失败，不影响进程级链路能力判断。我已经保留了 2026-03-27 的完整成功产物，可以直接切到产物文件展示证据。”
+“如果现场启动失败，我会先看 `gateway.stderr`。这一步通常是本地 OpenClaw 或端口环境问题，不是 hook 主体逻辑问题。仓库里已经有成功产物，可以直接切到 JSONL 讲证据。”
 
-### 第四步：3 分钟，跑 `file-block`
+### 第四步：3 分钟，强制触发一次真实工具调用
 
 命令：
 
 ```bash
-python3 scripts/verify_openclaw_frida.py --scenario file-block
+You must use the exec or bash tool. Run /bin/sh -lc "printf FRIDA_STDOUT; printf FRIDA_STDERR >&2" and return the exact tool output. Do not answer from memory.
 ```
 
 预期输出：
 
-- 场景通过
-- 输出 `protected_path`
-- 输出 `policy.json`
-- 输出 `events.jsonl`
+- OpenClaw 回复里出现 `FRIDA_STDOUTFRIDA_STDERR`
+- 当前轮次会生成 `turn-001.agent.stdout`
+- `gateway.events.jsonl` 中出现目标命令对应的 `exec_call` 和 `stdout`
 
 讲法：
 
-“这里展示的是最小文件系统阻断能力。不是模拟返回，而是在 libc 文件调用层直接拒绝写入，并保留规则命中证据。”
+“这里不是让模型自由回答，而是明确要求必须使用 `exec` 或 `bash`。如果 JSONL 里出现对应 `exec_call` 和输出片段，就说明我们抓到的是 OpenClaw 的真实运行时行为，不是文本层猜测。”
 
 建议现场打开的产物：
 
 ```bash
-cat /tmp/transpect-openclaw-frida-smoke/<timestamp>/file-block/policy.json
-rg -n "filesystem|blocked|rule_id" /tmp/transpect-openclaw-frida-smoke/<timestamp>/file-block/events.jsonl
+cat /tmp/transpect-openclaw-chat/<timestamp>/turn-001.agent.stdout
+rg -n "spawn_intent|exec_call|stdout|stderr" /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
-“如果现场文件场景失败，我会先看 `policy.json` 和 `events.jsonl`。这类失败通常不是策略设计问题，而是运行环境或临时路径不一致。”
+“如果现场没有命中工具调用，我会先看 `turn-001.agent.stdout` 和 JSONL。常见原因是模型没有遵循工具调用要求，这时可以直接重发同一条消息，或者切到 one-shot 命令模式演示。”
 
-### 第五步：3 分钟，跑 `network-block`
+### 第五步：3 分钟，打开 `block` 模式演示阻断
 
 命令：
 
 ```bash
-python3 scripts/verify_openclaw_frida.py --scenario network-block
+python3 scripts/start_openclaw_frida_chat.py --timeout 30 --mode block --policy-file /path/to/policy.json
 ```
 
 预期输出：
 
-- 场景通过
-- 输出本地 `url`
-- 输出 `policy.json`
-- 输出 `http.requests.json`
+- gateway 正常启动
+- 再发送一条会命中策略的消息
+- JSONL 中出现 `blocked=true`
+- OpenClaw 侧出现可见失败、超时提示或明确的重试/报错，而不是静默成功
 
 讲法：
 
-“这里不依赖公网，我们自己起一个 `127.0.0.1` 的临时 HTTP 服务，再让 OpenClaw runtime 样本去访问它。阻断成功的标准不是模型说失败了，而是本地 HTTP 服务根本没有收到请求，而且 JSONL 里有命中的 `rule_id`。”
+“这一步展示的是从观察走到控制。策略命中后，Frida 不只是留证据，而是直接阻止调用继续执行。判断标准不是模型文字怎么说，而是 JSONL 里有 `blocked=true`，并且目标动作没有真正成功。”
 
 建议现场打开的产物：
 
 ```bash
-cat /tmp/transpect-openclaw-frida-smoke/<timestamp>/network-block/policy.json
-cat /tmp/transpect-openclaw-frida-smoke/<timestamp>/network-block/http.requests.json
-rg -n "net_connect|net_sendto|blocked|rule_id" /tmp/transpect-openclaw-frida-smoke/<timestamp>/network-block/events.jsonl
+cat /path/to/policy.json
+rg -n "blocked|rule_id|spawn_blocked|net_connect|file_open" /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
-“如果现场网络场景失败，我会先看本地 HTTP 服务有没有被访问。如果 `http.requests.json` 为空而 JSONL 有命中，说明阻断能力是好的；如果两边都没有，就优先检查本地端口和服务是否起来。”
+“如果现场阻断没命中，我会先看 `policy.json` 和 JSONL 里的事件字段是否和规则匹配。通常是规则范围写窄了，不是 hook 点不存在。”
 
 ### 第六步：2 分钟，总结与路线图
 
 建议收尾这样讲：
 
-“这轮工作已经证明三件事。第一，我们能在不改 OpenClaw 的情况下，命中真实 runtime 工具链。第二，我们已经把它做成可重复 smoke，而不是手工 PoC。第三，能力已经从进程执行扩到文件和网络，所以它已经不是单一 hook，而是动态沙盒雏形。下一步我会继续补更广的文件系统和网络覆盖面，再把策略体系做完整。”
+“这轮工作已经证明三件事。第一，我们能在不改 OpenClaw 的情况下，直接启动一个被 Frida 包裹的真实对话入口。第二，我们能抓到真实 runtime 工具链并持续留证。第三，我们已经从观察走到阻断，所以这套东西已经不是单次 hook，而是动态沙盒雏形。下一步我会继续补更广的文件系统和网络覆盖面，再把策略体系做完整。”
 
 ## 5. 加分项
 
-如果时间允许，可以补一段实验场景：
+如果时间允许，可以补一段回归验证：
 
 ```bash
-python3 scripts/verify_openclaw_frida.py --scenario gateway-agent
+python3 scripts/verify_openclaw_frida.py --scenario all
 ```
 
 讲法：
 
-“这个场景不进默认 smoke，因为它受模型是否真的触发工具调用影响。但我们也已经在真实 agent 路径上验证过一次，当前仓库里保留了 2026-03-27 的成功产物。”
+“直接启动入口适合展示，`verify_openclaw_frida.py --scenario all` 适合证明这是可重复验证的工程闭环，而不是一次现场运气好。”
 
 建议现场打开：
 
 ```bash
-rg -n "exec_call" /tmp/transpect-openclaw-frida-smoke/20260327-173145/gateway-agent/gateway.events.jsonl
-cat /tmp/transpect-openclaw-frida-smoke/20260327-173145/gateway-agent/agent.stdout
+rg -n "spawn_intent|exec_call|stdout|exit" /tmp/transpect-openclaw-frida-smoke/<timestamp>/isolated-observe/events.jsonl
 ```
 
 ## 6. 现场推荐顺序
@@ -185,16 +182,16 @@ cat /tmp/transpect-openclaw-frida-smoke/20260327-173145/gateway-agent/agent.stdo
 
 1. 问题与目标
 2. 架构与 hook 点
-3. `--scenario all`
-4. `--scenario file-block`
-5. `--scenario network-block`
-6. 可选 `--scenario gateway-agent`
+3. 直接启动并进入对话
+4. 强制触发一次真实工具调用
+5. 打开 `block` 模式演示阻断
+6. 可选展示 `--scenario all`
 7. 当前完成度与下一步路线
 
 ## 7. 你可以强调的三个汇报点
 
 如果评审时间很短，至少把这三句话说清楚：
 
-- “这不是单次手工 PoC，而是可重复执行的 smoke 闭环。”
+- “这不是单次手工 PoC，而是一个可以直接启动并持续留证的真实对话入口。”
 - “当前已经覆盖进程、文件系统、网络三类运行时行为。”
-- “默认稳定链路和沙盒扩展链路已经分开，说明这套方案是可以工程化继续推进的。”
+- “默认稳定优先，说明这套方案不是只为展示写的，而是可以工程化继续推进的。”

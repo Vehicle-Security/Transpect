@@ -18,6 +18,14 @@ const maxChunkBytes = Math.max(1, Number(HOOK_CONFIG.maxChunkBytes || 16384));
 const blockMode = HOOK_CONFIG.mode === "block";
 const enableFilesystemHooks = Boolean(HOOK_CONFIG.enableFilesystemHooks);
 const enableNetworkHooks = Boolean(HOOK_CONFIG.enableNetworkHooks);
+const targetPath = typeof HOOK_CONFIG.targetPath === "string" ? HOOK_CONFIG.targetPath : null;
+const targetArgv = Array.isArray(HOOK_CONFIG.targetArgv) ? HOOK_CONFIG.targetArgv.map((item) => String(item)) : [];
+const isOpenClawGatewayBootstrap =
+  targetPath === "/usr/bin/node" &&
+  targetArgv.some((item) => item.includes("/usr/lib/node_modules/openclaw/openclaw.mjs")) &&
+  targetArgv.includes("gateway");
+const effectiveFilesystemHooks = enableFilesystemHooks && !isOpenClawGatewayBootstrap;
+const effectiveNetworkHooks = enableNetworkHooks && !isOpenClawGatewayBootstrap;
 const fdAliasMap = new Map([
   [1, 1],
   [2, 2],
@@ -43,8 +51,8 @@ if (ownRole === "parent") {
   hookExecFamily();
   hookFdAliasFamily();
   hookWriteFamily();
-  if (enableFilesystemHooks) hookFileFamily();
-  if (enableNetworkHooks) hookNetworkFamily();
+  if (effectiveFilesystemHooks) hookFileFamily();
+  if (effectiveNetworkHooks) hookNetworkFamily();
   hookExitFamily();
 }
 
@@ -282,6 +290,7 @@ function hookExecLike(name, retType, argTypes, extractor) {
       const args = Array.prototype.slice.call(arguments);
       const details = extractor(args);
       const rule = findMatchingExecRule(details.exe, details.argv);
+      const blocked = blockMode && rule !== null;
 
       emit({
         phase: "exec_call",
@@ -289,11 +298,28 @@ function hookExecLike(name, retType, argTypes, extractor) {
         op: "exec",
         exe: details.exe,
         argv: details.argv,
-        blocked: false,
-        errno: null,
+        blocked,
+        errno: blocked ? EACCES : null,
         api: name,
         rule_id: rule ? rule.id : null,
       });
+
+      if (blocked) {
+        if (errnoSetter) errnoSetter(EACCES);
+        emit({
+          phase: "exec_blocked",
+          resource: "process",
+          op: "exec",
+          exe: details.exe,
+          argv: details.argv,
+          blocked: true,
+          errno: EACCES,
+          api: name,
+          rule_id: rule.id,
+          block_strategy: "exec_errno",
+        });
+        return -1;
+      }
 
       return original.apply(null, args);
     }, retType, argTypes),

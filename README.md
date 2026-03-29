@@ -58,6 +58,50 @@ python3 scripts/verify_openclaw_frida.py --scenario gateway-agent --gateway-toke
 
 如果没有显式传 `--gateway-port`，runner 会从 `19001` 开始自动选择首个空闲端口。所有产物默认保留在 `/tmp/transpect-openclaw-frida-smoke/<timestamp>/`。
 
+## Direct Start
+
+如果你想直接起一个可对话的 OpenClaw 会话，并把 Frida 事件持续写进 JSONL，官方入口就是：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py
+```
+
+启动后：
+
+- Frida 会包裹 OpenClaw gateway
+- 终端里可以逐条输入消息和 OpenClaw 对话
+- 事件会持续写入 `gateway.events.jsonl`
+- 默认产物目录在 `/tmp/transpect-openclaw-chat/<timestamp>/`
+- 默认抓的是被 hook 到的 OpenClaw 运行时进程树中的操作，不承诺覆盖 OpenClaw 内部全部实现细节
+- 为了避免 gateway 启动阶段异常，gateway bootstrap 自身默认跳过文件和网络 hook；后续真实 runtime 子进程仍会继续抓取
+
+常用示例：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py --message "你必须使用 exec 工具执行 /bin/sh -lc 'printf HELLO'"
+python3 scripts/start_openclaw_frida_chat.py --timeout 30 --mode block --policy-file /path/to/policy.json
+python3 scripts/start_openclaw_frida_chat.py --disable-filesystem-hooks --disable-network-hooks
+```
+
+说明：
+
+- `--mode block` 必须搭配 `--policy-file`
+- 默认 `observe` 会抓进程链路，并抓子进程文件和网络事件
+
+如果你想快速验证“对话触发工具调用后，JSONL 里确实有命中”，可以直接运行：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py \
+  --json \
+  --message 'You must use the exec or bash tool. Run /bin/sh -lc "printf FRIDA_STDOUT; printf FRIDA_STDERR >&2" and return the exact tool output. Do not answer from memory.'
+```
+
+运行过程中你可以另开一个终端实时看日志：
+
+```bash
+tail -f /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
+```
+
 ## More Detail
 
 详细实现、策略文件格式、事件字段、场景通过标准、汇报材料和 Demo 脚本见：
