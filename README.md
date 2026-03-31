@@ -33,6 +33,7 @@ python3 scripts/verify_openclaw_frida.py --scenario all
 
 ```bash
 python3 scripts/verify_openclaw_frida.py --scenario sandbox-all
+python3 scripts/verify_openclaw_frida.py --scenario simple-sandbox
 ```
 
 单场景入口：
@@ -46,6 +47,7 @@ python3 scripts/verify_openclaw_frida.py --scenario file-observe
 python3 scripts/verify_openclaw_frida.py --scenario file-block
 python3 scripts/verify_openclaw_frida.py --scenario network-observe
 python3 scripts/verify_openclaw_frida.py --scenario network-block
+python3 scripts/verify_openclaw_frida.py --scenario simple-sandbox
 ```
 
 常用参数：
@@ -71,7 +73,7 @@ python3 scripts/start_openclaw_frida_chat.py
 - Frida 会包裹 OpenClaw gateway
 - 终端里可以逐条输入消息和 OpenClaw 对话
 - 事件会持续写入 `gateway.events.jsonl`
-- 默认产物目录在 `/tmp/transpect-openclaw-chat/<timestamp>/`
+- 默认产物目录在 `artifacts/openclaw-chat/<timestamp>/`
 - 默认抓的是被 hook 到的 OpenClaw 运行时进程树中的操作，不承诺覆盖 OpenClaw 内部全部实现细节
 - 为了避免 gateway 启动阶段异常，gateway bootstrap 自身默认跳过文件和网络 hook；后续真实 runtime 子进程仍会继续抓取
 
@@ -79,6 +81,9 @@ python3 scripts/start_openclaw_frida_chat.py
 
 ```bash
 python3 scripts/start_openclaw_frida_chat.py --message "你必须使用 exec 工具执行 /bin/sh -lc 'printf HELLO'"
+python3 scripts/start_openclaw_frida_chat.py --sandbox-preset simple-demo
+python3 scripts/start_openclaw_frida_chat.py --dashboard
+python3 scripts/start_openclaw_frida_chat.py --dashboard --no-dashboard-open
 python3 scripts/start_openclaw_frida_chat.py --timeout 30 --mode block --policy-file /path/to/policy.json
 python3 scripts/start_openclaw_frida_chat.py --disable-filesystem-hooks --disable-network-hooks
 ```
@@ -86,7 +91,11 @@ python3 scripts/start_openclaw_frida_chat.py --disable-filesystem-hooks --disabl
 说明：
 
 - `--mode block` 必须搭配 `--policy-file`
+- `--sandbox-preset simple-demo` 会自动进入 `block` 模式，并在输出目录里生成 `sandbox.policy.json` 与 `sandbox.targets.json`
+- `--sandbox-preset simple-demo` 会打印本轮的 `protected path` 和 `blocked url`，方便直接做拦截演示
 - 默认 `observe` 会抓进程链路，并抓子进程文件和网络事件
+- `--dashboard` 会直接打开 OpenClaw Control UI，并保持网关运行
+- `--dashboard --no-dashboard-open` 只打印 dashboard URL，适合没有桌面浏览器的环境
 
 如果你想快速验证“对话触发工具调用后，JSONL 里确实有命中”，可以直接运行：
 
@@ -99,7 +108,7 @@ python3 scripts/start_openclaw_frida_chat.py \
 运行过程中你可以另开一个终端实时看日志：
 
 ```bash
-tail -f /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
+tail -f artifacts/openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 ## More Detail

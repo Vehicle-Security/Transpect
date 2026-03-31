@@ -108,6 +108,9 @@ python3 scripts/start_openclaw_frida_chat.py
 当前固定接口：
 
 - `--message`
+- `--sandbox-preset simple-demo`
+- `--dashboard`
+- `--no-dashboard-open`
 - `--json`
 - `--output-dir`
 - `--mode observe|block`
@@ -120,7 +123,18 @@ python3 scripts/start_openclaw_frida_chat.py
 - 默认模式是 `observe`
 - 默认会打开文件和网络 hook，但会对 gateway bootstrap 自身做稳定性豁免
 - `--mode block` 必须搭配 `--policy-file`
-- 默认产物目录是 `/tmp/transpect-openclaw-chat/<timestamp>/`
+- `--sandbox-preset simple-demo` 会自动进入 `block` 模式
+- `--sandbox-preset simple-demo` 不与外部 `--policy-file` 混用
+- `--sandbox-preset simple-demo` 会自动生成：
+  - `sandbox.policy.json`
+  - `sandbox.targets.json`
+- `--sandbox-preset simple-demo` 会打印：
+  - `protected path`
+  - `blocked url`
+  - `policy path`
+- `--dashboard` 会打开 Control UI 并保持 gateway 存活
+- `--dashboard --no-dashboard-open` 只打印 dashboard URL，不尝试启动浏览器
+- 默认产物目录是 `artifacts/openclaw-chat/<timestamp>/`
 - 每轮对话至少会落盘：
   - `gateway.events.jsonl`
   - `gateway.stdout`
@@ -306,6 +320,30 @@ python3 scripts/verify_openclaw_frida.py --scenario sandbox-all
   - 本地临时 HTTP 服务不能收到请求
   - JSONL 中出现阻断的 `net_connect` 或 `net_sendto`
   - 事件带 `rule_id`
+
+### 简单沙盒预设
+
+新增单独验收入口：
+
+```bash
+python3 scripts/verify_openclaw_frida.py --scenario simple-sandbox
+python3 scripts/start_openclaw_frida_chat.py --sandbox-preset simple-demo
+```
+
+说明：
+
+- `simple-demo` 是运行时生成的简单沙盒预设
+- 默认只做“定点拒绝”，不做默认拒绝
+- 默认拦两类目标：
+  - 一个本地可达演示 URL `127.0.0.1:<demo_port>`
+  - 一个运行目录内的受保护路径 `<output_dir>/sandbox/protected-write.txt`
+- 固定规则 ID：
+  - `deny-demo-protected-write`
+  - `deny-demo-local-http`
+- `simple-sandbox` 会断言：
+  - 文件写入被拒绝
+  - 网络访问被拒绝
+  - JSONL 中同时出现 `blocked=true` 和对应 `rule_id`
 
 ### 实验场景
 

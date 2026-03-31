@@ -30,6 +30,13 @@ DEFAULT_AGENT_TIMEOUT_SECONDS = 90.0
 DEFAULT_PORT_SCAN_COUNT = 100
 LOCAL_HTTP_PORT_SCAN_START = 24080
 LOCAL_HTTP_PORT_SCAN_COUNT = 50
+SIMPLE_SANDBOX_PRESET_NAME = "simple-demo"
+SIMPLE_SANDBOX_BLOCKED_IP = "127.0.0.1"
+SIMPLE_SANDBOX_POLICY_NAME = "sandbox.policy.json"
+SIMPLE_SANDBOX_TARGETS_NAME = "sandbox.targets.json"
+SIMPLE_SANDBOX_RELATIVE_PROTECTED_PATH = Path("sandbox") / "protected-write.txt"
+SIMPLE_SANDBOX_PROTECTED_RULE_ID = "deny-demo-protected-write"
+SIMPLE_SANDBOX_NETWORK_RULE_ID = "deny-demo-local-http"
 AGENT_TARGET = "+15555550123"
 AGENT_MESSAGE = (
     'You must use the exec or bash tool. Run /bin/sh -lc "printf FRIDA_STDOUT; '
@@ -93,6 +100,17 @@ class ProbeRun:
     stderr_path: Path
 
 
+@dataclass
+class SimpleSandboxPreset:
+    name: str
+    protected_path: Path
+    blocked_ip: str
+    blocked_port: int
+    blocked_url: str
+    policy_path: Path
+    targets_path: Path
+
+
 class LocalHttpFixture:
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = output_dir
@@ -150,6 +168,7 @@ def parse_args() -> argparse.Namespace:
             "gateway-startup",
             "gateway-agent",
             "sandbox-all",
+            "simple-sandbox",
             "file-observe",
             "file-block",
             "network-observe",
@@ -220,6 +239,7 @@ def run_scenario(name: str, output_root: Path, args: argparse.Namespace) -> Scen
         "isolated-block": run_isolated_block,
         "gateway-startup": run_gateway_startup,
         "gateway-agent": run_gateway_agent,
+        "simple-sandbox": run_simple_sandbox,
         "file-observe": run_file_observe,
         "file-block": run_file_block,
         "network-observe": run_network_observe,
@@ -502,6 +522,93 @@ def run_network_block(output_dir: Path, _args: argparse.Namespace) -> ScenarioRe
             f"stdout={probe_run.stdout_path}",
             f"stderr={probe_run.stderr_path}",
             f"jsonl={probe_run.jsonl_path}",
+        ],
+    )
+
+
+def run_simple_sandbox(output_dir: Path, _args: argparse.Namespace) -> ScenarioResult:
+    fixture = LocalHttpFixture(output_dir)
+    fixture.start()
+    preset = materialize_simple_demo_preset(output_dir, blocked_port=fixture.port)
+    file_attempt_dir = output_dir / "file-attempt"
+    network_attempt_dir = output_dir / "network-attempt"
+    file_attempt_dir.mkdir(parents=True, exist_ok=True)
+    network_attempt_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        file_probe = run_driver_probe(
+            file_attempt_dir,
+            mode="block",
+            argv=[
+                "/usr/bin/python3",
+                "-c",
+                FILE_BLOCK_SNIPPET,
+                str(preset.protected_path),
+            ],
+            expect_block=True,
+            policy_file=preset.policy_path,
+        )
+        require_success(file_probe.command_result, "simple-sandbox file probe failed")
+        assert_probe_field(file_probe.payload, ("ok",), True, "simple-sandbox file probe did not report ok=true")
+        assert_probe_field(file_probe.payload, ("blocked",), True, "simple-sandbox file probe did not report blocked=true")
+        assert_event(
+            file_probe.records,
+            lambda event: event.get("resource") == "filesystem"
+            and event.get("path") == str(preset.protected_path)
+            and event.get("blocked") is True
+            and event.get("rule_id") == SIMPLE_SANDBOX_PROTECTED_RULE_ID,
+            "simple-sandbox missing blocked filesystem event",
+        )
+        if preset.protected_path.exists():
+            raise VerificationError(f"simple-sandbox unexpectedly created the protected file: {preset.protected_path}")
+
+        network_probe = run_driver_probe(
+            network_attempt_dir,
+            mode="block",
+            argv=[
+                "/usr/bin/python3",
+                "-c",
+                NETWORK_REQUEST_SNIPPET,
+                preset.blocked_url,
+            ],
+            expect_block=True,
+            policy_file=preset.policy_path,
+        )
+        require_success(network_probe.command_result, "simple-sandbox network probe failed")
+        assert_probe_field(network_probe.payload, ("ok",), True, "simple-sandbox network probe did not report ok=true")
+        assert_probe_field(
+            network_probe.payload,
+            ("blocked",),
+            True,
+            "simple-sandbox network probe did not report blocked=true",
+        )
+        assert_event(
+            network_probe.records,
+            lambda event: event.get("resource") == "network"
+            and event.get("phase") in {"net_connect", "net_sendto"}
+            and event.get("blocked") is True
+            and event.get("address") == preset.blocked_ip
+            and event.get("port") == preset.blocked_port
+            and event.get("rule_id") == SIMPLE_SANDBOX_NETWORK_RULE_ID,
+            "simple-sandbox missing blocked network event",
+        )
+        if fixture.requests:
+            raise VerificationError(f"simple-sandbox unexpectedly reached the local HTTP server: {fixture.requests}")
+    finally:
+        fixture.stop()
+
+    return ScenarioResult(
+        name="simple-sandbox",
+        passed=True,
+        output_dir=output_dir,
+        details=[
+            f"protected_path={preset.protected_path}",
+            f"blocked_url={preset.blocked_url}",
+            f"policy={preset.policy_path}",
+            f"targets={preset.targets_path}",
+            f"requests={fixture.request_log_path}",
+            f"file_jsonl={file_probe.jsonl_path}",
+            f"network_jsonl={network_probe.jsonl_path}",
         ],
     )
 
@@ -793,6 +900,55 @@ def load_json_payload(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def materialize_simple_demo_preset(output_dir: Path, *, blocked_port: int) -> SimpleSandboxPreset:
+    sandbox_dir = output_dir / "sandbox"
+    sandbox_dir.mkdir(parents=True, exist_ok=True)
+    protected_path = sandbox_dir / SIMPLE_SANDBOX_RELATIVE_PROTECTED_PATH.name
+    blocked_url = f"http://{SIMPLE_SANDBOX_BLOCKED_IP}:{blocked_port}/demo"
+    policy_path = output_dir / SIMPLE_SANDBOX_POLICY_NAME
+    targets_path = output_dir / SIMPLE_SANDBOX_TARGETS_NAME
+    write_json(
+        policy_path,
+        {
+            "exec": [],
+            "filesystem": [
+                {
+                    "id": SIMPLE_SANDBOX_PROTECTED_RULE_ID,
+                    "pathRegex": f"^{re.escape(str(protected_path))}$",
+                    "ops": ["create", "open_write"],
+                }
+            ],
+            "network": [
+                {
+                    "id": SIMPLE_SANDBOX_NETWORK_RULE_ID,
+                    "addressRegex": r"^127\.0\.0\.1$",
+                    "ports": [blocked_port],
+                    "ops": ["connect", "sendto"],
+                }
+            ],
+        },
+    )
+    write_json(
+        targets_path,
+        {
+            "preset": SIMPLE_SANDBOX_PRESET_NAME,
+            "protected_path": str(protected_path),
+            "blocked_url": blocked_url,
+            "blocked_ip": SIMPLE_SANDBOX_BLOCKED_IP,
+            "blocked_port": blocked_port,
+        },
+    )
+    return SimpleSandboxPreset(
+        name=SIMPLE_SANDBOX_PRESET_NAME,
+        protected_path=protected_path,
+        blocked_ip=SIMPLE_SANDBOX_BLOCKED_IP,
+        blocked_port=blocked_port,
+        blocked_url=blocked_url,
+        policy_path=policy_path,
+        targets_path=targets_path,
+    )
 
 
 def assert_event(records: list[dict[str, Any]], predicate: Callable[[dict[str, Any]], bool], message: str) -> dict[str, Any]:

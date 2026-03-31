@@ -7,24 +7,34 @@ import signal
 import subprocess
 import sys
 import time
+import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 from verify_openclaw_frida import (
     DRIVER_PATH,
+    LocalHttpFixture,
     OPENCLAW_GATEWAY_ENTRYPOINT,
     REPO_ROOT,
+    SIMPLE_SANDBOX_PRESET_NAME,
+    SimpleSandboxPreset,
     is_tcp_port_open,
     load_gateway_token,
+    materialize_simple_demo_preset,
     resolve_gateway_port,
     stop_process_tree,
 )
 
 
-DEFAULT_CHAT_OUTPUT_ROOT = Path("/tmp/transpect-openclaw-chat")
+DEFAULT_CHAT_OUTPUT_ROOT = REPO_ROOT / "artifacts" / "openclaw-chat"
 DEFAULT_AGENT_TARGET = "+15555550123"
 DEFAULT_AGENT_TIMEOUT_SECONDS = 600
 DEFAULT_GATEWAY_READY_TIMEOUT_SECONDS = 75.0
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(line_buffering=True)
 
 
 @dataclass
@@ -35,6 +45,7 @@ class GatewayRuntime:
     jsonl_path: Path
     stdout_path: Path
     stderr_path: Path
+    sandbox_preset: SimpleSandboxPreset | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,15 +53,35 @@ def parse_args() -> argparse.Namespace:
         description="Start a Frida-wrapped OpenClaw Gateway and chat through it while recording JSONL events"
     )
     parser.add_argument("--mode", choices=("observe", "block"), default="observe")
-    parser.add_argument("--output-dir", help="artifact directory; defaults to /tmp/transpect-openclaw-chat/<timestamp>")
+    parser.add_argument(
+        "--output-dir",
+        help="artifact directory; defaults to <repo>/artifacts/openclaw-chat/<timestamp>",
+    )
     parser.add_argument("--gateway-port", type=int, help="gateway port override")
     parser.add_argument("--gateway-token", help="gateway token override")
     parser.add_argument("--policy-file", help="optional policy file for block mode or sandbox rules")
+    parser.add_argument(
+        "--sandbox-preset",
+        choices=(SIMPLE_SANDBOX_PRESET_NAME,),
+        help="start with a built-in sandbox preset instead of a custom policy file",
+    )
     parser.add_argument("--to", default=DEFAULT_AGENT_TARGET, help="OpenClaw session target used by `openclaw agent`")
     parser.add_argument("--agent", help="optional OpenClaw agent id")
     parser.add_argument("--thinking", choices=("off", "minimal", "low", "medium", "high"))
     parser.add_argument("--timeout", type=int, default=DEFAULT_AGENT_TIMEOUT_SECONDS, help="agent turn timeout in seconds")
     parser.add_argument("--message", help="send one message and exit; omit to enter interactive mode")
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        default=False,
+        help="open the OpenClaw dashboard URL and keep the gateway running instead of entering terminal chat mode",
+    )
+    parser.add_argument(
+        "--no-dashboard-open",
+        action="store_true",
+        default=False,
+        help="with --dashboard, print the dashboard URL without attempting to launch a browser",
+    )
     parser.add_argument("--json", action="store_true", help="pass --json to `openclaw agent`")
     parser.add_argument(
         "--disable-filesystem-hooks",
@@ -69,7 +100,16 @@ def parse_args() -> argparse.Namespace:
 
 def validate_args(args: argparse.Namespace) -> None:
     if args.mode == "block" and not args.policy_file:
-        raise SystemExit("--mode block requires --policy-file")
+        if args.sandbox_preset is None:
+            raise SystemExit("--mode block requires --policy-file")
+    if args.dashboard and args.message:
+        raise SystemExit("--dashboard cannot be combined with --message")
+    if args.sandbox_preset and args.policy_file:
+        raise SystemExit("--sandbox-preset cannot be combined with --policy-file")
+    if args.sandbox_preset and args.disable_filesystem_hooks:
+        raise SystemExit("--sandbox-preset requires filesystem hooks; remove --disable-filesystem-hooks")
+    if args.sandbox_preset and args.disable_network_hooks:
+        raise SystemExit("--sandbox-preset requires network hooks; remove --disable-network-hooks")
 
 
 def resolve_output_dir(explicit_output_dir: str | None) -> Path:
@@ -79,7 +119,22 @@ def resolve_output_dir(explicit_output_dir: str | None) -> Path:
     return DEFAULT_CHAT_OUTPUT_ROOT / timestamp
 
 
-def start_gateway(args: argparse.Namespace, output_dir: Path) -> GatewayRuntime:
+def resolve_effective_mode(args: argparse.Namespace) -> str:
+    if args.sandbox_preset == SIMPLE_SANDBOX_PRESET_NAME:
+        return "block"
+    return args.mode
+
+
+def start_gateway(
+    args: argparse.Namespace,
+    output_dir: Path,
+    *,
+    mode: str,
+    policy_file: Path | None,
+    enable_filesystem_hooks: bool,
+    enable_network_hooks: bool,
+    sandbox_preset: SimpleSandboxPreset | None = None,
+) -> GatewayRuntime:
     gateway_port = resolve_gateway_port(args.gateway_port)
     jsonl_path = output_dir / "gateway.events.jsonl"
     stdout_path = output_dir / "gateway.stdout"
@@ -88,7 +143,7 @@ def start_gateway(args: argparse.Namespace, output_dir: Path) -> GatewayRuntime:
         "python3",
         str(DRIVER_PATH),
         "--mode",
-        args.mode,
+        mode,
         "--spawn-program",
         "/usr/bin/node",
         f"--spawn-arg={OPENCLAW_GATEWAY_ENTRYPOINT}",
@@ -98,12 +153,12 @@ def start_gateway(args: argparse.Namespace, output_dir: Path) -> GatewayRuntime:
         "--jsonl",
         str(jsonl_path),
     ]
-    if not args.disable_filesystem_hooks:
+    if enable_filesystem_hooks:
         argv.append("--enable-filesystem-hooks")
-    if not args.disable_network_hooks:
+    if enable_network_hooks:
         argv.append("--enable-network-hooks")
-    if args.policy_file:
-        argv.extend(["--policy-file", str(Path(args.policy_file).expanduser().resolve())])
+    if policy_file is not None:
+        argv.extend(["--policy-file", str(policy_file)])
     if args.gateway_token:
         argv.extend(["--spawn-arg=--token", f"--spawn-arg={args.gateway_token}"])
 
@@ -139,6 +194,7 @@ def start_gateway(args: argparse.Namespace, output_dir: Path) -> GatewayRuntime:
         jsonl_path=jsonl_path,
         stdout_path=stdout_path,
         stderr_path=stderr_path,
+        sandbox_preset=sandbox_preset,
     )
 
 
@@ -197,11 +253,61 @@ def run_agent_turn(
 def print_banner(gateway: GatewayRuntime) -> None:
     print("Frida-wrapped OpenClaw session is ready.")
     print(f"gateway url: ws://127.0.0.1:{gateway.port}")
+    if gateway.sandbox_preset is not None:
+        print(f"sandbox preset: {gateway.sandbox_preset.name}")
+        print(f"protected path: {gateway.sandbox_preset.protected_path}")
+        print(f"blocked url: {gateway.sandbox_preset.blocked_url}")
+        print(f"policy path: {gateway.sandbox_preset.policy_path}")
+        print(f"targets path: {gateway.sandbox_preset.targets_path}")
     print(f"jsonl path: {gateway.jsonl_path}")
     print(f"gateway stdout: {gateway.stdout_path}")
     print(f"gateway stderr: {gateway.stderr_path}")
     print("type /exit to quit")
     print("type /paths to print artifact paths again")
+
+
+def build_dashboard_url(gateway: GatewayRuntime, gateway_token: str) -> str:
+    base_url = f"http://127.0.0.1:{gateway.port}/"
+    if gateway_token:
+        return f"{base_url}#token={quote(gateway_token)}"
+    return base_url
+
+
+def dashboard_loop(args: argparse.Namespace, gateway: GatewayRuntime, gateway_token: str) -> int:
+    dashboard_url = build_dashboard_url(gateway, gateway_token)
+    print("Frida-wrapped OpenClaw dashboard mode is ready.")
+    print(f"gateway url: ws://127.0.0.1:{gateway.port}")
+    print(f"dashboard url: {dashboard_url}")
+    if gateway.sandbox_preset is not None:
+        print(f"sandbox preset: {gateway.sandbox_preset.name}")
+        print(f"protected path: {gateway.sandbox_preset.protected_path}")
+        print(f"blocked url: {gateway.sandbox_preset.blocked_url}")
+        print(f"policy path: {gateway.sandbox_preset.policy_path}")
+        print(f"targets path: {gateway.sandbox_preset.targets_path}")
+    print(f"jsonl path: {gateway.jsonl_path}")
+    print(f"gateway stdout: {gateway.stdout_path}")
+    print(f"gateway stderr: {gateway.stderr_path}")
+
+    if args.no_dashboard_open:
+        print("browser launch skipped (--no-dashboard-open)")
+    else:
+        try:
+            opened = webbrowser.open(dashboard_url, new=2)
+        except Exception as exc:  # pragma: no cover - desktop integration varies by host
+            opened = False
+            print(f"browser launch failed: {exc}", file=sys.stderr)
+        if opened:
+            print("opened dashboard in your browser")
+        else:
+            print("browser launch unavailable; open the dashboard URL manually")
+
+    print("press Ctrl-C to stop the gateway")
+    while True:
+        return_code = gateway.process.poll()
+        if return_code is not None:
+            print(f"gateway exited with code {return_code}", file=sys.stderr)
+            return return_code
+        time.sleep(1.0)
 
 
 def install_signal_handlers(gateway: GatewayRuntime) -> None:
@@ -247,11 +353,29 @@ def main() -> int:
     validate_args(args)
     output_dir = resolve_output_dir(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    gateway_token = args.gateway_token or load_gateway_token()
-    gateway = start_gateway(args, output_dir)
-    install_signal_handlers(gateway)
+    sandbox_fixture: LocalHttpFixture | None = None
+    sandbox_preset: SimpleSandboxPreset | None = None
+    gateway: GatewayRuntime | None = None
+    if args.sandbox_preset == SIMPLE_SANDBOX_PRESET_NAME:
+        sandbox_fixture = LocalHttpFixture(output_dir)
+        sandbox_fixture.start()
+        sandbox_preset = materialize_simple_demo_preset(output_dir, blocked_port=sandbox_fixture.port)
 
     try:
+        gateway_token = args.gateway_token or load_gateway_token()
+        policy_file = sandbox_preset.policy_path if sandbox_preset is not None else (
+            Path(args.policy_file).expanduser().resolve() if args.policy_file else None
+        )
+        gateway = start_gateway(
+            args,
+            output_dir,
+            mode=resolve_effective_mode(args),
+            policy_file=policy_file,
+            enable_filesystem_hooks=sandbox_preset is not None or not args.disable_filesystem_hooks,
+            enable_network_hooks=sandbox_preset is not None or not args.disable_network_hooks,
+            sandbox_preset=sandbox_preset,
+        )
+        install_signal_handlers(gateway)
         if args.message:
             return run_agent_turn(
                 message=args.message,
@@ -260,9 +384,14 @@ def main() -> int:
                 gateway=gateway,
                 gateway_token=gateway_token,
             )
+        if args.dashboard:
+            return dashboard_loop(args, gateway, gateway_token)
         return interactive_loop(args, gateway, gateway_token)
     finally:
-        stop_process_tree(gateway.process)
+        if gateway is not None:
+            stop_process_tree(gateway.process)
+        if sandbox_fixture is not None:
+            sandbox_fixture.stop()
 
 
 if __name__ == "__main__":

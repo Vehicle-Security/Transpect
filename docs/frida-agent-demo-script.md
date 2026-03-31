@@ -86,12 +86,26 @@ python3 scripts/start_openclaw_frida_chat.py
 建议现场打开的产物：
 
 ```bash
-tail -n 20 /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
+tail -n 20 artifacts/openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
 “如果现场启动失败，我会先看 `gateway.stderr`。这一步通常是本地 OpenClaw 或端口环境问题，不是 hook 主体逻辑问题。仓库里已经有成功产物，可以直接切到 JSONL 讲证据。”
+
+如果你更想直接演示网页控制台，也可以把这一步改成：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py --dashboard
+```
+
+如果现场环境不能自动打开浏览器，就改用：
+
+```bash
+python3 scripts/start_openclaw_frida_chat.py --dashboard --no-dashboard-open
+```
+
+然后手动打开终端里打印出来的 `dashboard url`。
 
 ### 第四步：3 分钟，强制触发一次真实工具调用
 
@@ -114,43 +128,58 @@ You must use the exec or bash tool. Run /bin/sh -lc "printf FRIDA_STDOUT; printf
 建议现场打开的产物：
 
 ```bash
-cat /tmp/transpect-openclaw-chat/<timestamp>/turn-001.agent.stdout
-rg -n "spawn_intent|exec_call|stdout|stderr" /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
+cat artifacts/openclaw-chat/<timestamp>/turn-001.agent.stdout
+rg -n "spawn_intent|exec_call|stdout|stderr" artifacts/openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
 “如果现场没有命中工具调用，我会先看 `turn-001.agent.stdout` 和 JSONL。常见原因是模型没有遵循工具调用要求，这时可以直接重发同一条消息，或者切到 one-shot 命令模式演示。”
 
-### 第五步：3 分钟，打开 `block` 模式演示阻断
+### 第五步：3 分钟，打开简单沙盒演示阻断
 
 命令：
 
 ```bash
-python3 scripts/start_openclaw_frida_chat.py --timeout 30 --mode block --policy-file /path/to/policy.json
+python3 scripts/start_openclaw_frida_chat.py --sandbox-preset simple-demo
 ```
 
 预期输出：
 
 - gateway 正常启动
-- 再发送一条会命中策略的消息
+- 启动后会打印：
+  - `protected path`
+  - `blocked url`
+  - `policy path`
+- 再发送两条会命中策略的消息
 - JSONL 中出现 `blocked=true`
 - OpenClaw 侧出现可见失败、超时提示或明确的重试/报错，而不是静默成功
 
 讲法：
 
-“这一步展示的是从观察走到控制。策略命中后，Frida 不只是留证据，而是直接阻止调用继续执行。判断标准不是模型文字怎么说，而是 JSONL 里有 `blocked=true`，并且目标动作没有真正成功。”
+“这一步展示的是从观察走到控制。这里不是临时手写一份外部 `policy.json`，而是直接起一个内置的简单沙盒预设。启动后它会自动告诉我这轮保护的文件路径和被拦截的 URL。策略命中后，Frida 不只是留证据，而是直接阻止调用继续执行。判断标准不是模型文字怎么说，而是 JSONL 里有 `blocked=true`，并且目标动作没有真正成功。”
+
+建议现场发送的两条 prompt：
+
+```text
+You must use the exec or bash tool. Try to fetch the printed blocked url and report the exact result. Do not answer from memory.
+```
+
+```text
+You must use the exec or bash tool. Try to write a file to the printed protected path and report the exact result. Do not answer from memory.
+```
 
 建议现场打开的产物：
 
 ```bash
-cat /path/to/policy.json
-rg -n "blocked|rule_id|spawn_blocked|net_connect|file_open" /tmp/transpect-openclaw-chat/<timestamp>/gateway.events.jsonl
+cat artifacts/openclaw-chat/<timestamp>/sandbox.policy.json
+cat artifacts/openclaw-chat/<timestamp>/sandbox.targets.json
+rg -n "blocked|rule_id|spawn_blocked|net_connect|file_open" artifacts/openclaw-chat/<timestamp>/gateway.events.jsonl
 ```
 
 失败兜底说辞：
 
-“如果现场阻断没命中，我会先看 `policy.json` 和 JSONL 里的事件字段是否和规则匹配。通常是规则范围写窄了，不是 hook 点不存在。”
+“如果现场阻断没命中，我会先看 `sandbox.targets.json` 里本轮实际受保护的路径和 URL，再对照 JSONL 的 `path`、`address`、`port` 和 `rule_id`。通常是现场 prompt 没有真的命中目标，不是 hook 点不存在。”
 
 ### 第六步：2 分钟，总结与路线图
 
