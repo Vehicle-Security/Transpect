@@ -1,0 +1,6 @@
+Please read `tests/fixtures/seed-note.txt` and reply with one short sentence that includes the phrase `trace fixture acknowledged`.
+
+Rules:
+1. Use exactly one tool call.
+2. Do not write any files.
+3. Do not spawn a subagent.

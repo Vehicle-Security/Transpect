@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transpect Trace Viewer</title>
+    <link rel="stylesheet" href="./app.css?v=20260415-1" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-brand">
+          <strong class="topbar-title">Transpect</strong>
+          <span id="source-line" class="topbar-meta">behavior-events.jsonl</span>
+        </div>
+        <div class="status-cluster topbar-cluster">
+          <span id="live-badge" class="live-badge connected">Live connected</span>
+          <span id="event-count" class="meta-chip">0 events</span>
+          <span id="last-updated" class="meta-chip">Updated --</span>
+        </div>
+        <div class="topbar-actions">
+          <button id="back-to-traces" class="hidden" type="button">Back to traces</button>
+          <button id="refresh-button" type="button">Refresh</button>
+          <button id="filter-button" type="button">Show all</button>
+        </div>
+      </header>
+
+      <section id="banner-area" class="banner-area"></section>
+
+      <main class="app-layout">
+        <section id="traces-page" class="page-view">
+          <section class="trace-panel panel traces-page-panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Traces</p>
+                <h2>Request list</h2>
+              </div>
+              <div class="trace-page-actions">
+                <span id="trace-count" class="panel-meta">0 traces</span>
+                <label class="upload-chip" for="trace-jsonl-input">
+                  Upload JSONL
+                  <input id="trace-jsonl-input" type="file" accept=".jsonl,application/json,text/plain" />
+                </label>
+              </div>
+            </div>
+            <div id="trace-list" class="trace-list"></div>
+          </section>
+        </section>
+
+        <section id="timeline-page" class="page-view hidden">
+          <section class="main-panel">
+            <section id="hero-empty" class="panel empty-panel">
+              <h2>No trace data yet</h2>
+              <p>Load the live JSONL file first. Routine traces stay hidden until you switch the filter.</p>
+            </section>
+
+            <section id="trace-header-card" class="panel hidden"></section>
+
+            <section id="timeline-panel" class="panel hidden">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">Trace waterfall</p>
+                  <h2>Execution timeline</h2>
+                </div>
+              </div>
+              <div id="timeline-list" class="timeline-list"></div>
+            </section>
+          </section>
+
+          <section class="panel evidence-panel">
+            <button id="toggle-evidence" class="evidence-toggle" type="button">View raw events and diagnostics</button>
+            <div id="evidence-drawer" class="evidence-drawer hidden"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js?v=20260415-1"></script>
+  </body>
+</html>

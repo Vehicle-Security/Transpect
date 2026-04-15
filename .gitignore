@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local OpenClaw runtime state
+.openclaw/
+
+# Environment files
+.env
+.env.*
+
+# Runtime outputs
+live/**
+!live/.gitkeep
+!live/otel/
+!live/otel/.gitkeep
+captures/**
+!captures/.gitkeep
+bin/**
+!bin/.gitkeep
+tmp-*.log
+tmp-*.jsonl
+
+# Local config snapshots and rendered files
+config/applied/**
+config/*.local.yaml
+
+# Optional vendor dependencies
+vendor/openclaw-observability-plugin/node_modules/
+
+# Keep only repository screenshots
+docs/images/*.png
+!docs/images/runtime-empty.png
+!docs/images/runtime-single-trace.png
+!docs/images/runtime-error.png
