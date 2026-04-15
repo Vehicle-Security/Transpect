@@ -1,3 +1,3 @@
-# Core scripts rely on the Python standard library.
-# Install the optional Windows Frida dependency to enable scripts/capture_frida.py.
+# 核心脚本只依赖 Python 标准库。
+# 如需启用 scripts/capture_frida.py，请安装下面的可选 Windows Frida 依赖。
 frida>=16.0.0; platform_system == "Windows"

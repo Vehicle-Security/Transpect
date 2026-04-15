@@ -1,59 +1,59 @@
-# Architecture
+# 架构说明
 
-Transpect is organized around three complementary data paths:
+Transpect 围绕三条互补的数据路径组织：
 
-## 1. JSONL Trace Path
+## 1. JSONL 主链路
 
-The default path is:
+默认链路如下：
 
 ```text
 OpenClaw hooks -> behavior-mediator -> live/behavior-events.jsonl -> viewer/index.html?view=traces
 ```
 
-This path is the fastest way to inspect requests, turns, tools, tasks, and LLM activity in a single browser session.
+这是最轻量、最直接的一条路径，适合在一个页面里查看请求、轮次、工具调用、任务节点和 LLM 调用过程。
 
-The viewer uses two route states:
+当前查看器有两个正式路由：
 
-- `view=traces` renders the `请求列表` page.
-- `view=timeline&traceId=<trace-id>` renders the `链路主视图` page for one trace.
-- `查看原始事件与调试信息` expands the evidence drawer for the selected trace.
+- `view=traces`：显示 `请求列表`
+- `view=timeline&traceId=<trace-id>`：显示某一条 trace 的 `链路主视图`
+- `查看原始事件与调试信息`：展开当前 trace 的原始事件抽屉
 
-## 2. OTEL Path
+## 2. OTEL 链路
 
-The OTEL path uses the vendored `otel-observability` plugin and optional collector config:
+OTEL 链路依赖 vendored 的 `otel-observability` 插件和可选的 collector 配置：
 
 ```text
 OpenClaw hooks -> otel-observability -> OTLP -> config/otel-collector.local.yaml -> live/otel/*.jsonl
 ```
 
-This path is useful when you want local OTLP output or want to forward telemetry to another backend.
+当你需要本地保存 OTLP 输出，或者准备把遥测数据转发到其他后端时，可以使用这条路径。
 
-## 3. Frida Path
+## 3. Frida 链路
 
-The Frida path attaches to a running gateway process and records host-level activity:
+Frida 链路会附着到一个正在运行的 gateway 进程，并记录宿主侧事件：
 
 ```text
 Frida attach -> frida/openclaw_gateway_windows.js -> live/frida/*.jsonl
 ```
 
-It captures process, file, port, and network events and complements the JSONL and OTEL traces.
+这条路径会补充进程、文件、端口和网络层面的信息，与 JSONL 主链路和 OTEL 链路互补。
 
-## Repository Roles
+## 关键脚本职责
 
-- `scripts/setup_runtime.py` patches `~/.openclaw/openclaw.json` into `core`, `hybrid`, or `otel` mode.
-- `scripts/start_trace.py` prepares runtime mode, starts the gateway if needed, and opens the `请求列表` route when the viewer is enabled.
-- `scripts/doctor.py` inspects runtime health and reports the inferred active mode.
-- `scripts/run_acceptance.py` sends a small set of safe prompts and validates the resulting trace stream.
-- `scripts/check_repo.py` checks syntax, required files, ignore rules, and portability constraints.
+- `scripts/setup_runtime.py`：把 `~/.openclaw/openclaw.json` 调整到 `core`、`hybrid` 或 `otel` 模式
+- `scripts/start_trace.py`：准备运行模式、按需启动 gateway，并在启用查看器时打开 `请求列表`
+- `scripts/doctor.py`：检查运行健康状态，并给出当前推断出的运行模式
+- `scripts/run_acceptance.py`：发送一组安全的最小输入并校验产出的 trace
+- `scripts/check_repo.py`：检查语法、必需文件、忽略规则和可移植性约束
 
-## Mode Summary
+## 模式说明
 
-- `core`: behavior mediator only
-- `hybrid`: behavior mediator + OTEL plugin
-- `otel`: OTEL plugin only
+- `core`：只启用 behavior mediator
+- `hybrid`：同时启用 behavior mediator 和 OTEL 插件
+- `otel`：只启用 OTEL 插件
 
-## Portability Rules
+## 可移植性约束
 
-- Repository paths are derived from the cloned repository root instead of fixed machine paths.
-- OTEL collector output paths are rendered into `config/otel-collector.local.yaml` from a committed template.
-- Runtime state lives under `live/`, `captures/`, and `config/applied/`, all of which are ignored by git.
+- 仓库路径从当前克隆目录动态推导，不依赖固定机器路径。
+- OTEL collector 输出路径由模板渲染到 `config/otel-collector.local.yaml`，不把本机绝对路径提交进仓库。
+- 运行态数据统一落在 `live/`、`captures/` 和 `config/applied/`，这些目录都默认被 git 忽略。
