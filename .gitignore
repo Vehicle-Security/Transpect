@@ -32,3 +32,5 @@ vendor/openclaw-observability-plugin/node_modules/
 docs/images/*.png
 !docs/images/runtime-traces.png
 !docs/images/runtime-timeline.png
+!docs/images/runtime-timeline-detail.png
+!docs/images/runtime-timeline-evidence.png

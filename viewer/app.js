@@ -22,6 +22,13 @@
 const VIEW_TRACES = "traces";
 const VIEW_TIMELINE = "timeline";
 
+function parseBooleanFlag(value) {
+  const text = String(value || "")
+    .trim()
+    .toLowerCase();
+  return text === "1" || text === "true" || text === "yes" || text === "open";
+}
+
 function parseRouteFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const rawView = params.get("view");
@@ -30,6 +37,7 @@ function parseRouteFromUrl() {
   return {
     view,
     traceId: traceId && traceId.trim() ? traceId.trim() : null,
+    evidenceExpanded: view === VIEW_TIMELINE && parseBooleanFlag(params.get("evidence")),
   };
 }
 
@@ -46,7 +54,7 @@ const state = {
   selectedSpanId: null,
   expandedTraceId: null,
   expandedSpanIds: new Set(),
-  evidenceExpanded: false,
+  evidenceExpanded: initialRoute.evidenceExpanded,
   loadStatus: "loading",
   statusBadge: "empty",
   statusLabel: "正在加载",
@@ -84,7 +92,7 @@ function basename(value) {
   return parts[parts.length - 1] || text;
 }
 
-function buildRouteHref(view, traceId = null) {
+function buildRouteHref(view, traceId = null, evidenceExpanded = false) {
   const url = new URL(window.location.href);
   if (view === VIEW_TIMELINE) {
     url.searchParams.set("view", VIEW_TIMELINE);
@@ -93,9 +101,15 @@ function buildRouteHref(view, traceId = null) {
     } else {
       url.searchParams.delete("traceId");
     }
+    if (evidenceExpanded) {
+      url.searchParams.set("evidence", "1");
+    } else {
+      url.searchParams.delete("evidence");
+    }
   } else {
     url.searchParams.set("view", VIEW_TRACES);
     url.searchParams.delete("traceId");
+    url.searchParams.delete("evidence");
   }
   const query = url.searchParams.toString();
   return `${url.pathname}${query ? `?${query}` : ""}${url.hash}`;
@@ -103,7 +117,7 @@ function buildRouteHref(view, traceId = null) {
 
 function syncRoute(options = {}) {
   const { push = false } = options;
-  const href = buildRouteHref(state.view, state.selectedTraceId);
+  const href = buildRouteHref(state.view, state.selectedTraceId, state.evidenceExpanded);
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (href === current) {
     return;
@@ -156,6 +170,9 @@ function syncVisibleTraces() {
 function normalizeViewState() {
   if (state.view === VIEW_TIMELINE && !selectedTrace()) {
     state.view = VIEW_TRACES;
+  }
+  if (state.view !== VIEW_TIMELINE) {
+    state.evidenceExpanded = false;
   }
 }
 
@@ -693,6 +710,7 @@ elements.filterButton.addEventListener("click", () => {
 });
 elements.toggleEvidence.addEventListener("click", () => {
   state.evidenceExpanded = !state.evidenceExpanded;
+  syncRoute({ push: true });
   renderEvidence(selectedTrace());
   renderTopbar();
 });
@@ -705,6 +723,7 @@ elements.traceJsonlInput.addEventListener("change", async (event) => {
 window.addEventListener("popstate", () => {
   const route = parseRouteFromUrl();
   state.view = route.view;
+  state.evidenceExpanded = route.evidenceExpanded;
   if (route.traceId !== null) {
     state.selectedTraceId = route.traceId;
   }

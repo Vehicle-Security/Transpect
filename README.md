@@ -184,13 +184,16 @@ npm --prefix vendor/openclaw-observability-plugin run typecheck
 
 ## 运行截图
 
-当前截图放在 `docs/images/`，对应的是查看器的两个正式路由：
+当前截图放在 `docs/images/`，除了基础页面，还补充了更长链路和证据抽屉已展开的状态：
 
 - `view=traces` 对应 `请求列表`
 - `view=timeline&traceId=<trace-id>` 对应 `链路主视图`
+- `view=timeline&traceId=<trace-id>&evidence=1` 会自动展开 `原始事件与调试信息`
 
 ![请求列表](docs/images/runtime-traces.png)
 ![链路主视图](docs/images/runtime-timeline.png)
+![链路主视图-较长链路](docs/images/runtime-timeline-detail.png)
+![原始事件与调试信息](docs/images/runtime-timeline-evidence.png)
 
 ## 常见问题
 

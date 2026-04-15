@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STABLE_SCREENSHOTS = [
     "runtime-traces.png",
     "runtime-timeline.png",
+    "runtime-timeline-detail.png",
+    "runtime-timeline-evidence.png",
 ]
 REQUIRED_PATHS = [
     REPO_ROOT / "README.md",
@@ -43,6 +45,8 @@ REQUIRED_GITIGNORE_PATTERNS = [
     "docs/images/*.png",
     "!docs/images/runtime-traces.png",
     "!docs/images/runtime-timeline.png",
+    "!docs/images/runtime-timeline-detail.png",
+    "!docs/images/runtime-timeline-evidence.png",
 ]
 HARD_CODED_PATTERNS = [
     token("D", ":/"),

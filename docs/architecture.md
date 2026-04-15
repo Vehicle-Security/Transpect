@@ -17,6 +17,7 @@ OpenClaw hooks -> behavior-mediator -> live/behavior-events.jsonl -> viewer/inde
 - `view=traces`：显示 `请求列表`
 - `view=timeline&traceId=<trace-id>`：显示某一条 trace 的 `链路主视图`
 - `查看原始事件与调试信息`：展开当前 trace 的原始事件抽屉
+- `view=timeline&traceId=<trace-id>&evidence=1`：直接打开当前 trace 的证据抽屉，便于文档引用和问题定位
 
 ## 2. OTEL 链路
 
