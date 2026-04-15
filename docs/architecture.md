@@ -7,10 +7,16 @@ Transpect is organized around three complementary data paths:
 The default path is:
 
 ```text
-OpenClaw hooks -> behavior-mediator -> live/behavior-events.jsonl -> viewer/index.html
+OpenClaw hooks -> behavior-mediator -> live/behavior-events.jsonl -> viewer/index.html?view=traces
 ```
 
 This path is the fastest way to inspect requests, turns, tools, tasks, and LLM activity in a single browser session.
+
+The viewer uses two route states:
+
+- `view=traces` renders the `请求列表` page.
+- `view=timeline&traceId=<trace-id>` renders the `链路主视图` page for one trace.
+- `查看原始事件与调试信息` expands the evidence drawer for the selected trace.
 
 ## 2. OTEL Path
 
@@ -35,7 +41,7 @@ It captures process, file, port, and network events and complements the JSONL an
 ## Repository Roles
 
 - `scripts/setup_runtime.py` patches `~/.openclaw/openclaw.json` into `core`, `hybrid`, or `otel` mode.
-- `scripts/start_trace.py` prepares runtime mode, starts the gateway if needed, and serves the viewer when applicable.
+- `scripts/start_trace.py` prepares runtime mode, starts the gateway if needed, and opens the `请求列表` route when the viewer is enabled.
 - `scripts/doctor.py` inspects runtime health and reports the inferred active mode.
 - `scripts/run_acceptance.py` sends a small set of safe prompts and validates the resulting trace stream.
 - `scripts/check_repo.py` checks syntax, required files, ignore rules, and portability constraints.

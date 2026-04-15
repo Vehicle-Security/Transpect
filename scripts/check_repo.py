@@ -8,6 +8,10 @@ from typing import Any
 from trace_common import extract_json_from_text, node_executable, python_executable, run_command
 
 
+def token(*parts: str) -> str:
+    return "".join(parts)
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STABLE_SCREENSHOTS = [
     "runtime-traces.png",
@@ -41,13 +45,13 @@ REQUIRED_GITIGNORE_PATTERNS = [
     "!docs/images/runtime-timeline.png",
 ]
 HARD_CODED_PATTERNS = [
-    "D" + ":/",
-    "C" + ":/Users",
-    "state" + "/trace",
-    "start_trace" + "_demo",
-    "demo" + ".js",
-    "demo" + ".css",
-    "Trace " + "Demo",
+    token("D", ":/"),
+    token("C", ":/Users"),
+    "/".join(["state", "trace"]),
+    token("start_trace", "_", "de", "mo"),
+    token("de", "mo", ".js"),
+    token("de", "mo", ".css"),
+    token("Trace ", "De", "mo"),
 ]
 SCAN_SUFFIXES = {".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".mjs", ".txt", ".css", ".html", ".sh", ".cmd"}
 EXCLUDED_SCAN_PARTS = {".git", "node_modules", "__pycache__", "live", "captures"}

@@ -1,10 +1,10 @@
 # Transpect
 
-Transpect packages the OpenClaw trace runtime, a browser viewer, OTEL observability integration, and Windows-oriented Frida capture helpers into a single repository layout that can be cloned and used directly.
+Transpect packages the OpenClaw trace runtime, the OpenClaw Trace viewer, OTEL observability integration, and Windows-oriented Frida capture helpers into a single repository layout that can be cloned and used directly.
 
 ## What This Repository Contains
 
-- A browser viewer for `live/behavior-events.jsonl`
+- The OpenClaw Trace viewer for `live/behavior-events.jsonl`
 - Runtime setup scripts that patch `~/.openclaw/openclaw.json`
 - A behavior mediator plugin that writes canonical JSONL trace events
 - An OpenTelemetry plugin subtree for OTLP export
@@ -14,7 +14,7 @@ Transpect packages the OpenClaw trace runtime, a browser viewer, OTEL observabil
 ## Directory Layout
 
 ```text
-viewer/                         Browser UI for trace inspection
+viewer/                         OpenClaw Trace UI for request and timeline inspection
 scripts/                        Runtime setup, start, diagnostics, validation
 tests/fixtures/                 Minimal prompts used by acceptance checks
 config/                         Portable templates and generated local configs
@@ -70,7 +70,7 @@ python scripts/setup_runtime.py --mode core
 python scripts/start_trace.py
 ```
 
-5. Open the viewer if your browser does not open automatically.
+5. Open the 请求列表 page if your browser does not open automatically.
 
 ```text
 http://127.0.0.1:8711/viewer/index.html?view=traces
@@ -82,7 +82,7 @@ http://127.0.0.1:8711/viewer/index.html?view=traces
 
 - Enables `behavior-mediator`
 - Disables the OTEL plugin
-- Starts the browser viewer over `live/behavior-events.jsonl`
+- Starts the OpenClaw Trace viewer over `live/behavior-events.jsonl`
 
 ```powershell
 python scripts/setup_runtime.py --mode core
@@ -104,7 +104,7 @@ python scripts/start_trace.py --mode hybrid
 
 - Enables the OTEL plugin only
 - Renders `config/otel-collector.local.yaml`
-- Skips the browser viewer when started through `scripts/start_trace.py`
+- Skips the OpenClaw Trace viewer when started through `scripts/start_trace.py`
 
 ```powershell
 python scripts/setup_runtime.py --mode otel --render-otel-config
@@ -174,10 +174,10 @@ npm --prefix vendor/openclaw-observability-plugin run typecheck
 
 ## Screenshots
 
-Current UI screenshots are stored under `docs/images/` and reflect the current two-route viewer:
+Current UI screenshots are stored under `docs/images/` and reflect the current OpenClaw Trace viewer routes:
 
-- `view=traces` for the trace list page
-- `view=timeline&traceId=<trace-id>` for a single trace timeline
+- `view=traces` corresponds to `请求列表`
+- `view=timeline&traceId=<trace-id>` corresponds to `链路主视图`
 
 ![Trace list view](docs/images/runtime-traces.png)
 ![Trace timeline view](docs/images/runtime-timeline.png)
