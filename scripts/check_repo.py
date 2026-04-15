@@ -10,9 +10,8 @@ from trace_common import extract_json_from_text, node_executable, python_executa
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STABLE_SCREENSHOTS = [
-    "runtime-empty.png",
-    "runtime-single-trace.png",
-    "runtime-error.png",
+    "runtime-traces.png",
+    "runtime-timeline.png",
 ]
 REQUIRED_PATHS = [
     REPO_ROOT / "README.md",
@@ -38,9 +37,8 @@ REQUIRED_GITIGNORE_PATTERNS = [
     "vendor/openclaw-observability-plugin/node_modules/",
     "config/*.local.yaml",
     "docs/images/*.png",
-    "!docs/images/runtime-empty.png",
-    "!docs/images/runtime-single-trace.png",
-    "!docs/images/runtime-error.png",
+    "!docs/images/runtime-traces.png",
+    "!docs/images/runtime-timeline.png",
 ]
 HARD_CODED_PATTERNS = [
     "D" + ":/",

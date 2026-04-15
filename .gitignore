@@ -30,6 +30,5 @@ vendor/openclaw-observability-plugin/node_modules/
 
 # Keep only repository screenshots
 docs/images/*.png
-!docs/images/runtime-empty.png
-!docs/images/runtime-single-trace.png
-!docs/images/runtime-error.png
+!docs/images/runtime-traces.png
+!docs/images/runtime-timeline.png

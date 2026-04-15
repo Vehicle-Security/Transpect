@@ -174,11 +174,13 @@ npm --prefix vendor/openclaw-observability-plugin run typecheck
 
 ## Screenshots
 
-Current UI screenshots are stored under `docs/images/`.
+Current UI screenshots are stored under `docs/images/` and reflect the current two-route viewer:
 
-![Empty runtime view](docs/images/runtime-empty.png)
-![Single trace view](docs/images/runtime-single-trace.png)
-![Error trace view](docs/images/runtime-error.png)
+- `view=traces` for the trace list page
+- `view=timeline&traceId=<trace-id>` for a single trace timeline
+
+![Trace list view](docs/images/runtime-traces.png)
+![Trace timeline view](docs/images/runtime-timeline.png)
 
 ## Troubleshooting
 
