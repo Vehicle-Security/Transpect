@@ -1,4 +1,4 @@
-﻿export const LIVE_URL = "../live/behavior-events.jsonl";
+export const RUNS_INDEX_URL = "../live/runs/index.json";
 export const REQUIRED_FIELDS = ["schemaVersion", "seq", "ts", "traceId", "spanId", "kind", "name", "status"];
 export const DEMO_VISIBLE_KINDS = ["request", "turn", "llm", "tool", "task"];
 export const MIN_VISIBLE_WATERFALL_PCT = 1.2;
@@ -945,14 +945,22 @@ export async function fetchHealth() {
   return response.json();
 }
 
-export async function fetchLiveText() {
-  const response = await fetch(`${LIVE_URL}?t=${Date.now()}`);
+export async function fetchRunsIndex() {
+  const response = await fetch(`${RUNS_INDEX_URL}?t=${Date.now()}`, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchRunText(eventsPath) {
+  const response = await fetch(`${eventsPath}?t=${Date.now()}`);
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
   const text = await response.text();
   if (!text.trim()) {
-    throw new Error("live JSONL 文件为空");
+    throw new Error("run JSONL 文件为空");
   }
   return text;
 }

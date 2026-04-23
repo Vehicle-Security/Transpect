@@ -213,6 +213,7 @@ code {
 }
 
 .topbar-actions button,
+.topbar-actions select,
 .banner-button,
 .row-toggle,
 .evidence-toggle {
@@ -226,6 +227,7 @@ code {
 }
 
 .topbar-actions button:hover,
+.topbar-actions select:hover,
 .banner-button:hover,
 .row-toggle:hover,
 .evidence-toggle:hover {

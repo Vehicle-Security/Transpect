@@ -1,27 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenClaw Trace</title>
+    <title>Transpect Viewer</title>
     <link rel="stylesheet" href="./app.css?v=20260415-1" />
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-brand">
-          <strong class="topbar-title">OpenClaw Trace</strong>
-          <span id="source-line" class="topbar-meta">behavior-events.jsonl</span>
+          <strong class="topbar-title">Transpect Viewer</strong>
+          <span id="source-line" class="topbar-meta">runs/index.json</span>
         </div>
         <div class="status-cluster topbar-cluster">
-          <span id="live-badge" class="live-badge connected">Live 已连接</span>
+          <span id="live-badge" class="live-badge connected">Loading</span>
           <span id="event-count" class="meta-chip">0 events</span>
-          <span id="last-updated" class="meta-chip">最后更新 --</span>
+          <span id="last-updated" class="meta-chip">Last updated --</span>
         </div>
         <div class="topbar-actions">
-          <button id="back-to-traces" class="hidden" type="button">返回 Traces</button>
-          <button id="refresh-button" type="button">刷新</button>
-          <button id="filter-button" type="button">显示全部</button>
+          <button id="back-to-traces" class="hidden" type="button">Back to Traces</button>
+          <button id="refresh-button" type="button">Refresh</button>
+          <button id="filter-button" type="button">Show All</button>
         </div>
       </header>
 
@@ -33,12 +33,12 @@
             <div class="panel-head">
               <div>
                 <p class="panel-kicker">Traces</p>
-                <h2>请求列表</h2>
+                <h2>Request List</h2>
               </div>
               <div class="trace-page-actions">
                 <span id="trace-count" class="panel-meta">0 traces</span>
                 <label class="upload-chip" for="trace-jsonl-input">
-                  上传 JSONL
+                  Upload JSONL
                   <input id="trace-jsonl-input" type="file" accept=".jsonl,application/json,text/plain" />
                 </label>
               </div>
@@ -50,8 +50,8 @@
         <section id="timeline-page" class="page-view hidden">
           <section class="main-panel">
             <section id="hero-empty" class="panel empty-panel">
-              <h2>还没有可展示的 trace</h2>
-              <p>先加载 live JSONL；如果当前只有例行 trace，当前页面会默认隐藏它们。</p>
+              <h2>No trace selected yet</h2>
+              <p>Load the runs index, choose a run, or upload a per-run JSONL file. Routine traces may be hidden by default.</p>
             </section>
 
             <section id="trace-header-card" class="panel hidden"></section>
@@ -60,7 +60,7 @@
               <div class="panel-head">
                 <div>
                   <p class="panel-kicker">Trace Waterfall</p>
-                  <h2>链路主视图</h2>
+                  <h2>Main Timeline</h2>
                 </div>
               </div>
               <div id="timeline-list" class="timeline-list"></div>
@@ -68,7 +68,7 @@
           </section>
 
           <section class="panel evidence-panel">
-            <button id="toggle-evidence" class="evidence-toggle" type="button">查看原始事件与调试信息</button>
+            <button id="toggle-evidence" class="evidence-toggle" type="button">Toggle Raw Evidence</button>
             <div id="evidence-drawer" class="evidence-drawer hidden"></div>
           </section>
         </section>

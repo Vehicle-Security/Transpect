@@ -1,10 +1,12 @@
+import fs from "node:fs";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { appendCanonicalEvent, cleanObject, createId, createWriterState, nowIso } from "./canonical.js";
 
 const als = new AsyncLocalStorage();
 
-const DEFAULT_OUTPUT_FILE = path.resolve(process.cwd(), "live", "behavior-events.jsonl");
+const DEFAULT_RUNS_DIRECTORY = path.resolve(process.cwd(), "live", "runs");
 const DEFAULT_PREVIEW_CHARS = 2000;
 const DEFAULT_REDACT_HEADERS = ["authorization", "cookie", "set-cookie", "x-api-key", "proxy-authorization"];
 const DEFAULT_REDACT_PATTERNS = [
@@ -43,8 +45,26 @@ function compilePatterns(patterns) {
 
 function parseConfig(value) {
   const config = value && typeof value === "object" ? value : {};
+  const legacyOutputFile = typeof config.outputFile === "string" && config.outputFile ? path.resolve(config.outputFile) : null;
+  const runsDirectory =
+    typeof config.runsDirectory === "string" && config.runsDirectory
+      ? path.resolve(config.runsDirectory)
+      : legacyOutputFile
+        ? path.resolve(path.dirname(legacyOutputFile), "runs")
+        : DEFAULT_RUNS_DIRECTORY;
   return {
-    outputFile: typeof config.outputFile === "string" && config.outputFile ? config.outputFile : DEFAULT_OUTPUT_FILE,
+    runsDirectory,
+    artifactsEnabled: config.artifactsEnabled !== false,
+    autoDiagnosisEnabled: config.autoDiagnosisEnabled === true,
+    diagnosisScript:
+      typeof config.diagnosisScript === "string" && config.diagnosisScript.trim()
+        ? path.resolve(config.diagnosisScript)
+        : path.resolve(process.cwd(), "scripts", "run_codetracer_diagnosis.py"),
+    diagnosisPython:
+      typeof config.diagnosisPython === "string" && config.diagnosisPython.trim()
+        ? config.diagnosisPython.trim()
+        : process.env.PYTHON || "python",
+    legacyOutputFile,
     capturePreviewChars:
       typeof config.capturePreviewChars === "number" && Number.isFinite(config.capturePreviewChars)
         ? Math.max(128, Math.floor(config.capturePreviewChars))
@@ -227,13 +247,41 @@ function deriveToolTarget(toolName, params = {}) {
   return { toolName };
 }
 
+function safePathSegment(value, fallback) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^[.-]+|[.-]+$/g, "");
+  return normalized || fallback;
+}
+
+function buildRunDirName(details = {}) {
+  return safePathSegment(details.runId || details.traceId || details.sessionKey || `run-${Date.now()}`, "run");
+}
+
+function diagnosisPathsForRun(runDir) {
+  return {
+    bundleDir: path.resolve(runDir, "diagnosis", "codetracer", "bundle"),
+    analysisDir: path.resolve(runDir, "diagnosis", "codetracer", "analysis"),
+    diagnosisRunPath: path.resolve(runDir, "diagnosis", "codetracer", "analysis", "diagnosis_run.json"),
+  };
+}
+
 function createRuntime(config, logger) {
-  const writer = createWriterState(config.outputFile);
+  fs.mkdirSync(config.runsDirectory, { recursive: true });
   return {
     config,
     logger,
-    ...writer,
+    runsDirectory: config.runsDirectory,
+    eventsWritten: 0,
+    lastEventTs: null,
+    lastWriteOk: null,
+    lastWriteError: null,
     redactPatterns: compilePatterns(config.redactPatterns),
+    runStores: new Map(),
+    runStoreByRunId: new Map(),
+    runStoreByTraceId: new Map(),
+    runStoreBySessionKey: new Map(),
     requestContexts: new Map(),
     requestByRunId: new Map(),
     turnContexts: new Map(),
@@ -252,7 +300,428 @@ function createRuntime(config, logger) {
     hookEventsObserved: 0,
     firstHookEventTs: null,
     lastHookEventTs: null,
+    artifactsWritten: 0,
+    diagnosesTriggered: 0,
+    diagnosisInFlight: 0,
+    lastDiagnosisError: null,
   };
+}
+
+function getStoreArtifactDirectory(store) {
+  return path.resolve(store.runDir, "artifacts");
+}
+
+function buildRunRuntimeStatus(state, store) {
+  return {
+    schemaVersion: "openclaw.run.runtime.v1",
+    capturedAt: nowIso(),
+    ids: {
+      runId: store.runId,
+      traceId: store.traceId,
+      sessionKey: store.sessionKey,
+    },
+    behaviorMediator: buildRuntimeStatus(state),
+  };
+}
+
+function readJsonFile(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildTaskInput(store) {
+  return {
+    schemaVersion: "openclaw.run.task-input.v1",
+    capturedAt: nowIso(),
+    userInput: {
+      message: store.requestMessage || null,
+      source: store.requestMessage ? "request.started.preview.message" : null,
+    },
+    agentTask: {
+      prompt: store.turnPrompt || null,
+      source: store.turnPrompt ? "turn.started.preview.prompt" : null,
+    },
+    securityScenario: store.securityScenario || null,
+    policyObservations: [...store.policyObservations.values()],
+  };
+}
+
+function buildRunManifest(state, store) {
+  const diagnosisPaths = diagnosisPathsForRun(store.runDir);
+  const diagnosisRun = fs.existsSync(diagnosisPaths.diagnosisRunPath) ? readJsonFile(diagnosisPaths.diagnosisRunPath) : null;
+  return {
+    schemaVersion: "openclaw.run.v1",
+    runId: store.runId || null,
+    traceId: store.traceId || null,
+    sessionKey: store.sessionKey || null,
+    scenarioId: store.securityScenario?.id || null,
+    createdAt: store.createdAt,
+    completedAt: store.completedAt || null,
+    status: store.status || "running",
+    eventCount: store.writer.eventsWritten || 0,
+    artifactCount: store.artifactCount || 0,
+    hasRuntimeStatus: true,
+    hasTaskInput: true,
+    paths: {
+      events: "behavior-events.jsonl",
+      runtimeStatus: "runtime_status.json",
+      taskInput: "task_input.json",
+      artifacts: "artifacts",
+      codetracerBundle: fs.existsSync(diagnosisPaths.bundleDir) ? "diagnosis/codetracer/bundle" : null,
+      codetracerAnalysis: fs.existsSync(diagnosisPaths.analysisDir) ? "diagnosis/codetracer/analysis" : null,
+    },
+    diagnosis: {
+      codetracer: {
+        bundleReady: fs.existsSync(diagnosisPaths.bundleDir),
+        analysisReady: Boolean(diagnosisRun?.analysisExists),
+        analysisOk: diagnosisRun?.ok ?? null,
+        lastRunAt: diagnosisRun?.completedAt ?? null,
+        status: diagnosisRun?.status ?? null,
+      },
+    },
+  };
+}
+
+function writeRunsIndexFile(state) {
+  const runs = [];
+  if (fs.existsSync(state.runsDirectory)) {
+    for (const entry of fs.readdirSync(state.runsDirectory, { withFileTypes: true })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const manifestPath = path.resolve(state.runsDirectory, entry.name, "manifest.json");
+      if (!fs.existsSync(manifestPath)) {
+        continue;
+      }
+      const manifest = readJsonFile(manifestPath);
+      if (!manifest || typeof manifest !== "object") {
+        continue;
+      }
+      runs.push({
+        runId: manifest.runId || null,
+        traceId: manifest.traceId || null,
+        sessionKey: manifest.sessionKey || null,
+        scenarioId: manifest.scenarioId || null,
+        createdAt: manifest.createdAt || null,
+        completedAt: manifest.completedAt || null,
+        status: manifest.status || "unknown",
+        analysisReady: Boolean(manifest?.diagnosis?.codetracer?.analysisReady),
+        analysisOk: manifest?.diagnosis?.codetracer?.analysisOk ?? null,
+        eventCount: manifest.eventCount || 0,
+        artifactCount: manifest.artifactCount || 0,
+        dirName: entry.name,
+        runPath: path.resolve(state.runsDirectory, entry.name).replaceAll("\\", "/"),
+        manifestPath: manifestPath.replaceAll("\\", "/"),
+        eventsPath: `/live/runs/${entry.name}/behavior-events.jsonl`,
+      });
+    }
+  }
+  runs.sort((left, right) => {
+    const leftKey = `${left.completedAt || ""}|${left.createdAt || ""}|${left.runId || left.traceId || left.dirName}`;
+    const rightKey = `${right.completedAt || ""}|${right.createdAt || ""}|${right.runId || right.traceId || right.dirName}`;
+    return rightKey.localeCompare(leftKey);
+  });
+  const payload = {
+    schemaVersion: "openclaw.runs.index.v1",
+    generatedAt: nowIso(),
+    runsRoot: state.runsDirectory.replaceAll("\\", "/"),
+    runCount: runs.length,
+    latestRun: runs[0] || null,
+    runs,
+  };
+  fs.writeFileSync(path.resolve(state.runsDirectory, "index.json"), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function writeRunMetadata(state, store) {
+  fs.mkdirSync(store.runDir, { recursive: true });
+  fs.writeFileSync(path.resolve(store.runDir, "task_input.json"), `${JSON.stringify(buildTaskInput(store), null, 2)}\n`, "utf8");
+  fs.writeFileSync(
+    path.resolve(store.runDir, "runtime_status.json"),
+    `${JSON.stringify(buildRunRuntimeStatus(state, store), null, 2)}\n`,
+    "utf8",
+  );
+  fs.writeFileSync(path.resolve(store.runDir, "manifest.json"), `${JSON.stringify(buildRunManifest(state, store), null, 2)}\n`, "utf8");
+  writeRunsIndexFile(state);
+}
+
+function indexRunStore(state, store) {
+  if (store.runId) {
+    state.runStoreByRunId.set(store.runId, store.storeId);
+  }
+  if (store.traceId) {
+    state.runStoreByTraceId.set(store.traceId, store.storeId);
+  }
+  if (store.sessionKey) {
+    state.runStoreBySessionKey.set(store.sessionKey, store.storeId);
+  }
+}
+
+function resolveRunStore(state, details = {}) {
+  const storeId =
+    (details.runId && state.runStoreByRunId.get(details.runId)) ||
+    (details.traceId && state.runStoreByTraceId.get(details.traceId)) ||
+    (details.sessionKey && state.runStoreBySessionKey.get(details.sessionKey)) ||
+    null;
+  return storeId ? state.runStores.get(storeId) || null : null;
+}
+
+function moveRunDirectory(store, nextDirName) {
+  if (store.dirName === nextDirName) {
+    return;
+  }
+  const nextRunDir = path.resolve(path.dirname(store.runDir), nextDirName);
+  if (fs.existsSync(store.runDir) && !fs.existsSync(nextRunDir)) {
+    fs.renameSync(store.runDir, nextRunDir);
+  } else {
+    fs.mkdirSync(nextRunDir, { recursive: true });
+  }
+  store.dirName = nextDirName;
+  store.runDir = nextRunDir;
+  store.writer.outputFile = path.resolve(nextRunDir, "behavior-events.jsonl");
+}
+
+function ensureRunStore(state, details = {}) {
+  let store = resolveRunStore(state, details);
+  if (!store) {
+    const dirName = buildRunDirName(details);
+    const runDir = path.resolve(state.runsDirectory, dirName);
+    fs.mkdirSync(runDir, { recursive: true });
+    store = {
+      storeId: createId("run"),
+      dirName,
+      runDir,
+      writer: createWriterState(path.resolve(runDir, "behavior-events.jsonl")),
+      runId: details.runId || null,
+      traceId: details.traceId || null,
+      sessionKey: details.sessionKey || null,
+      createdAt: nowIso(),
+      completedAt: null,
+      status: "running",
+      requestMessage: null,
+      turnPrompt: null,
+      securityScenario: null,
+      policyObservations: new Map(),
+      artifactCount: 0,
+      diagnosisTriggered: false,
+    };
+    state.runStores.set(store.storeId, store);
+  }
+  store.runId = store.runId || details.runId || null;
+  store.traceId = store.traceId || details.traceId || null;
+  store.sessionKey = store.sessionKey || details.sessionKey || null;
+  if (store.runId) {
+    moveRunDirectory(store, buildRunDirName({ runId: store.runId }));
+  }
+  indexRunStore(state, store);
+  writeRunMetadata(state, store);
+  return store;
+}
+
+function normalizePolicyObservation(payload, status = null) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const normalized = {};
+  const effectiveStatus = status || payload.status || payload.outcome || null;
+  if (effectiveStatus) {
+    normalized.status = effectiveStatus;
+  }
+  for (const key of [
+    "ruleId",
+    "code",
+    "severity",
+    "category",
+    "reason",
+    "description",
+    "decision",
+    "outcome",
+    "matches",
+    "linkedToolCallId",
+    "linkedObservationSpanId",
+    "observedExecution",
+    "pathSecurity",
+    "mode",
+    "effectiveMode",
+  ]) {
+    if (payload[key] != null) {
+      normalized[key] = payload[key];
+    }
+  }
+  return Object.keys(normalized).length ? normalized : null;
+}
+
+function extractPolicyObservation(...sources) {
+  for (const source of sources) {
+    if (!source || typeof source !== "object") {
+      continue;
+    }
+    if (source.policyObservation && typeof source.policyObservation === "object") {
+      return normalizePolicyObservation(source.policyObservation, source.status || null);
+    }
+    if (source.policy && typeof source.policy === "object") {
+      return normalizePolicyObservation(source.policy, source.status || null);
+    }
+    if (source.evidence && typeof source.evidence === "object" && source.evidence.policy) {
+      return normalizePolicyObservation(source.evidence.policy, source.status || null);
+    }
+  }
+  return null;
+}
+
+function extractSecurityScenario(...sources) {
+  for (const source of sources) {
+    if (!source || typeof source !== "object") {
+      continue;
+    }
+    const candidate =
+      source.securityScenario ||
+      (source.evidence && typeof source.evidence === "object" ? source.evidence.securityScenario : null);
+    if (candidate && typeof candidate === "object") {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function updateRunStoreFromPayload(state, store, payload) {
+  store.lastEventTs = payload.ts;
+  const preview = payload.preview && typeof payload.preview === "object" ? payload.preview : {};
+  if (payload.kind === "request" && payload.status === "started" && typeof preview.message === "string" && preview.message.trim()) {
+    store.requestMessage = preview.message.trim();
+  }
+  if (payload.kind === "turn" && payload.status === "started" && typeof preview.prompt === "string" && preview.prompt.trim()) {
+    store.turnPrompt = preview.prompt.trim();
+  }
+  const securityScenario = extractSecurityScenario(payload);
+  if (securityScenario) {
+    store.securityScenario = securityScenario;
+  }
+  const policyObservation = extractPolicyObservation(payload.evidence || null, payload);
+  if (policyObservation) {
+    store.policyObservations.set(JSON.stringify(policyObservation), policyObservation);
+  }
+  if (payload.kind === "request" && (payload.status === "ok" || payload.status === "error")) {
+    store.completedAt = payload.ts || nowIso();
+    store.status = payload.status === "error" ? "failed" : "completed";
+  }
+  writeRunMetadata(state, store);
+}
+
+function appendRunEvent(state, row) {
+  const store = ensureRunStore(state, {
+    runId: row.runId,
+    traceId: row.traceId,
+    sessionKey: row.sessionKey,
+  });
+  const payload = appendCanonicalEvent(store.writer, row);
+  state.eventsWritten = (state.eventsWritten || 0) + 1;
+  state.lastEventTs = payload.ts;
+  state.lastWriteOk = store.writer.lastWriteOk;
+  state.lastWriteError = store.writer.lastWriteError;
+  updateRunStoreFromPayload(state, store, payload);
+  return { payload, store };
+}
+
+function redactStructuredValue(value, state, seen = new WeakSet()) {
+  if (value == null) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return redactText(value, state);
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactStructuredValue(item, state, seen));
+  }
+  if (typeof value === "object") {
+    if (seen.has(value)) {
+      return "[Circular]";
+    }
+    seen.add(value);
+    const output = {};
+    for (const [key, item] of Object.entries(value)) {
+      output[key] = redactStructuredValue(item, state, seen);
+    }
+    seen.delete(value);
+    return output;
+  }
+  return String(value);
+}
+
+function buildToolArtifactPayload(tool, status, kind, payload, state) {
+  return {
+    schemaVersion: "openclaw.tool-sidecar.v1",
+    generatedAt: nowIso(),
+    kind,
+    status,
+    traceId: tool.traceId,
+    spanId: tool.spanId,
+    parentSpanId: tool.parentSpanId ?? null,
+    sessionKey: tool.sessionKey ?? null,
+    runId: tool.runId ?? null,
+    toolCallId: tool.toolCallId ?? null,
+    toolName: tool.toolName || tool.target?.toolName || tool.name?.replace(/^tool\./, "") || null,
+    payload: redactStructuredValue(payload, state),
+  };
+}
+
+function writeToolArtifact(state, tool, status, kind, payload) {
+  const store = ensureRunStore(state, {
+    runId: tool.runId,
+    traceId: tool.traceId,
+    sessionKey: tool.sessionKey,
+  });
+  const baseName = kind === "output" ? "output.json" : "input.json";
+  const relativePath = path.join("artifacts", safePathSegment(tool.toolCallId || tool.spanId, "tool"), baseName);
+  const targetPath = path.resolve(store.runDir, relativePath);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  const sidecar = buildToolArtifactPayload(tool, status, kind, payload, state);
+  fs.writeFileSync(targetPath, `${JSON.stringify(sidecar, null, 2)}\n`, "utf8");
+  store.artifactCount += 1;
+  state.artifactsWritten += 1;
+  writeRunMetadata(state, store);
+  return { relativePath: relativePath.replaceAll("\\", "/"), payload: sidecar };
+}
+
+function scheduleDiagnosis(state, details = {}) {
+  if (!state.config.autoDiagnosisEnabled) {
+    return;
+  }
+  const store = resolveRunStore(state, details);
+  if (!store || store.diagnosisTriggered || !store.completedAt) {
+    return;
+  }
+  store.diagnosisTriggered = true;
+  state.diagnosisInFlight += 1;
+  state.diagnosesTriggered += 1;
+  state.lastDiagnosisError = null;
+  const child = spawn(state.config.diagnosisPython, [state.config.diagnosisScript, "--run-dir", store.runDir], {
+    cwd: process.cwd(),
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr?.on("data", (chunk) => {
+    stderr += String(chunk || "");
+  });
+  child.on("error", (error) => {
+    state.diagnosisInFlight = Math.max(state.diagnosisInFlight - 1, 0);
+    state.lastDiagnosisError = String(error?.message || error || "diagnosis_spawn_failed");
+    store.diagnosisTriggered = false;
+    writeRunMetadata(state, store);
+  });
+  child.on("close", (code) => {
+    state.diagnosisInFlight = Math.max(state.diagnosisInFlight - 1, 0);
+    if (code !== 0) {
+      state.lastDiagnosisError = (stderr || `diagnosis exit code ${code}`).trim();
+    }
+    writeRunMetadata(state, store);
+  });
 }
 
 function observeHookEvent(state, hookName) {
@@ -281,7 +750,9 @@ function buildRuntimeStatus(state) {
     ok: true,
     method: "behavior-mediator.status",
     active: state.active,
-    outputFile: state.outputFile,
+    runsDirectory: state.runsDirectory,
+    artifactsEnabled: state.config.artifactsEnabled,
+    autoDiagnosisEnabled: state.config.autoDiagnosisEnabled,
     capturePreviewChars: state.config.capturePreviewChars,
     captureNetwork: state.config.captureNetwork,
     traceEval: state.config.traceEval,
@@ -294,6 +765,11 @@ function buildRuntimeStatus(state) {
     lastEventTs: state.lastEventTs,
     lastWriteOk: state.lastWriteOk,
     lastWriteError: state.lastWriteError,
+    artifactsWritten: state.artifactsWritten,
+    diagnosesTriggered: state.diagnosesTriggered,
+    diagnosisInFlight: state.diagnosisInFlight,
+    lastDiagnosisError: state.lastDiagnosisError,
+    runStoreCount: state.runStores.size,
     openRequests: state.requestContexts.size,
     openTurns: state.turnContexts.size,
     openTools: state.toolContexts.size,
@@ -495,7 +971,7 @@ function createSpanContext(state, details) {
 }
 
 function emitSpanStarted(state, span, details = {}) {
-  appendCanonicalEvent(state, {
+  appendRunEvent(state, {
     ts: span.startedTs,
     traceId: span.traceId,
     spanId: span.spanId,
@@ -517,7 +993,7 @@ function emitSpanStarted(state, span, details = {}) {
 
 function emitSpanFinished(state, span, details = {}) {
   const durationMs = numeric(details.durationMs) ?? Math.max(0, Date.now() - span.startedAt);
-  appendCanonicalEvent(state, {
+  appendRunEvent(state, {
     ts: details.ts || nowIso(),
     traceId: span.traceId,
     spanId: span.spanId,
@@ -666,6 +1142,8 @@ function openRequestContext(state, event = {}, ctx = {}) {
   });
 
   const task = resolveTaskContext(state, sessionKey, null);
+  const securityScenario = extractSecurityScenario(event, ctx);
+  const policyObservation = extractPolicyObservation(event, ctx);
   const request = createSpanContext(state, {
     kind: "request",
     name: "openclaw.request",
@@ -684,11 +1162,13 @@ function openRequestContext(state, event = {}, ctx = {}) {
     preview: {
       message: previewText(event.text || event.message || event.content || null, state),
     },
-    evidence: {
+    evidence: cleanObject({
       hook: "message_received",
       surface: "typed-hook",
       provenanceKind: event.provenance?.kind || null,
-    },
+      policy: policyObservation,
+      securityScenario,
+    }),
   });
 
   state.requestContexts.set(sessionKey, request);
@@ -700,6 +1180,8 @@ function openTurnContext(state, event = {}, ctx = {}) {
   const runId = event.runId || ctx.runId || null;
   const request = resolveRequestContext(state, sessionKey, runId) || openRequestContext(state, event, ctx);
   const currentTurn = resolveTurnContext(state, sessionKey, runId);
+  const securityScenario = extractSecurityScenario(event, ctx);
+  const policyObservation = extractPolicyObservation(event, ctx);
   if (currentTurn) {
     emitSpanFinished(state, currentTurn, {
       status: "error",
@@ -736,10 +1218,12 @@ function openTurnContext(state, event = {}, ctx = {}) {
     preview: {
       prompt: previewText(event.prompt || event.task || event.systemPrompt || null, state),
     },
-    evidence: {
+    evidence: cleanObject({
       hook: "before_agent_start",
       surface: "typed-hook",
-    },
+      policy: policyObservation,
+      securityScenario,
+    }),
   });
 
   state.turnContexts.set(runKey(runId, sessionKey), turn);
@@ -768,6 +1252,8 @@ function closeTurnContext(state, event = {}, ctx = {}) {
     evidence: {
       hook: "agent_end",
       surface: "typed-hook",
+      policy: extractPolicyObservation(event, ctx),
+      securityScenario: extractSecurityScenario(event, ctx),
     },
   });
 
@@ -785,7 +1271,10 @@ function openToolContext(state, event = {}, ctx = {}) {
   const runId = event.runId || ctx.runId || null;
   const toolCallId = event.toolCallId || createId("tool");
   const toolName = event.toolName || event.name || "unknown";
+  const toolParams = event.params || event.input || event.arguments || {};
   const turn = resolveTurnContext(state, sessionKey, runId) || openTurnContext(state, event, ctx);
+  const policyObservation = extractPolicyObservation(event, ctx);
+  const securityScenario = extractSecurityScenario(event, ctx);
   const tool = createSpanContext(state, {
     kind: "tool",
     name: `tool.${toolName}`,
@@ -794,23 +1283,33 @@ function openToolContext(state, event = {}, ctx = {}) {
     sessionKey,
     runId,
     toolCallId,
-    target: deriveToolTarget(toolName, event.params || event.input || event.arguments || {}),
+    target: deriveToolTarget(toolName, toolParams),
   });
+  const inputArtifact =
+    state.config.artifactsEnabled === false ? null : writeToolArtifact(state, { ...tool, toolName }, "started", "input", toolParams);
 
   emitSpanStarted(state, tool, {
     preview: {
-      params: previewText(event.params || event.input || event.arguments || null, state),
+      params: previewText(toolParams || null, state),
     },
-    evidence: {
+    evidence: cleanObject({
       hook: "before_tool_call",
       surface: "typed-hook",
-    },
+      policy: policyObservation,
+      securityScenario,
+      artifacts: cleanObject({
+        input: inputArtifact?.relativePath || null,
+      }),
+    }),
   });
 
   state.toolContexts.set(toolCallId, {
     ...tool,
     toolName,
-    params: event.params || event.input || event.arguments || {},
+    params: toolParams,
+    policyObservation,
+    securityScenario,
+    inputArtifact,
   });
   return tool;
 }
@@ -908,6 +1407,11 @@ function finishToolContext(state, event = {}, ctx = {}) {
   const result = event.result || null;
   const isError = event.error != null || result?.isError === true;
   const toolResultPreview = summarizeToolResult(result, state, tool);
+  const outputArtifact =
+    state.config.artifactsEnabled === false ? null : writeToolArtifact(state, tool, isError ? "error" : "ok", "output", {
+      result: event.result || null,
+      error: event.error || null,
+    });
   emitSpanFinished(state, tool, {
     status: isError ? "error" : "ok",
     durationMs: event.durationMs,
@@ -919,10 +1423,16 @@ function finishToolContext(state, event = {}, ctx = {}) {
       result: toolResultPreview,
       error: previewText(event.error || result?.error || null, state),
     },
-    evidence: {
+    evidence: cleanObject({
       hook: "after_tool_call",
       surface: "typed-hook",
-    },
+      policy: tool.policyObservation || extractPolicyObservation(event, ctx),
+      securityScenario: tool.securityScenario || extractSecurityScenario(event, ctx),
+      artifacts: cleanObject({
+        input: tool.inputArtifact?.relativePath || null,
+        output: outputArtifact?.relativePath || null,
+      }),
+    }),
   });
 
   if (tool.toolName === "sessions_spawn" && !isError) {
@@ -1347,7 +1857,7 @@ function registerTypedHooks(api, state) {
       const sessionKey = event?.sessionKey || ctx?.sessionKey || "unknown";
       const runId = event?.runId || ctx?.runId || null;
       closeTurnContext(state, event, ctx);
-      closeRequestContext(state, sessionKey, {
+      const request = closeRequestContext(state, sessionKey, {
         status: event?.success === false || event?.error ? "error" : "ok",
         durationMs: event?.durationMs,
         preview: {
@@ -1373,6 +1883,11 @@ function registerTypedHooks(api, state) {
           hook: "agent_end",
         });
       }
+      scheduleDiagnosis(state, {
+        runId: request?.runId || runId,
+        traceId: request?.traceId || null,
+        sessionKey,
+      });
     } catch (error) {
       state.logger?.warn?.(`[behavior] agent_end failed: ${error?.message || error}`);
     }
@@ -1431,7 +1946,7 @@ const behaviorMediatorPlugin = {
           state.cleanupTimer = setInterval(() => cleanupStaleContexts(state), 60_000);
         }
         logger?.info?.(`[behavior] registered ${state.hookNames.size} typed hooks`);
-        logger?.info?.(`[behavior] writing canonical events to ${state.outputFile}`);
+        logger?.info?.(`[behavior] writing canonical events under ${state.runsDirectory}`);
       },
       stop: async () => {
         state.active = false;

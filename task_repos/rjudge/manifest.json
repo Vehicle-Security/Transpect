@@ -1,0 +1,104 @@
+{
+  "name": "R-Judge",
+  "repo_root": "D:/code/R-Judge",
+  "type": "task_benchmark",
+  "python": {
+    "preferred": "3.11",
+    "supported": [
+      "3.10",
+      "3.11"
+    ],
+    "venv_name": "rjudge-py311",
+    "conda_env_name": "rjudge-py311",
+    "expected_envs": [
+      {
+        "kind": "conda",
+        "name": "py310"
+      },
+      {
+        "kind": "venv",
+        "name": "rjudge-py311"
+      },
+      {
+        "kind": "conda",
+        "name": "rjudge-py311"
+      }
+    ]
+  },
+  "setup": {
+    "commands": [
+      "pip install -r requirements.txt"
+    ]
+  },
+  "preflight": {
+    "required_files": [
+      "config/data_schema.json",
+      "eval/safety_judgment.py",
+      "eval/risk_identification.py",
+      "eval/extract_analysis.py"
+    ],
+    "required_env": [
+      "MODEL_API_KEY",
+      "MODEL_BASE_URL"
+    ]
+  },
+  "env_defaults": {
+    "MODEL_NAME": "qwen-plus",
+    "MODEL_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  },
+  "env_map": {
+    "API_KEY": "MODEL_API_KEY"
+  },
+  "source": {
+    "data_root": "data",
+    "data_pattern": "**/*.json",
+    "task_id_format": "data/<category>/<file>.json#<sample_id>"
+  },
+  "run": {
+    "commands": [
+      {
+        "name": "safety_judgment_smoke",
+        "cmd": "python ${TRANSPECT_ROOT}/task_repos/rjudge/run_safety_judgment_smoke.py --repo-root ${TASK_REPO_ROOT}",
+        "timeout_seconds": 600,
+        "preflight": {
+          "replace_global": true,
+          "required_files": [
+            "config/data_schema.json",
+            "eval/safety_judgment.py",
+            "data/Application/chatbot.json"
+          ]
+        }
+      },
+      {
+        "name": "safety_judgment",
+        "cmd": "python ${TRANSPECT_ROOT}/task_repos/rjudge/run_safety_judgment_compatible.py --repo-root ${TASK_REPO_ROOT} --run-dir ${RUN_DIR}",
+        "timeout_seconds": 7200
+      },
+      {
+        "name": "risk_identification",
+        "cmd": "python ${TRANSPECT_ROOT}/task_repos/rjudge/run_risk_identification_compatible.py --repo-root ${TASK_REPO_ROOT} --run-dir ${RUN_DIR}",
+        "timeout_seconds": 7200
+      }
+    ]
+  },
+  "artifacts": {
+    "stdout": true,
+    "stderr": true,
+    "max_copy_files": 40,
+    "max_copy_bytes": 5242880,
+    "result_paths": [
+      "results/${MODEL_NAME}/",
+      ".transpect_smoke_latest/results/smoke-judge/",
+      ".transpect_smoke_latest/smoke_summary.json",
+      "eval/overall_result_unsafe.json",
+      "eval/results/overall_result_unsafe.json",
+      "eval/${MODEL_NAME}/"
+    ]
+  },
+  "known_risks": [
+    "ratelimiter is incompatible with Python 3.13 in the upstream repository",
+    "the OpenAI-compatible model name requested through MODEL_NAME may be unavailable at MODEL_BASE_URL",
+    "risk_identification.py requires API_KEY mapped from MODEL_API_KEY",
+    "risk_identification.py expects eval/overall_result_unsafe.json and needs adapter seeding to use current model outputs"
+  ]
+}

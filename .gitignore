@@ -26,7 +26,7 @@ config/applied/**
 config/*.local.yaml
 
 # Optional vendor dependencies
-vendor/openclaw-observability-plugin/node_modules/
+vendor/external/openclaw-observability-plugin/node_modules/
 
 # Keep only repository screenshots
 docs/images/*.png

@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "name",
+    "repo_root",
+    "type",
+    "python",
+    "preflight"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repo_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "python": {
+      "type": "object",
+      "required": [
+        "preferred",
+        "supported"
+      ],
+      "properties": {
+        "preferred": {
+          "type": "string"
+        },
+        "supported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "venv_name": {
+          "type": "string"
+        },
+        "conda_env_name": {
+          "type": "string"
+        },
+        "expected_envs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "name"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "venv",
+                  "conda"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "setup": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "preflight": {
+      "type": "object",
+      "properties": {
+        "required_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_env": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "model_probe_url_env": {
+          "type": "string"
+        },
+        "model_probe_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "env_defaults": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "env_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "commands"
+      ],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "cmd"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "cmd": {
+                "type": "string"
+              },
+              "timeout_seconds": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "preflight": {
+                "type": "object",
+                "properties": {
+                  "replace_global": {
+                    "type": "boolean"
+                  },
+                  "required_files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "required_env": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "model_probe_url_env": {
+                    "type": "string"
+                  },
+                  "model_probe_path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "data_root": {
+          "type": "string"
+        },
+        "data_pattern": {
+          "type": "string"
+        },
+        "task_id_format": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "stdout": {
+          "type": "boolean"
+        },
+        "stderr": {
+          "type": "boolean"
+        },
+        "result_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_copy_files": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_copy_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "known_risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,55 +1,34 @@
-# OTEL 说明
+# Observability Notes
 
-Transpect 内置了 `vendor/openclaw-observability-plugin/` 下的 `otel-observability` 插件，用于把 OpenClaw gateway 的遥测数据以 OTLP 形式输出。
+Transpect includes an optional vendored OTEL integration under `vendor/external/openclaw-observability-plugin/`.
 
-## 它能做什么
+## Purpose
 
-- 导出 OTLP traces、metrics 和 logs
-- 在 `hybrid` 模式下与 JSONL 主链路并行工作
-- 配合本地 collector，把结果落到 `live/otel/`
+The OTEL path is optional support for:
 
-## 启用步骤
+- exporting OTLP traces, metrics, and logs
+- running alongside the canonical runs-based JSONL flow in `hybrid` mode
+- writing optional local outputs under `live/otel/`
 
-1. 安装插件依赖。
+This path does not replace `live/runs/<runId>/` as the primary runtime record.
 
-```powershell
-npm ci --prefix vendor/openclaw-observability-plugin
-```
-
-2. 渲染本机 collector 配置。
+## Usage
 
 ```powershell
-python scripts/setup_runtime.py --mode hybrid --render-otel-config
-```
-
-3. 启动 collector。
-
-```powershell
+npm ci --prefix vendor/external/openclaw-observability-plugin
+python scripts/runtime/setup_runtime.py --mode hybrid --render-otel-config
 otelcol-contrib --config config/otel-collector.local.yaml
+python scripts/runtime/start_trace.py --mode hybrid
 ```
 
-4. 启动 `hybrid` 或 `otel` 模式。
-
-```powershell
-python scripts/start_trace.py --mode hybrid
-```
-
-## 输出文件
+## Output
 
 - `live/otel/traces.jsonl`
 - `live/otel/logs.jsonl`
 - `live/otel/metrics.jsonl`
 
-## 切回默认链路
+## Notes
 
-如果要回到仅使用 JSONL 主链路的状态：
-
-```powershell
-python scripts/setup_runtime.py --mode core
-```
-
-## 注意事项
-
-- 仓库中提交的是可移植模板 `config/otel-collector.template.yaml`。
-- `config/otel-collector.local.yaml` 是本机生成文件，默认不会进入 git。
-- 如果你希望把 OTLP 数据发往其他后端，可以直接修改本机生成的 collector 配置，或者调整 `~/.openclaw/openclaw.json` 里的插件配置。
+- `config/otel-collector.template.yaml` is the committed template.
+- `config/otel-collector.local.yaml` is a local rendered file.
+- Switch back to canonical runs-only mode with `python scripts/runtime/setup_runtime.py --mode core`.

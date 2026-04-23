@@ -7,9 +7,29 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "runsDirectory": {
+        "type": "string",
+        "description": "Absolute path to the root directory that stores one trace run per task."
+      },
+      "artifactsEnabled": {
+        "type": "boolean",
+        "description": "Whether to persist full redacted tool input/output sidecars under each run directory."
+      },
+      "autoDiagnosisEnabled": {
+        "type": "boolean",
+        "description": "Whether to trigger the CodeTracer diagnosis runner automatically after a run reaches a terminal state."
+      },
+      "diagnosisScript": {
+        "type": "string",
+        "description": "Absolute path to the Python script that builds the CodeTracer bundle and runs diagnosis for one run directory."
+      },
+      "diagnosisPython": {
+        "type": "string",
+        "description": "Python executable used to spawn the diagnosis runner."
+      },
       "outputFile": {
         "type": "string",
-        "description": "Absolute path to the canonical behavior-events.jsonl output file."
+        "description": "Deprecated legacy hot-log path. If provided, runsDirectory defaults to <outputFile parent>/runs."
       },
       "capturePreviewChars": {
         "type": "integer",

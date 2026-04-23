@@ -1,13 +1,14 @@
-﻿import {
-  LIVE_URL,
+import {
   MIN_VISIBLE_WATERFALL_PCT,
+  RUNS_INDEX_URL,
   buildRawEventEntries,
   buildTraces,
   chooseDefaultSpan,
   chooseDefaultTrace,
   escapeHtml,
   fetchHealth,
-  fetchLiveText,
+  fetchRunText,
+  fetchRunsIndex,
   filterTraces,
   findSpanById,
   findTraceById,
@@ -33,9 +34,11 @@ function parseRouteFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const rawView = params.get("view");
   const view = rawView === VIEW_TIMELINE ? VIEW_TIMELINE : VIEW_TRACES;
+  const run = params.get("run");
   const traceId = params.get("traceId");
   return {
     view,
+    run: run && run.trim() ? run.trim() : null,
     traceId: traceId && traceId.trim() ? traceId.trim() : null,
     evidenceExpanded: view === VIEW_TIMELINE && parseBooleanFlag(params.get("evidence")),
   };
@@ -45,6 +48,8 @@ const initialRoute = parseRouteFromUrl();
 
 const state = {
   health: null,
+  runs: [],
+  selectedRunDir: initialRoute.run,
   sourceLabel: "",
   allTraces: [],
   visibleTraces: [],
@@ -58,7 +63,7 @@ const state = {
   loadStatus: "loading",
   statusBadge: "empty",
   statusLabel: "正在加载",
-  statusMessage: "正在读取 live JSONL",
+  statusMessage: "正在读取 runs 索引",
 };
 
 const elements = {
@@ -66,6 +71,7 @@ const elements = {
   eventCount: document.getElementById("event-count"),
   lastUpdated: document.getElementById("last-updated"),
   sourceLine: document.getElementById("source-line"),
+  topbarActions: document.querySelector(".topbar-actions"),
   backToTraces: document.getElementById("back-to-traces"),
   refreshButton: document.getElementById("refresh-button"),
   filterButton: document.getElementById("filter-button"),
@@ -83,6 +89,15 @@ const elements = {
   evidenceDrawer: document.getElementById("evidence-drawer"),
 };
 
+if (!document.getElementById("run-select") && elements.topbarActions) {
+  const select = document.createElement("select");
+  select.id = "run-select";
+  select.className = "meta-chip";
+  select.setAttribute("aria-label", "Select run");
+  elements.topbarActions.insertBefore(select, elements.backToTraces);
+}
+elements.runSelect = document.getElementById("run-select");
+
 function basename(value) {
   const text = String(value || "");
   if (!text) {
@@ -92,8 +107,13 @@ function basename(value) {
   return parts[parts.length - 1] || text;
 }
 
-function buildRouteHref(view, traceId = null, evidenceExpanded = false) {
+function buildRouteHref(view, runDir = null, traceId = null, evidenceExpanded = false) {
   const url = new URL(window.location.href);
+  if (runDir) {
+    url.searchParams.set("run", runDir);
+  } else {
+    url.searchParams.delete("run");
+  }
   if (view === VIEW_TIMELINE) {
     url.searchParams.set("view", VIEW_TIMELINE);
     if (traceId) {
@@ -117,7 +137,7 @@ function buildRouteHref(view, traceId = null, evidenceExpanded = false) {
 
 function syncRoute(options = {}) {
   const { push = false } = options;
-  const href = buildRouteHref(state.view, state.selectedTraceId, state.evidenceExpanded);
+  const href = buildRouteHref(state.view, state.selectedRunDir, state.selectedTraceId, state.evidenceExpanded);
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (href === current) {
     return;
@@ -134,15 +154,15 @@ function classifyLoadError(error) {
   if (message.includes("404")) {
     return {
       badge: "disconnected",
-      label: "Live 缺失",
-      message: "默认 live 文件还不存在，当前页面暂时没有可展示的数据。",
+      label: "Runs 缺失",
+      message: "默认 runs 索引还不存在，当前页面暂时没有可展示的数据。",
     };
   }
   if (message.includes("文件为空")) {
     return {
       badge: "empty",
-      label: "Live 为空",
-      message: "当前 behavior-events.jsonl 为空，等待下一次写入后会出现 trace。",
+      label: "Runs 为空",
+      message: "当前选中的 run 还没有事件，等待下一次写入后会出现 trace。",
     };
   }
   if (message.includes("不是合法 JSON") || message.includes("缺少字段") || message.includes("合法事件对象")) {
@@ -189,6 +209,10 @@ function ensureExpandedRows(trace) {
   state.expandedSpanIds = new Set(trace.visibleNodes.map((node) => node.spanId));
 }
 
+function selectedRun() {
+  return state.runs.find((run) => run.dirName === state.selectedRunDir) || state.runs[0] || null;
+}
+
 function selectedTrace() {
   return findTraceById(state.visibleTraces, state.selectedTraceId);
 }
@@ -204,18 +228,50 @@ function renderStatusBadge(value) {
 
 function renderTopbar() {
   const health = state.health || {};
-  const sourceName = state.sourceLabel || basename(health.liveJsonlPath) || basename(LIVE_URL) || "behavior-events.jsonl";
-  const count = health.eventCount ?? countEvents(state.allTraces);
-  const updated = health.liveMtime ? formatDateTime(health.liveMtime) : "--";
+  const activeRun = selectedRun();
+  const sourceName =
+    state.sourceLabel ||
+    activeRun?.runId ||
+    activeRun?.traceId ||
+    activeRun?.dirName ||
+    basename(health.runsIndexPath) ||
+    basename(RUNS_INDEX_URL) ||
+    "runs/index.json";
+  const count = activeRun?.eventCount ?? countEvents(state.allTraces);
+  const updated = activeRun?.completedAt || activeRun?.createdAt ? formatDateTime(activeRun.completedAt || activeRun.createdAt) : "--";
 
   elements.liveBadge.className = `live-badge ${state.statusBadge}`;
   elements.liveBadge.textContent = state.statusLabel;
   elements.eventCount.textContent = `${count || 0} events`;
   elements.lastUpdated.textContent = `最后更新 ${updated}`;
   elements.sourceLine.textContent = sourceName;
+  renderRunSelector();
   elements.backToTraces.classList.toggle("hidden", state.view !== VIEW_TIMELINE);
   elements.filterButton.textContent = state.traceFilter === "important" ? "显示全部" : "仅重要";
   elements.toggleEvidence.textContent = state.evidenceExpanded ? "收起原始事件与调试信息" : "查看原始事件与调试信息";
+}
+
+function renderRunSelector() {
+  if (!elements.runSelect) {
+    return;
+  }
+  const runs = state.runs || [];
+  if (!runs.length) {
+    elements.runSelect.innerHTML = `<option value="">暂无 runs</option>`;
+    elements.runSelect.disabled = true;
+    return;
+  }
+  elements.runSelect.disabled = false;
+  elements.runSelect.innerHTML = runs
+    .map((run) => {
+      const label = [run.runId || run.traceId || run.dirName, run.status || "unknown"].filter(Boolean).join(" · ");
+      return `<option value="${escapeHtml(run.dirName)}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
+  if (!state.selectedRunDir) {
+    state.selectedRunDir = runs[0].dirName;
+  }
+  elements.runSelect.value = state.selectedRunDir || runs[0].dirName;
 }
 
 function renderBanner() {
@@ -605,15 +661,21 @@ function render() {
 }
 
 function applyEvents(events, options = {}) {
-  const { sourceLabel = "", health = null } = options;
+  const { sourceLabel = "", health = null, runs = null, selectedRunDir = null } = options;
   state.allTraces = buildTraces(events);
   if (health) {
     state.health = health;
   }
+  if (Array.isArray(runs)) {
+    state.runs = runs;
+  }
+  if (selectedRunDir) {
+    state.selectedRunDir = selectedRunDir;
+  }
   state.sourceLabel = sourceLabel;
   state.loadStatus = "ready";
   state.statusBadge = "connected";
-  state.statusLabel = "Live 已连接";
+  state.statusLabel = "Runs 已连接";
   state.statusMessage = "";
   syncVisibleTraces();
   normalizeViewState();
@@ -621,23 +683,40 @@ function applyEvents(events, options = {}) {
   render();
 }
 
+async function loadRunSnapshot(runEntry, options = {}) {
+  if (!runEntry?.eventsPath) {
+    throw new Error("run events path missing");
+  }
+  const text = await fetchRunText(runEntry.eventsPath);
+  const events = parseJsonl(text, runEntry.eventsPath);
+  state.view = state.view || VIEW_TRACES;
+  applyEvents(events, {
+    sourceLabel: runEntry.runId || runEntry.traceId || runEntry.dirName || runEntry.eventsPath,
+    health: options.health || state.health,
+    runs: options.runs || state.runs,
+    selectedRunDir: runEntry.dirName,
+  });
+}
+
 async function loadLive() {
   state.loadStatus = "loading";
   state.statusBadge = "empty";
   state.statusLabel = "正在加载";
-  state.statusMessage = "正在重新读取 behavior-events.jsonl";
+  state.statusMessage = "正在重新读取 runs/index.json";
   state.sourceLabel = "";
   renderTopbar();
 
-  const [healthResult, liveResult] = await Promise.allSettled([fetchHealth(), fetchLiveText()]);
+  const [healthResult, runsResult] = await Promise.allSettled([fetchHealth(), fetchRunsIndex()]);
   if (healthResult.status === "fulfilled") {
     state.health = healthResult.value;
   }
 
-  if (liveResult.status === "rejected") {
-    const view = classifyLoadError(liveResult.reason);
+  if (runsResult.status === "rejected") {
+    const view = classifyLoadError(runsResult.reason);
     state.allTraces = [];
     state.visibleTraces = [];
+    state.runs = [];
+    state.selectedRunDir = null;
     state.selectedTraceId = null;
     state.selectedSpanId = null;
     state.view = VIEW_TRACES;
@@ -651,12 +730,22 @@ async function loadLive() {
   }
 
   try {
-    const events = parseJsonl(liveResult.value, LIVE_URL);
-    applyEvents(events);
+    const runsPayload = runsResult.value || {};
+    const runs = Array.isArray(runsPayload.runs) ? runsPayload.runs : [];
+    if (!runs.length) {
+      throw new Error("runs index 文件为空");
+    }
+    const activeRun = runs.find((item) => item.dirName === state.selectedRunDir) || runs[0];
+    await loadRunSnapshot(activeRun, {
+      health: state.health,
+      runs,
+    });
   } catch (error) {
     const view = classifyLoadError(error);
     state.allTraces = [];
     state.visibleTraces = [];
+    state.runs = [];
+    state.selectedRunDir = null;
     state.selectedTraceId = null;
     state.selectedSpanId = null;
     state.view = VIEW_TRACES;
@@ -682,6 +771,8 @@ async function loadUploadedJsonl(file) {
     const text = await file.text();
     const events = parseJsonl(text, `upload:${file.name}`);
     state.view = VIEW_TRACES;
+    state.runs = [];
+    state.selectedRunDir = null;
     state.selectedTraceId = null;
     state.selectedSpanId = null;
     applyEvents(events, { sourceLabel: `upload:${file.name}` });
@@ -696,6 +787,23 @@ async function loadUploadedJsonl(file) {
 }
 
 elements.refreshButton.addEventListener("click", loadLive);
+if (elements.runSelect) {
+  elements.runSelect.addEventListener("change", async (event) => {
+    const nextRunDir = event.target.value || null;
+    if (!nextRunDir || nextRunDir === state.selectedRunDir) {
+      return;
+    }
+    state.selectedRunDir = nextRunDir;
+    state.selectedTraceId = null;
+    state.selectedSpanId = null;
+    const nextRun = selectedRun();
+    if (!nextRun) {
+      return;
+    }
+    await loadRunSnapshot(nextRun, { health: state.health, runs: state.runs });
+    syncRoute({ push: true });
+  });
+}
 elements.backToTraces.addEventListener("click", () => {
   state.view = VIEW_TRACES;
   syncRoute({ push: true });
@@ -720,12 +828,18 @@ elements.traceJsonlInput.addEventListener("change", async (event) => {
   event.target.value = "";
 });
 
-window.addEventListener("popstate", () => {
+window.addEventListener("popstate", async () => {
   const route = parseRouteFromUrl();
+  const runChanged = route.run !== state.selectedRunDir;
   state.view = route.view;
   state.evidenceExpanded = route.evidenceExpanded;
+  state.selectedRunDir = route.run;
   if (route.traceId !== null) {
     state.selectedTraceId = route.traceId;
+  }
+  if (runChanged) {
+    await loadLive();
+    return;
   }
   syncVisibleTraces();
   normalizeViewState();
