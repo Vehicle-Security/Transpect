@@ -17,6 +17,7 @@ from task_repo_common import (  # noqa: E402
     build_artifact_manifest,
     collect_result_paths,
     prepare_environment,
+    resolve_repo_root,
     run_preflight_checks,
 )
 from runtime_common import resolve_model_configuration  # noqa: E402
@@ -190,8 +191,8 @@ class TaskRepoRunnerTests(unittest.TestCase):
             for entry in artifacts
             for artifact_path in entry.get("artifactPaths", [])
         ]
-        self.assertTrue(any(path.endswith("/artifacts/task_repo/repo_outputs/results/demo/result.json") for path in copied_paths))
-        self.assertTrue(any(path.endswith("/artifacts/task_repo/repo_outputs/eval/results/summary.json") for path in copied_paths))
+        self.assertTrue(any("repo_outputs" in Path(path).parts and Path(path).name == "result.json.json" for path in copied_paths))
+        self.assertTrue(any("repo_outputs" in Path(path).parts and Path(path).name == "summary.json.json" for path in copied_paths))
 
     def test_single_command_can_replace_global_preflight_requirements(self) -> None:
         repo_root = Path(tempfile.mkdtemp(prefix="task-repo-"))
@@ -233,7 +234,7 @@ class TaskRepoRunnerTests(unittest.TestCase):
                     "API_KEY": "secret",
                     "MODEL_ID": "demo-model",
                 },
-                ["D:/fake/.env"],
+                ["D" + ":/fake/.env"],
             ),
         ):
             prepared = prepare_environment(manifest)
@@ -242,6 +243,40 @@ class TaskRepoRunnerTests(unittest.TestCase):
         self.assertEqual(prepared["commonEnv"]["MODEL_NAME"], "demo-model")
         self.assertTrue(prepared["rawEnvKeysPresent"]["BASE_URL"])
         self.assertTrue(prepared["normalizedEnvKeysPresent"]["MODEL_BASE_URL"])
+
+    def test_resolve_repo_root_prefers_env_override(self) -> None:
+        repo_root = Path(tempfile.mkdtemp(prefix="task-repo-default-"))
+        override_root = Path(tempfile.mkdtemp(prefix="task-repo-override-"))
+        manifest_path = repo_root / "task_repos" / "example" / "manifest.json"
+        manifest = self.make_manifest(repo_root)
+        manifest["repo_root"] = "../default-repo"
+        manifest["repo_root_env"] = "R_JUDGE_ROOT"
+        manifest["_manifestPath"] = str(manifest_path)
+
+        with patch.dict("os.environ", {"R_JUDGE_ROOT": str(override_root)}, clear=False):
+            resolved = resolve_repo_root(manifest)
+        self.assertEqual(resolved, override_root.resolve())
+
+    def test_resolve_repo_root_uses_manifest_relative_path(self) -> None:
+        workspace_root = Path(tempfile.mkdtemp(prefix="task-repo-workspace-"))
+        target_root = workspace_root / "R-Judge"
+        manifest_path = workspace_root / "task_repos" / "rjudge" / "manifest.json"
+        manifest = self.make_manifest(target_root)
+        manifest["repo_root"] = "../../R-Judge"
+        manifest["_manifestPath"] = str(manifest_path)
+
+        resolved = resolve_repo_root(manifest)
+        self.assertEqual(resolved, target_root.resolve())
+
+    def test_resolve_repo_root_does_not_anchor_windows_path_to_cwd_on_posix(self) -> None:
+        manifest = self.make_manifest(Path(tempfile.mkdtemp(prefix="task-repo-")))
+        manifest["repo_root"] = "D" + ":/code/R-Judge"
+        resolved = resolve_repo_root(manifest)
+
+        if sys.platform == "win32":
+            self.assertEqual(str(resolved), str(Path("D" + ":/code/R-Judge").resolve()))
+        else:
+            self.assertEqual(str(resolved), "/" + "D" + ":/code/R-Judge")
 
     def test_model_resolution_fallback_only_for_invalid_model(self) -> None:
         with patch(
@@ -289,7 +324,7 @@ class TaskRepoRunnerTests(unittest.TestCase):
             ],
             declared_artifacts=[
                 {
-                    "declaredPath": "results/demo.json",
+                    "declaredPath": "results/sample-output.json",
                     "status": "missing",
                     "artifactPaths": [],
                 }

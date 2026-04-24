@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Transpect Viewer</title>
-    <link rel="stylesheet" href="./app.css?v=20260415-1" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./app.css?v=20260424-1" />
   </head>
   <body>
     <div class="app-shell">
@@ -29,11 +30,22 @@
 
       <main class="app-layout">
         <section id="traces-page" class="page-view">
+          <section id="run-explorer-panel" class="panel run-explorer-panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Runs</p>
+                <h2>Run Explorer</h2>
+              </div>
+              <span id="run-count" class="panel-meta">0 runs</span>
+            </div>
+            <div id="run-group-list" class="run-group-list"></div>
+          </section>
+
           <section class="trace-panel panel traces-page-panel">
             <div class="panel-head">
               <div>
                 <p class="panel-kicker">Traces</p>
-                <h2>Request List</h2>
+                <h2>Current Run Trace</h2>
               </div>
               <div class="trace-page-actions">
                 <span id="trace-count" class="panel-meta">0 traces</span>
@@ -75,6 +87,6 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js?v=20260415-2"></script>
+    <script type="module" src="./app.js?v=20260424-1"></script>
   </body>
 </html>

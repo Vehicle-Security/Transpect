@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "common"))
+
+from repo_roots import resolve_manifest_repo_root  # noqa: E402
+
 
 def _repo_root(manifest: dict[str, Any]) -> Path:
-    return Path(str(manifest["repo_root"])).expanduser().resolve()
+    return resolve_manifest_repo_root(manifest)
 
 
 def _data_root(manifest: dict[str, Any]) -> Path:

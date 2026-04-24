@@ -56,7 +56,8 @@ class AgentTraceRunnerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.manifest = {
             "name": "R-Judge",
-            "repo_root": "D:/code/R-Judge",
+            "repo_root": "../../../R-Judge",
+            "repo_root_env": "R_JUDGE_ROOT",
             "type": "task_benchmark",
             "python": {"preferred": "3.11", "supported": ["3.11"]},
             "preflight": {},

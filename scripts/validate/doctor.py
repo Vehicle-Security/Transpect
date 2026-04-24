@@ -48,6 +48,10 @@ EXPECTED_BEHAVIOR_CONFIG = {
     "captureNetwork": True,
     "traceEval": False,
 }
+APPROVAL_BLOCKED_TOKENS = (
+    "scope upgrade pending approval",
+    "pairing required",
+)
 
 
 def inspect_runs(root: Path) -> dict[str, Any]:
@@ -59,6 +63,43 @@ def inspect_runs(root: Path) -> dict[str, Any]:
         "runCount": payload.get("runCount"),
         "latestRun": latest,
         "indexSchemaVersion": payload.get("schemaVersion"),
+    }
+
+
+def inspect_behavior_evidence(root: Path) -> dict[str, Any]:
+    run_dirs = sorted((path for path in root.iterdir() if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True) if root.exists() else []
+    for run_dir in run_dirs:
+        manifest = read_json(run_dir / "manifest.json", default={}) or {}
+        runtime_status = read_json(run_dir / "runtime_status.json", default={}) or {}
+        events_path = run_dir / "behavior-events.jsonl"
+        event_count = 0
+        if isinstance(manifest, dict):
+            event_count = int(manifest.get("eventCount") or 0)
+        if event_count <= 0 and events_path.exists():
+            with events_path.open("r", encoding="utf-8", errors="replace") as handle:
+                event_count = sum(1 for line in handle if line.strip())
+        behavior_status = runtime_status.get("behaviorMediator") if isinstance(runtime_status, dict) else {}
+        behavior_ok = isinstance(behavior_status, dict) and bool(behavior_status.get("ok"))
+        last_write_ok = isinstance(behavior_status, dict) and behavior_status.get("lastWriteOk") is True
+        if event_count > 0 or behavior_ok or last_write_ok:
+            diagnosis = (manifest.get("diagnosis") or {}).get("codetracer") if isinstance(manifest, dict) else {}
+            return {
+                "ok": True,
+                "latestEvidenceRun": {
+                    "runId": manifest.get("runId") or run_dir.name,
+                    "traceId": manifest.get("traceId"),
+                    "runDir": str(run_dir.resolve()),
+                    "eventCount": event_count,
+                    "status": manifest.get("status"),
+                    "analysisReady": diagnosis.get("analysisReady") if isinstance(diagnosis, dict) else None,
+                    "analysisOk": diagnosis.get("analysisOk") if isinstance(diagnosis, dict) else None,
+                    "behaviorMediatorOk": behavior_ok,
+                    "lastWriteOk": behavior_status.get("lastWriteOk") if isinstance(behavior_status, dict) else None,
+                },
+            }
+    return {
+        "ok": False,
+        "latestEvidenceRun": None,
     }
 
 
@@ -253,6 +294,12 @@ def collect_runtime_residue() -> dict[str, Any]:
     }
 
 
+def approval_blocked(payload: dict[str, Any]) -> bool:
+    error = payload.get("error") if isinstance(payload, dict) else None
+    message = str((error or {}).get("message") or "").lower()
+    return any(token in message for token in APPROVAL_BLOCKED_TOKENS)
+
+
 def build_summary(report: dict[str, Any]) -> dict[str, Any]:
     issues: list[str] = []
     warnings: list[str] = []
@@ -285,8 +332,17 @@ def build_summary(report: dict[str, Any]) -> dict[str, Any]:
         issues.append("gateway /health is not available")
     if not report["gatewayRpc"]["ok"]:
         warnings.append(f"gateway status probe failed: {report['gatewayRpc'].get('status') or 'unknown'}")
-    if mode in {"core", "hybrid"} and not report["behaviorMediatorStatus"]["ok"]:
-        issues.append(f"behavior-mediator.status is not available: {report['behaviorMediatorStatus'].get('status') or 'unknown'}")
+    behavior_status = report["behaviorMediatorStatus"]
+    behavior_evidence = report.get("behaviorEvidence") or {}
+    if mode in {"core", "hybrid"} and not behavior_status["ok"]:
+        if approval_blocked(behavior_status) and behavior_evidence.get("ok"):
+            latest = behavior_evidence.get("latestEvidenceRun") or {}
+            warnings.append(
+                "behavior-mediator.status needs OpenClaw scope approval; run evidence shows tracing is working"
+                + (f" (latest run: {latest.get('runId')})" if latest.get("runId") else "")
+            )
+        else:
+            issues.append(f"behavior-mediator.status is not available: {behavior_status.get('status') or 'unknown'}")
     if mode in {"hybrid", "otel"} and not report["otelStatus"]["ok"]:
         warnings.append(f"otel-observability.status is not available: {report['otelStatus'].get('status') or 'unknown'}")
 
@@ -340,6 +396,7 @@ def main() -> None:
         "gatewayRpc": run_gateway_status(args.gateway_timeout),
         "behaviorMediatorStatus": run_behavior_status(args.gateway_timeout),
         "otelStatus": run_otel_status(args.gateway_timeout),
+        "behaviorEvidence": inspect_behavior_evidence(TRACE_LIVE_RUNS_DIR),
         "runtimeResidue": collect_runtime_residue(),
     }
     report["summary"] = build_summary(report)

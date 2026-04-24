@@ -6,16 +6,18 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "common"))
 
 from runtime_common import (  # noqa: E402
     MODEL_RESOLUTION_MACHINE_REASONS,
     apply_effective_model,
     resolve_model_configuration,
 )
+from repo_roots import resolve_manifest_repo_root  # noqa: E402
 
 
 def _repo_root(manifest: dict[str, Any]) -> Path:
-    return Path(str(manifest["repo_root"])).expanduser().resolve()
+    return resolve_manifest_repo_root(manifest)
 
 
 def _data_root(manifest: dict[str, Any]) -> Path:
@@ -147,7 +149,7 @@ def additional_preflight_checks(
     *,
     selected_commands: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    repo_root = Path(str(manifest["repo_root"])).expanduser().resolve()
+    repo_root = _repo_root(manifest)
     overall_result = repo_root / "eval" / "results" / "overall_result_unsafe.json"
     checks = [
         {
@@ -208,7 +210,7 @@ def evaluate_repo_result(
     *,
     selected_commands: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    repo_root = Path(str(manifest["repo_root"])).expanduser().resolve()
+    repo_root = _repo_root(manifest)
     effective_model = str((prepared_env.get("templateEnv") or {}).get("MODEL_NAME") or "").strip()
     selected_names = {str(command.get("name")) for command in (selected_commands or [])}
     repo_success = all(bool(command.get("ok")) for command in command_results)

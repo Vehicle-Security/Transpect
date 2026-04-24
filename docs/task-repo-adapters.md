@@ -30,7 +30,7 @@ The shared schema lives at `task_repos/manifest.schema.json`.
 
 The shared runtime entrypoint is:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo <repo> --mode <mode>
 ```
 
@@ -143,9 +143,25 @@ For model-oriented repositories, common aliases are normalized before execution:
 
 `task_repos/rjudge/manifest.json` configures R-Judge as both a source adapter and a repo-native baseline.
 
+Recommended local layout:
+
+```text
+code/
+├── Transpect/
+├── CodeTracer/
+└── R-Judge/
+```
+
+Path resolution order for the R-Judge source repository is:
+
+1. `R_JUDGE_ROOT`
+2. manifest `repo_root`
+3. relative `repo_root` resolved from the manifest directory
+
 Source-mode assumptions:
 
-- data root: `D:/code/R-Judge/data`
+- default checkout root: sibling `R-Judge/` repository
+- data root: `<R_JUDGE_ROOT>/data`
 - data pattern: `**/*.json`
 - task ID format: `data/<category>/<file>.json#<sample_id>`
 - `contents` is serialized round-by-round in the agent prompt
@@ -155,66 +171,85 @@ Repo-native assumptions remain explicit:
 
 - preferred Python: `3.11`
 - supported Python: `3.10`, `3.11`
-- accepted environment names: `rjudge-py311` or local `py310`
+- accepted environment names: `rjudge-py311`, `rjudge-py310`, or local `py310`
 - required full benchmark files: `config/data_schema.json`, `eval/safety_judgment.py`, `eval/risk_identification.py`, `eval/extract_analysis.py`
 - default model name: `qwen-plus`
 - default model base URL: `https://dashscope.aliyuncs.com/compatible-mode/v1`
 - repository env mapping: `API_KEY <- MODEL_API_KEY`
 
+Recommended macOS environments:
+
+- `transpect-py311`: run Transpect scripts, OpenClaw runtime hooks, and CodeTracer diagnosis
+- `rjudge-py310`: optional repo-native baseline environment for upstream R-Judge scripts
+
+`agent-trace` only requires the R-Judge dataset checkout to be readable. It does not require repo-native R-Judge commands to succeed first.
+
 ## Commands
 
 List available source tasks:
 
-```powershell
+```bash
+conda activate transpect-py311
 python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
 ```
 
 Show one source task:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
 ```
 
 Run one source task through the real agent trace harness:
 
-```powershell
-$env:CODETRACER_ROOT="D:\code\CodeTracer"
+```bash
+export CODETRACER_ROOT="${CODETRACER_ROOT:-$(cd .. && pwd)/CodeTracer}"
+export R_JUDGE_ROOT="${R_JUDGE_ROOT:-$(cd .. && pwd)/R-Judge}"
 python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
 ```
 
+Before the first `agent-trace` run on macOS, prepare OpenClaw in core mode:
+
+```bash
+python scripts/runtime/setup_runtime.py --mode core
+python scripts/validate/doctor.py
+```
+
+If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested scopes in OpenClaw and rerun `doctor.py`.
+
 Run one source task without diagnosis:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
 ```
 
 Run repo-native preflight:
 
-```powershell
+```bash
+conda activate rjudge-py310
 python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
 ```
 
 Run a repo-native baseline command:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --command safety_judgment
 ```
 
 Backward-compatible repo-native invocation:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --command safety_judgment_smoke
 ```
 
 Inspect structured outputs:
 
-```powershell
-Get-ChildItem live/runs | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
-Get-Content live/runs/<runId>/adapter/preflight_report.json
-Get-Content live/runs/<runId>/adapter/run_report.json
-Get-ChildItem live/runs/<runId>/artifacts/task_repo -Recurse
-Get-Content live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
-Get-Content live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
+```bash
+ls -td live/runs/* | head -n 1
+cat live/runs/<runId>/adapter/preflight_report.json
+cat live/runs/<runId>/adapter/run_report.json
+find live/runs/<runId>/artifacts/task_repo -type f | sort
+cat live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
+cat live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
 ```
 
 ## Failure Reasons

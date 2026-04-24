@@ -51,16 +51,70 @@ Grouped script paths are the primary interface. Legacy flat entrypoints such as 
 
 ## Quick Start
 
-```powershell
+Recommended local layout:
+
+```text
+code/
+├── Transpect/
+├── CodeTracer/
+└── R-Judge/
+```
+
+Create the runtime environment used by Transpect and CodeTracer:
+
+```bash
+conda create -n transpect-py311 python=3.11 -y
+conda activate transpect-py311
+pip install -r requirements.txt
+pip install -e ../CodeTracer
 python --version
 node --version
 openclaw --version
 ```
 
-```powershell
-python scripts/runtime/setup_runtime.py --mode hybrid
+Optional: create a separate environment for repo-native R-Judge runs:
+
+```bash
+conda create -n rjudge-py310 python=3.10 -y
+conda activate rjudge-py310
+pip install -r ../R-Judge/requirements.txt
+```
+
+If `CodeTracer/` or `R-Judge/` are not siblings of `Transpect/`, set explicit roots:
+
+```bash
+export CODETRACER_ROOT="$HOME/path/to/CodeTracer"
+export R_JUDGE_ROOT="$HOME/path/to/R-Judge"
+```
+
+Configure OpenClaw for canonical trace capture and auto-diagnosis:
+
+```bash
+conda activate transpect-py311
+python scripts/runtime/setup_runtime.py --mode core
+python scripts/validate/doctor.py
+```
+
+If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested OpenClaw scopes first, then rerun `doctor.py`.
+
+Run the trace-first task flow:
+
+```bash
+python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
+python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
+python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
 python scripts/runtime/start_trace.py
 ```
+
+Run one or more R-Judge tasks with the batch helper:
+
+```bash
+./bin/run-rjudge-tasks.sh --source-path data/Program --count 5 --concurrency 2
+./bin/run-rjudge-tasks.sh --source-path data/Application/chatbot.json --count 3 --label 1
+./bin/run-rjudge-tasks.sh --task-id "data/Application/chatbot.json#37"
+```
+
+Use `--dry-run --no-start-runtime` to preview the selected tasks without launching agents.
 
 The viewer opens at `http://127.0.0.1:8711/viewer/index.html?view=traces`.
 
@@ -81,7 +135,7 @@ Each canonical run directory may contain:
 
 `live/behavior-events.jsonl` is retained only as a migration source for older environments. If you still have historical global logs, use:
 
-```powershell
+```bash
 python scripts/diagnosis/segment_behavior_events.py --dry-run
 python scripts/diagnosis/segment_behavior_events.py --archive-source
 ```
@@ -92,7 +146,7 @@ External benchmark repositories can also be onboarded through manifest-driven ta
 
 ## Verification
 
-```powershell
+```bash
 node --check viewer/app.js
 node --check viewer/shared.js
 python scripts/validate/check_repo.py --skip-start
@@ -102,7 +156,7 @@ python scripts/validate/run_acceptance.py
 
 Compatibility smoke checks:
 
-```powershell
+```bash
 python scripts/start_trace.py --help
 python scripts/setup_runtime.py --help
 python scripts/export_codetracer_bundle.py --help

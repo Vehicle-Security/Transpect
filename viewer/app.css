@@ -226,6 +226,10 @@ code {
   text-decoration: none;
 }
 
+.topbar-actions select {
+  max-width: min(420px, 36vw);
+}
+
 .topbar-actions button:hover,
 .topbar-actions select:hover,
 .banner-button:hover,
@@ -294,7 +298,7 @@ code {
 }
 
 .traces-page-panel {
-  min-height: calc(100vh - 220px);
+  min-height: 320px;
 }
 
 .traces-page-panel .trace-list {
@@ -340,6 +344,216 @@ code {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+
+.run-explorer-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.run-group-list {
+  display: grid;
+  gap: 10px;
+}
+
+.run-group {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel-soft);
+}
+
+.run-group-head {
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.run-group-head:hover {
+  background: #f6f9fd;
+}
+
+.run-group-caret {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--neutral-soft);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.run-group-kind,
+.run-badge,
+.run-row-tags span {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.run-group-kind {
+  height: 22px;
+  padding: 0 8px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--running);
+}
+
+.run-group-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.run-group-meta {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.run-group-body {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.run-row {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-left: 4px solid transparent;
+  border-radius: 8px;
+  background: #fff;
+  padding: 9px 10px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.run-row:hover {
+  border-color: #b7c7db;
+  background: #f8fbff;
+}
+
+.run-row.active {
+  border-color: var(--accent);
+  background: #eef5ff;
+}
+
+.run-row.mismatch {
+  border-left-color: #d97706;
+}
+
+.run-row.diagnosis-failed {
+  border-left-color: var(--error);
+}
+
+.run-row.running {
+  border-left-color: var(--running);
+}
+
+.run-row-main,
+.run-row-tags,
+.run-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.run-title {
+  min-width: 0;
+  flex: 1 1 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.run-issue-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--success);
+  flex: 0 0 auto;
+}
+
+.run-issue-dot.mismatch {
+  background: #d97706;
+}
+
+.run-issue-dot.diagnosis-failed {
+  background: var(--error);
+}
+
+.run-issue-dot.running {
+  background: var(--running);
+}
+
+.run-badge {
+  height: 22px;
+  padding: 0 8px;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.run-badge.mismatch {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+
+.run-badge.diagnosis-failed {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.run-badge.running {
+  background: var(--running-soft);
+  color: var(--running);
+}
+
+.run-row-tags span {
+  min-height: 22px;
+  padding: 0 8px;
+  background: #eef3f8;
+  color: #5f6f82;
+}
+
+.run-row-meta,
+.run-row-subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.run-row-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .upload-chip {
@@ -824,13 +1038,27 @@ code {
 
 @media (max-width: 900px) {
   .topbar,
+  .run-group-head,
   .timeline-scale-header,
   .waterfall-row {
     grid-template-columns: 1fr;
   }
 
+  .topbar-actions select {
+    max-width: 100%;
+  }
+
   .topbar-cluster {
     justify-self: start;
+  }
+
+  .run-group-meta {
+    white-space: normal;
+  }
+
+  .run-title,
+  .run-row-subtitle {
+    white-space: normal;
   }
 
   .traces-page-panel {

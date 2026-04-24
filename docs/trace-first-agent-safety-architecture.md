@@ -56,8 +56,10 @@ The source adapter interface is:
 For R-Judge, tasks are loaded from:
 
 ```text
-D:/code/R-Judge/data/**/*.json
+<R_JUDGE_ROOT>/data/**/*.json
 ```
+
+The default local layout assumes `Transpect/`, `CodeTracer/`, and `R-Judge/` are sibling checkouts. `R_JUDGE_ROOT` can override that default when the repositories live elsewhere.
 
 Stable task ids use this shape:
 
@@ -181,41 +183,46 @@ Current non-goals:
 
 List R-Judge tasks:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
 ```
 
 Show one R-Judge task:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
 ```
 
 Run one sample through Layers 1-3:
 
-```powershell
+```bash
+conda activate transpect-py311
+python scripts/runtime/setup_runtime.py --mode core
+python scripts/validate/doctor.py
 python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
 ```
 
+If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested OpenClaw scopes before retrying the run.
+
 Run agent-trace without CodeTracer diagnosis:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
 ```
 
 Inspect the resulting run:
 
-```powershell
-Get-ChildItem live/runs | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
-Get-Content live/runs/<runId>/manifest.json
-Get-Content live/runs/<runId>/task_input.json
-Get-Content live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
-Get-Content live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
+```bash
+ls -td live/runs/* | head -n 1
+cat live/runs/<runId>/manifest.json
+cat live/runs/<runId>/task_input.json
+cat live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
+cat live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
 ```
 
 Legacy repo-native baseline mode remains available for compatibility:
 
-```powershell
+```bash
 python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
 ```
 

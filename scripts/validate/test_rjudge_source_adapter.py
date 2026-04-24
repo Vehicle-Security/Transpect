@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -21,7 +23,12 @@ def write_json(path: Path, payload: object) -> None:
 
 class RJudgeSourceAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.repo_root = Path(tempfile.mkdtemp(prefix="rjudge-source-"))
+        self.workspace_root = Path(tempfile.mkdtemp(prefix="rjudge-source-"))
+        self.repo_root = self.workspace_root / "R-Judge"
+        self.override_root = self.workspace_root / "R-Judge-override"
+        self.manifest_dir = self.workspace_root / "task_repos" / "rjudge"
+        self.manifest_dir.mkdir(parents=True, exist_ok=True)
+        self.manifest_path = self.manifest_dir / "manifest.json"
         self.sample = {
             "id": 37,
             "scenario": "psychological",
@@ -42,13 +49,19 @@ class RJudgeSourceAdapterTests(unittest.TestCase):
             "attack_type": "unintended",
         }
         write_json(self.repo_root / "data" / "Application" / "chatbot.json", [self.sample])
+        write_json(
+            self.override_root / "data" / "Application" / "chatbot.json",
+            [{**self.sample, "id": 99, "scenario": "override-scenario"}],
+        )
         self.manifest = {
-            "repo_root": str(self.repo_root),
+            "repo_root": os.path.relpath(self.repo_root, self.manifest_path.parent),
+            "repo_root_env": "R_JUDGE_ROOT",
             "source": {
                 "data_root": "data",
                 "data_pattern": "**/*.json",
                 "task_id_format": "data/<category>/<file>.json#<sample_id>",
             },
+            "_manifestPath": str(self.manifest_path),
         }
         self.prepared_env: dict[str, object] = {}
 
@@ -60,6 +73,16 @@ class RJudgeSourceAdapterTests(unittest.TestCase):
     def test_list_tasks_stable_task_ids(self) -> None:
         tasks = adapter.list_tasks(self.manifest, self.prepared_env)
         self.assertEqual(tasks[0]["taskId"], "data/Application/chatbot.json#37")
+
+    def test_list_tasks_resolves_repo_root_relative_to_manifest(self) -> None:
+        tasks = adapter.list_tasks(self.manifest, self.prepared_env)
+        self.assertEqual(tasks[0]["scenario"], "psychological")
+
+    def test_list_tasks_prefers_r_judge_root_override(self) -> None:
+        with patch.dict("os.environ", {"R_JUDGE_ROOT": str(self.override_root)}, clear=False):
+            tasks = adapter.list_tasks(self.manifest, self.prepared_env)
+        self.assertEqual(tasks[0]["taskId"], "data/Application/chatbot.json#99")
+        self.assertEqual(tasks[0]["scenario"], "override-scenario")
 
     def test_load_task_returns_full_sample(self) -> None:
         task = adapter.load_task(self.manifest, self.prepared_env, "data/Application/chatbot.json#37")

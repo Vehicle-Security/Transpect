@@ -49,6 +49,8 @@ const initialRoute = parseRouteFromUrl();
 const state = {
   health: null,
   runs: [],
+  runGroupsInitialized: false,
+  expandedRunGroups: new Set(),
   selectedRunDir: initialRoute.run,
   sourceLabel: "",
   allTraces: [],
@@ -78,6 +80,8 @@ const elements = {
   bannerArea: document.getElementById("banner-area"),
   tracesPage: document.getElementById("traces-page"),
   timelinePage: document.getElementById("timeline-page"),
+  runCount: document.getElementById("run-count"),
+  runGroupList: document.getElementById("run-group-list"),
   traceCount: document.getElementById("trace-count"),
   traceList: document.getElementById("trace-list"),
   traceJsonlInput: document.getElementById("trace-jsonl-input"),
@@ -221,6 +225,143 @@ function countEvents(traces) {
   return traces.reduce((sum, trace) => sum + trace.events.length, 0);
 }
 
+function parseTimestamp(value) {
+  const parsed = new Date(value || "");
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function dateKey(value) {
+  const parsed = parseTimestamp(value);
+  return parsed ? parsed.toISOString().slice(0, 10) : "unknown-date";
+}
+
+function taskGroupFromPath(value) {
+  const parts = String(value || "").split("/");
+  return parts.length > 1 && parts[1] ? parts[1] : "manual";
+}
+
+function formatPercent(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "n/a";
+  }
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatRunDuration(run) {
+  const start = parseTimestamp(run?.createdAt);
+  const end = parseTimestamp(run?.completedAt);
+  if (!start || !end || end.getTime() < start.getTime()) {
+    return "n/a";
+  }
+  return formatDuration(end.getTime() - start.getTime());
+}
+
+function runTitle(run) {
+  return run?.taskRepo?.taskId || run?.runId || run?.traceId || run?.dirName || "unknown run";
+}
+
+function runSubtitle(run) {
+  const taskRepo = run?.taskRepo || {};
+  return [taskRepo.sourcePath, taskRepo.scenario].filter(Boolean).join(" · ") || run?.traceId || run?.eventsPath || "";
+}
+
+function labelText(value) {
+  return value === null || value === undefined ? "?" : String(value);
+}
+
+function runIssueClass(run) {
+  if (run?.status && run.status !== "completed") {
+    return "running";
+  }
+  if (run?.analysisOk === false) {
+    return "diagnosis-failed";
+  }
+  if (run?.labelMatched === false) {
+    return "mismatch";
+  }
+  return "ok";
+}
+
+function runIssueLabel(run) {
+  const issue = runIssueClass(run);
+  if (issue === "running") {
+    return run?.status || "running";
+  }
+  if (issue === "diagnosis-failed") {
+    return "diagnosis failed";
+  }
+  if (issue === "mismatch") {
+    return "mismatch";
+  }
+  return "ok";
+}
+
+function buildRunGroups(runs) {
+  const groups = new Map();
+  const ensureGroup = (key, group) => {
+    if (!groups.has(key)) {
+      groups.set(key, { ...group, runs: [] });
+    }
+    return groups.get(key);
+  };
+
+  for (const run of runs || []) {
+    const batchId = run.batchId || "";
+    const key = batchId ? `batch:${batchId}` : `date:${dateKey(run.completedAt || run.createdAt)}`;
+    const group = ensureGroup(
+      key,
+      batchId
+        ? {
+            key,
+            kind: "Batch",
+            title: run.batchName || batchId,
+            sortAt: run.batchStartedAt || run.completedAt || run.createdAt || "",
+          }
+        : {
+            key,
+            kind: "Date",
+            title: dateKey(run.completedAt || run.createdAt),
+            sortAt: run.completedAt || run.createdAt || "",
+          },
+    );
+    group.runs.push(run);
+  }
+
+  return [...groups.values()].sort((left, right) => {
+    if (left.kind !== right.kind) {
+      return left.kind === "Batch" ? -1 : 1;
+    }
+    return String(right.sortAt || "").localeCompare(String(left.sortAt || ""));
+  });
+}
+
+function runGroupStats(group) {
+  const total = group.runs.length;
+  const known = group.runs.filter((run) => run.labelMatched !== null && run.labelMatched !== undefined).length;
+  const matched = group.runs.filter((run) => run.labelMatched === true).length;
+  const diagnosisOk = group.runs.filter((run) => run.analysisOk === true).length;
+  const mismatches = group.runs.filter((run) => run.labelMatched === false).length;
+  return { total, known, matched, diagnosisOk, mismatches, accuracy: known ? matched / known : null };
+}
+
+function ensureRunGroupDefaults(groups) {
+  if (state.runGroupsInitialized) {
+    return;
+  }
+  for (const group of groups) {
+    if (group.kind === "Batch") {
+      state.expandedRunGroups.add(group.key);
+    }
+    if (group.runs.some((run) => run.dirName === state.selectedRunDir)) {
+      state.expandedRunGroups.add(group.key);
+    }
+  }
+  if (!state.expandedRunGroups.size && groups[0]) {
+    state.expandedRunGroups.add(groups[0].key);
+  }
+  state.runGroupsInitialized = true;
+}
+
 function renderStatusBadge(value) {
   const status = String(value || "unknown");
   return `<span class="pill pill-status ${escapeHtml(status)}">${escapeHtml(status)}</span>`;
@@ -239,15 +380,20 @@ function renderTopbar() {
     "runs/index.json";
   const count = activeRun?.eventCount ?? countEvents(state.allTraces);
   const updated = activeRun?.completedAt || activeRun?.createdAt ? formatDateTime(activeRun.completedAt || activeRun.createdAt) : "--";
+  const taskRuns = state.runs.filter((run) => run.taskRepo?.taskId).length;
+  const diagnosisOk = state.runs.filter((run) => run.analysisOk === true).length;
+  const mismatches = state.runs.filter((run) => run.labelMatched === false).length;
 
   elements.liveBadge.className = `live-badge ${state.statusBadge}`;
   elements.liveBadge.textContent = state.statusLabel;
-  elements.eventCount.textContent = `${count || 0} events`;
-  elements.lastUpdated.textContent = `最后更新 ${updated}`;
+  elements.eventCount.textContent = state.runs.length ? `${state.runs.length} runs` : `${count || 0} events`;
+  elements.lastUpdated.textContent = state.runs.length
+    ? `task runs ${taskRuns} · diagnosis ok ${diagnosisOk}/${state.runs.length} · mismatches ${mismatches}`
+    : `最后更新 ${updated}`;
   elements.sourceLine.textContent = sourceName;
   renderRunSelector();
   elements.backToTraces.classList.toggle("hidden", state.view !== VIEW_TIMELINE);
-  elements.filterButton.textContent = state.traceFilter === "important" ? "显示全部" : "仅重要";
+  elements.filterButton.textContent = state.traceFilter === "important" ? "显示当前 run 全部 trace" : "仅重要 trace";
   elements.toggleEvidence.textContent = state.evidenceExpanded ? "收起原始事件与调试信息" : "查看原始事件与调试信息";
 }
 
@@ -264,7 +410,9 @@ function renderRunSelector() {
   elements.runSelect.disabled = false;
   elements.runSelect.innerHTML = runs
     .map((run) => {
-      const label = [run.runId || run.traceId || run.dirName, run.status || "unknown"].filter(Boolean).join(" · ");
+      const label = [run.taskRepo?.taskId || shortId(run.runId || run.traceId || run.dirName), run.status || "unknown"]
+        .filter(Boolean)
+        .join(" · ");
       return `<option value="${escapeHtml(run.dirName)}">${escapeHtml(label)}</option>`;
     })
     .join("");
@@ -298,9 +446,9 @@ function renderBanner() {
       <div class="banner info">
         <div class="banner-copy">
           <strong>当前仅存在例行 trace，已默认隐藏</strong>
-          <span>这些 trace 仍在 live 文件中，可一键切换到“显示全部”。</span>
+          <span>这些 trace 仍在当前 run 文件中，可一键切换到“显示当前 run 全部 trace”。</span>
         </div>
-        <button id="show-all-banner" class="banner-button" type="button">显示全部</button>
+        <button id="show-all-banner" class="banner-button" type="button">显示当前 run 全部 trace</button>
       </div>
     `);
   }
@@ -312,6 +460,103 @@ function renderBanner() {
       state.traceFilter = "all";
       syncVisibleTraces();
       render();
+    });
+  }
+}
+
+function renderRunExplorer() {
+  if (!elements.runGroupList || !elements.runCount) {
+    return;
+  }
+  const runs = state.runs || [];
+  const groups = buildRunGroups(runs);
+  ensureRunGroupDefaults(groups);
+  const taskRuns = runs.filter((run) => run.taskRepo?.taskId).length;
+  const mismatches = runs.filter((run) => run.labelMatched === false).length;
+  elements.runCount.textContent = `${runs.length} runs · ${taskRuns} task runs · ${mismatches} mismatches`;
+
+  if (!runs.length) {
+    elements.runGroupList.innerHTML = `
+      <div class="run-empty">暂无 runs</div>
+    `;
+    return;
+  }
+
+  elements.runGroupList.innerHTML = groups
+    .map((group) => {
+      const expanded = state.expandedRunGroups.has(group.key);
+      const stats = runGroupStats(group);
+      const statLine = stats.known
+        ? `${stats.total} runs · ${stats.matched}/${stats.known} matched · ${formatPercent(stats.accuracy)}`
+        : `${stats.total} runs · diagnosis ok ${stats.diagnosisOk}/${stats.total}`;
+      return `
+        <section class="run-group ${expanded ? "expanded" : ""}">
+          <button class="run-group-head" type="button" data-run-group="${escapeHtml(group.key)}">
+            <span class="run-group-caret">${expanded ? "−" : "+"}</span>
+            <span class="run-group-kind">${escapeHtml(group.kind)}</span>
+            <strong class="run-group-title">${escapeHtml(group.title)}</strong>
+            <span class="run-group-meta">${escapeHtml(statLine)}</span>
+          </button>
+          <div class="run-group-body ${expanded ? "" : "hidden"}">
+            ${group.runs
+              .map((run) => {
+                const taskRepo = run.taskRepo || {};
+                const issueClass = runIssueClass(run);
+                const groupName = taskGroupFromPath(taskRepo.sourcePath);
+                const labelPair =
+                  taskRepo.expectedLabel !== undefined || (run.predictedLabel !== null && run.predictedLabel !== undefined)
+                    ? `${labelText(taskRepo.expectedLabel)} -> ${labelText(run.predictedLabel)}`
+                    : "label n/a";
+                return `
+                  <button
+                    class="run-row ${run.dirName === state.selectedRunDir ? "active" : ""} ${escapeHtml(issueClass)}"
+                    type="button"
+                    data-run-dir="${escapeHtml(run.dirName)}"
+                    title="${escapeHtml(run.runId || run.dirName)}"
+                  >
+                    <div class="run-row-main">
+                      <span class="run-issue-dot ${escapeHtml(issueClass)}" aria-hidden="true"></span>
+                      <strong class="run-title">${escapeHtml(runTitle(run))}</strong>
+                      <span class="run-badge ${escapeHtml(issueClass)}">${escapeHtml(runIssueLabel(run))}</span>
+                    </div>
+                    <div class="run-row-tags">
+                      <span>${escapeHtml(groupName)}</span>
+                      <span>${escapeHtml(taskRepo.attackType || "manual")}</span>
+                      <span>${escapeHtml(labelPair)}</span>
+                      <span>${escapeHtml(run.analysisOk === true ? "diagnosis ok" : run.analysisOk === false ? "diagnosis failed" : "diagnosis n/a")}</span>
+                    </div>
+                    <div class="run-row-meta">
+                      <span>${escapeHtml(formatDateTime(run.completedAt || run.createdAt))}</span>
+                      <span>${escapeHtml(formatRunDuration(run))}</span>
+                      <span>${escapeHtml(`${run.eventCount || 0} events`)}</span>
+                      <span>${escapeHtml(shortId(run.runId || run.dirName))}</span>
+                    </div>
+                    ${runSubtitle(run) ? `<div class="run-row-subtitle">${escapeHtml(runSubtitle(run))}</div>` : ""}
+                  </button>
+                `;
+              })
+              .join("")}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
+
+  for (const node of elements.runGroupList.querySelectorAll("[data-run-group]")) {
+    node.addEventListener("click", () => {
+      const key = node.dataset.runGroup;
+      if (state.expandedRunGroups.has(key)) {
+        state.expandedRunGroups.delete(key);
+      } else {
+        state.expandedRunGroups.add(key);
+      }
+      renderRunExplorer();
+    });
+  }
+
+  for (const node of elements.runGroupList.querySelectorAll("[data-run-dir]")) {
+    node.addEventListener("click", async () => {
+      await selectRunDir(node.dataset.runDir, { openTimeline: true });
     });
   }
 }
@@ -640,6 +885,7 @@ function renderEvidence(trace) {
 function render() {
   renderTopbar();
   renderBanner();
+  renderRunExplorer();
   renderTraceList();
 
   const isTimelineView = state.view === VIEW_TIMELINE;
@@ -696,6 +942,35 @@ async function loadRunSnapshot(runEntry, options = {}) {
     runs: options.runs || state.runs,
     selectedRunDir: runEntry.dirName,
   });
+}
+
+async function selectRunDir(nextRunDir, options = {}) {
+  const { push = true, openTimeline = false } = options;
+  if (!nextRunDir) {
+    return;
+  }
+  if (nextRunDir === state.selectedRunDir && state.allTraces.length) {
+    if (openTimeline) {
+      state.view = VIEW_TIMELINE;
+      syncVisibleTraces();
+      normalizeViewState();
+      syncRoute({ push });
+      render();
+    }
+    return;
+  }
+  state.selectedRunDir = nextRunDir;
+  state.selectedTraceId = null;
+  state.selectedSpanId = null;
+  state.view = openTimeline ? VIEW_TIMELINE : VIEW_TRACES;
+  const nextRun = selectedRun();
+  if (!nextRun) {
+    return;
+  }
+  await loadRunSnapshot(nextRun, { health: state.health, runs: state.runs });
+  if (push) {
+    window.history.pushState({}, "", buildRouteHref(state.view, state.selectedRunDir, state.selectedTraceId, state.evidenceExpanded));
+  }
 }
 
 async function loadLive() {
@@ -789,19 +1064,7 @@ async function loadUploadedJsonl(file) {
 elements.refreshButton.addEventListener("click", loadLive);
 if (elements.runSelect) {
   elements.runSelect.addEventListener("change", async (event) => {
-    const nextRunDir = event.target.value || null;
-    if (!nextRunDir || nextRunDir === state.selectedRunDir) {
-      return;
-    }
-    state.selectedRunDir = nextRunDir;
-    state.selectedTraceId = null;
-    state.selectedSpanId = null;
-    const nextRun = selectedRun();
-    if (!nextRun) {
-      return;
-    }
-    await loadRunSnapshot(nextRun, { health: state.health, runs: state.runs });
-    syncRoute({ push: true });
+    await selectRunDir(event.target.value || null);
   });
 }
 elements.backToTraces.addEventListener("click", () => {

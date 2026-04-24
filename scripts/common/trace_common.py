@@ -179,16 +179,159 @@ def list_run_dirs(root: Path | None = None) -> list[Path]:
     return sorted(path for path in base.iterdir() if path.is_dir())
 
 
+TASK_REPO_KEYS = ["sourceRepo", "taskId", "sourcePath", "scenario", "attackType", "expectedLabel", "harnessMode"]
+
+
+def normalize_task_repo_metadata(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    metadata = {key: payload.get(key) for key in TASK_REPO_KEYS if key in payload}
+    return metadata if any(value is not None for value in metadata.values()) else None
+
+
+def read_task_repo_metadata(run_dir: Path) -> dict[str, Any] | None:
+    task_input = read_json(run_dir / "task_input.json", default=None)
+    if isinstance(task_input, dict):
+        metadata = normalize_task_repo_metadata(task_input.get("taskRepo"))
+        if metadata:
+            return metadata
+
+    harness_report = read_json(run_dir / "artifacts" / "task_repo" / "harness_report.json", default=None)
+    if isinstance(harness_report, dict):
+        return normalize_task_repo_metadata(
+            {
+                "sourceRepo": harness_report.get("repoSlug") or harness_report.get("repo"),
+                "taskId": harness_report.get("taskId"),
+                "sourcePath": harness_report.get("sourcePath"),
+                "scenario": harness_report.get("scenario"),
+                "attackType": harness_report.get("attackType"),
+                "expectedLabel": harness_report.get("expectedLabel"),
+                "harnessMode": harness_report.get("mode"),
+            }
+        )
+    return None
+
+
+def batch_id_from_summary_path(path: Path) -> str:
+    name = path.name
+    suffix = ".summary.json"
+    return name[: -len(suffix)] if name.endswith(suffix) else path.stem
+
+
+def run_id_from_batch_result(result: dict[str, Any]) -> str | None:
+    payload = result.get("payload")
+    if isinstance(payload, dict):
+        for key in ["agentRunId", "runId"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        run_dir = payload.get("resolvedRunDir")
+        if isinstance(run_dir, str) and run_dir.strip():
+            return Path(run_dir).name
+    value = result.get("runId")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def batch_result_task_repo(result: dict[str, Any]) -> dict[str, Any] | None:
+    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
+    return normalize_task_repo_metadata(
+        {
+            "sourceRepo": payload.get("repoSlug") or payload.get("repo"),
+            "taskId": result.get("taskId") or payload.get("taskId"),
+            "sourcePath": result.get("sourcePath") or payload.get("sourcePath"),
+            "scenario": result.get("scenario") or payload.get("scenario"),
+            "attackType": result.get("attackType") or payload.get("attackType"),
+            "expectedLabel": result.get("expectedLabel") if result.get("expectedLabel") is not None else payload.get("expectedLabel"),
+            "harnessMode": payload.get("mode"),
+        }
+    )
+
+
+def scan_batch_report_links(reports_root: Path) -> dict[str, dict[str, Any]]:
+    if not reports_root.exists():
+        return {}
+
+    summaries: dict[str, dict[str, Any]] = {}
+    for summary_path in sorted(reports_root.glob("*.summary.json")):
+        summary = read_json(summary_path, default=None)
+        if isinstance(summary, dict):
+            summaries[batch_id_from_summary_path(summary_path)] = summary
+
+    links: dict[str, dict[str, Any]] = {}
+    for report_path in sorted(reports_root.glob("*.json")):
+        if report_path.name.endswith(".summary.json") or report_path.name.endswith(".progress.json"):
+            continue
+        report = read_json(report_path, default=None)
+        if not isinstance(report, dict):
+            continue
+        results = report.get("results")
+        if not isinstance(results, list):
+            continue
+
+        batch_id = report_path.stem
+        summary = summaries.get(batch_id)
+        mismatch_by_run: dict[str, dict[str, Any]] = {}
+        if isinstance(summary, dict):
+            for mismatch in summary.get("mismatches") or []:
+                if not isinstance(mismatch, dict):
+                    continue
+                run_id = mismatch.get("runId")
+                if not isinstance(run_id, str) or not run_id.strip():
+                    run_dir = mismatch.get("runDir")
+                    run_id = Path(run_dir).name if isinstance(run_dir, str) and run_dir.strip() else None
+                if isinstance(run_id, str) and run_id.strip():
+                    mismatch_by_run[run_id.strip()] = mismatch
+
+        started_values = [
+            result.get("startedAt")
+            for result in results
+            if isinstance(result, dict) and isinstance(result.get("startedAt"), str) and result.get("startedAt")
+        ]
+        batch_started_at = min(started_values) if started_values else None
+
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+            run_id = run_id_from_batch_result(result)
+            if not run_id:
+                continue
+            task_repo = batch_result_task_repo(result)
+            expected_label = task_repo.get("expectedLabel") if task_repo else None
+            mismatch = mismatch_by_run.get(run_id)
+            predicted_label = None
+            label_matched = None
+            if mismatch:
+                predicted_label = mismatch.get("predictedLabel")
+                label_matched = False
+            elif isinstance(summary, dict) and expected_label is not None:
+                predicted_label = expected_label
+                label_matched = True
+            links[run_id] = {
+                "batchId": batch_id,
+                "batchName": batch_id,
+                "batchStartedAt": batch_started_at,
+                "batchReportPath": normalize_path(report_path.resolve()),
+                "taskRepo": task_repo,
+                "predictedLabel": predicted_label,
+                "labelMatched": label_matched,
+            }
+    return links
+
+
 def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
     runs_root = (root or TRACE_LIVE_RUNS_DIR).resolve()
+    batch_links = scan_batch_report_links(runs_root.parent / "reports")
     summaries: list[dict[str, Any]] = []
     for run_dir in list_run_dirs(runs_root):
         manifest_path = run_dir / "manifest.json"
         manifest = read_json(manifest_path, default=None)
         if not isinstance(manifest, dict):
             continue
+        run_id = manifest.get("runId")
+        batch_link = batch_links.get(str(run_id)) if run_id else None
+        task_repo = read_task_repo_metadata(run_dir) or ((batch_link or {}).get("taskRepo"))
         summary = {
-            "runId": manifest.get("runId"),
+            "runId": run_id,
             "traceId": manifest.get("traceId"),
             "sessionKey": manifest.get("sessionKey"),
             "scenarioId": manifest.get("scenarioId"),
@@ -203,6 +346,13 @@ def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
             "runPath": normalize_path(run_dir.resolve()),
             "manifestPath": normalize_path(manifest_path.resolve()),
             "eventsPath": f"/live/runs/{run_dir.name}/behavior-events.jsonl",
+            "taskRepo": task_repo,
+            "batchId": (batch_link or {}).get("batchId"),
+            "batchName": (batch_link or {}).get("batchName"),
+            "batchStartedAt": (batch_link or {}).get("batchStartedAt"),
+            "batchReportPath": (batch_link or {}).get("batchReportPath"),
+            "predictedLabel": (batch_link or {}).get("predictedLabel"),
+            "labelMatched": (batch_link or {}).get("labelMatched"),
         }
         summaries.append(summary)
     summaries.sort(

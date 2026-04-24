@@ -1,6 +1,7 @@
 {
   "name": "R-Judge",
-  "repo_root": "D:/code/R-Judge",
+  "repo_root": "../../../R-Judge",
+  "repo_root_env": "R_JUDGE_ROOT",
   "type": "task_benchmark",
   "python": {
     "preferred": "3.11",
@@ -14,6 +15,10 @@
       {
         "kind": "conda",
         "name": "py310"
+      },
+      {
+        "kind": "conda",
+        "name": "rjudge-py310"
       },
       {
         "kind": "venv",

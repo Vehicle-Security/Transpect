@@ -16,7 +16,7 @@ sys.path.insert(0, str(_SCRIPTS_ROOT / "diagnosis"))
 
 from export_codetracer_bundle import export_bundles  # noqa: E402
 from run_codetracer_diagnosis import detect_codetracer_src_dir, run_codetracer_diagnosis  # noqa: E402
-from trace_common import CommandResult  # noqa: E402
+from trace_common import CommandResult, build_runs_index_payload  # noqa: E402
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -88,6 +88,149 @@ class TracePipelineTests(unittest.TestCase):
             },
         )
         return run_dir
+
+    def make_index_run_dir(self, runs_root: Path, *, run_id: str, trace_id: str = "trace-index") -> Path:
+        run_dir = runs_root / run_id
+        write_json(
+            run_dir / "manifest.json",
+            {
+                "schemaVersion": "openclaw.run.v1",
+                "runId": run_id,
+                "traceId": trace_id,
+                "sessionKey": "sess-test",
+                "createdAt": "2026-04-24T04:00:00Z",
+                "completedAt": "2026-04-24T04:00:10Z",
+                "status": "completed",
+                "eventCount": 8,
+                "artifactCount": 0,
+                "diagnosis": {"codetracer": {"analysisReady": True, "analysisOk": True}},
+            },
+        )
+        return run_dir
+
+    def test_runs_index_includes_task_repo_metadata(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="transpect-index-"))
+        runs_root = root / "runs"
+        run_dir = self.make_index_run_dir(runs_root, run_id="run-task-meta")
+        write_json(
+            run_dir / "task_input.json",
+            {
+                "schemaVersion": "openclaw.run.task-input.v1",
+                "taskRepo": {
+                    "sourceRepo": "rjudge",
+                    "taskId": "data/Application/chatbot.json#37",
+                    "sourcePath": "data/Application/chatbot.json",
+                    "scenario": "psychological",
+                    "attackType": "unintended",
+                    "expectedLabel": 0,
+                    "harnessMode": "agent-trace",
+                },
+            },
+        )
+
+        payload = build_runs_index_payload(runs_root)
+
+        self.assertEqual(payload["runCount"], 1)
+        run = payload["runs"][0]
+        self.assertEqual(run["taskRepo"]["taskId"], "data/Application/chatbot.json#37")
+        self.assertEqual(run["taskRepo"]["sourcePath"], "data/Application/chatbot.json")
+        self.assertEqual(run["taskRepo"]["attackType"], "unintended")
+        self.assertEqual(run["taskRepo"]["expectedLabel"], 0)
+        self.assertIsNone(run["batchId"])
+        self.assertIsNone(run["labelMatched"])
+
+    def test_runs_index_links_batch_reports_and_label_mismatches(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="transpect-index-batch-"))
+        runs_root = root / "runs"
+        self.make_index_run_dir(runs_root, run_id="run-match")
+        self.make_index_run_dir(runs_root, run_id="run-mismatch")
+        reports_root = root / "reports"
+        write_json(
+            reports_root / "rjudge-batch-2-20260424T043618Z.json",
+            {
+                "sample": [],
+                "results": [
+                    {
+                        "taskId": "data/Application/chatbot.json#37",
+                        "sourcePath": "data/Application/chatbot.json",
+                        "attackType": "unintended",
+                        "expectedLabel": 0,
+                        "startedAt": "2026-04-24T04:36:18Z",
+                        "payload": {"agentRunId": "run-match"},
+                    },
+                    {
+                        "taskId": "data/Finance/moneymanagement.json#13",
+                        "sourcePath": "data/Finance/moneymanagement.json",
+                        "attackType": "unintended",
+                        "expectedLabel": 1,
+                        "startedAt": "2026-04-24T04:37:18Z",
+                        "payload": {"agentRunId": "run-mismatch"},
+                    },
+                ],
+            },
+        )
+        write_json(
+            reports_root / "rjudge-batch-2-20260424T043618Z.summary.json",
+            {
+                "matchedLabels": 1,
+                "parsedLabels": 2,
+                "accuracy": 0.5,
+                "mismatches": [
+                    {
+                        "taskId": "data/Finance/moneymanagement.json#13",
+                        "expectedLabel": 1,
+                        "predictedLabel": 0,
+                        "runId": "run-mismatch",
+                    }
+                ],
+            },
+        )
+
+        payload = build_runs_index_payload(runs_root)
+        by_run_id = {run["runId"]: run for run in payload["runs"]}
+
+        self.assertEqual(by_run_id["run-match"]["batchId"], "rjudge-batch-2-20260424T043618Z")
+        self.assertEqual(by_run_id["run-match"]["batchName"], "rjudge-batch-2-20260424T043618Z")
+        self.assertEqual(by_run_id["run-match"]["batchStartedAt"], "2026-04-24T04:36:18Z")
+        self.assertEqual(by_run_id["run-match"]["predictedLabel"], 0)
+        self.assertTrue(by_run_id["run-match"]["labelMatched"])
+        self.assertEqual(by_run_id["run-mismatch"]["predictedLabel"], 0)
+        self.assertFalse(by_run_id["run-mismatch"]["labelMatched"])
+
+    def test_runs_index_links_custom_named_reports(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="transpect-index-custom-report-"))
+        runs_root = root / "runs"
+        self.make_index_run_dir(runs_root, run_id="run-custom")
+        reports_root = root / "reports"
+        write_json(
+            reports_root / "custom-smoke.json",
+            {
+                "sample": [],
+                "results": [
+                    {
+                        "taskId": "data/Program/terminal.json#0",
+                        "sourcePath": "data/Program/terminal.json",
+                        "expectedLabel": 1,
+                        "startedAt": "2026-04-24T04:36:18Z",
+                        "payload": {"agentRunId": "run-custom"},
+                    }
+                ],
+            },
+        )
+        write_json(
+            reports_root / "custom-smoke.summary.json",
+            {
+                "matchedLabels": 1,
+                "parsedLabels": 1,
+                "accuracy": 1.0,
+                "mismatches": [],
+            },
+        )
+
+        payload = build_runs_index_payload(runs_root)
+
+        self.assertEqual(payload["runs"][0]["batchId"], "custom-smoke")
+        self.assertTrue(payload["runs"][0]["labelMatched"])
 
     def test_export_bundle_from_run_dir_updates_run_manifest(self) -> None:
         run_id = "run-readme"
@@ -303,7 +446,7 @@ class TracePipelineTests(unittest.TestCase):
         self.assertNotIn(secret_api_key, json.dumps(result, ensure_ascii=False))
 
     def test_detect_codetracer_sibling_src_dir(self) -> None:
-        sibling_src = Path("D:/code/CodeTracer/src")
+        sibling_src = Path(__file__).resolve().parents[3] / "CodeTracer" / "src"
         if not sibling_src.exists():
             self.skipTest("local sibling CodeTracer checkout is not available")
         with patch.dict("os.environ", {"CODETRACER_ROOT": "", "CODETRACER_SRC": ""}, clear=False):

@@ -16,6 +16,7 @@ from typing import Any
 
 from jsonschema import validate
 
+from repo_roots import resolve_manifest_repo_root
 from trace_common import (
     TRACE_LIVE_RUNS_DIR,
     build_run_dir_name,
@@ -116,7 +117,7 @@ def has_source_capabilities(adapter: ModuleType | None) -> bool:
 
 
 def resolve_repo_root(manifest: dict[str, Any]) -> Path:
-    return Path(str(manifest["repo_root"])).expanduser().resolve()
+    return resolve_manifest_repo_root(manifest)
 
 
 def read_dotenv_values(path: Path) -> dict[str, str]:
