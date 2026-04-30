@@ -219,3 +219,52 @@ def explicit_authorized(context: SecurityContextState, action: str, target: str)
         if lowered and (lowered in text or any(token in lowered for token in text.split() if len(token) > 4)):
             return True
     return False
+
+
+def compress_context(context: SecurityContextState) -> dict[str, float]:
+    """Fixed-dimension security context feature vector.
+
+    Encodes the variable-length security context (chains of source-trust
+    events, navigation edges, risk timeline entries, sensitive actions)
+    into a fixed-length numerical vector suitable for downstream analysis,
+    similarity comparison, or lightweight persistence.
+
+    This addresses Research Direction 1: security-sensitive long-context
+    state compression.  The 9-dimensional vector preserves the key
+    security semantics while discarding raw event text.
+    """
+    trust_count = len(context.sourceTrustChain)
+    nav_count = len(context.navigationChain)
+    sensitive_count = len(context.sensitiveActions)
+    low_trust_count = sum(1 for s in context.sourceTrustChain if s.trustLevel == "low")
+    external_nav_count = sum(
+        1 for n in context.navigationChain
+        if n.fromSource in {"comment", "advertisement", "popup", "external_website", "button"}
+    )
+    unauthorized_count = sum(1 for a in context.sensitiveActions if not a.authorizedByUser)
+
+    scope_map = {
+        "in_scope": 0.0,
+        "minor_expansion": 0.33,
+        "scope_expansion": 0.66,
+        "severe_deviation": 1.0,
+    }
+    chain_escalated = 1.0 if (
+        nav_count > 0
+        and any(
+            s.sourceType in {"comment", "advertisement", "popup", "external_website"}
+            for s in context.sourceTrustChain
+        )
+    ) else 0.0
+
+    return {
+        "cumulative_risk_score": min(100.0, float(context.cumulativeRisk.score)) / 100.0,
+        "low_trust_ratio": low_trust_count / max(1, trust_count),
+        "external_navigation_ratio": external_nav_count / max(1, nav_count),
+        "unauthorized_sensitive_ratio": unauthorized_count / max(1, sensitive_count),
+        "scope_deviation_level": scope_map.get(context.taskScopeDeviation.level, 0.0),
+        "chain_escalation_flag": chain_escalated,
+        "source_trust_chain_diversity": min(1.0, trust_count / 10.0),
+        "sensitive_action_density": min(1.0, sensitive_count / 5.0),
+        "risk_timeline_span": min(1.0, len(context.riskTimeline) / 20.0),
+    }
