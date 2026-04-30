@@ -27,7 +27,10 @@ from trace_common import (
 
 
 EXPORTER_SCHEMA_VERSION = "openclaw.codetracer.bundle.v1"
-SOURCE_TRACE_RELATIVE_PATH = "source/behavior-events.jsonl"
+SOURCE_TRACE_RELATIVE_PATH = "source/merged-trace.jsonl"
+BEHAVIOR_TRACE_RELATIVE_PATH = "source/behavior-events.jsonl"
+FRIDA_TRACE_RELATIVE_PATH = "source/frida-events.jsonl"
+TRACE_INDEX_RELATIVE_PATH = "source/trace_index.json"
 LINE_MAP_RELATIVE_PATH = "source/line-map.json"
 OPENCLAW_RUNTIME_RELATIVE_PATH = "openclaw_runtime.json"
 MANIFEST_RELATIVE_PATH = "manifest.json"
@@ -35,6 +38,7 @@ TASK_RELATIVE_PATH = "task.md"
 STAGE_RANGES_RELATIVE_PATH = "stage_ranges.json"
 STEPS_RELATIVE_PATH = "steps.json"
 RUN_EVENTS_NAME = "behavior-events.jsonl"
+RUN_MERGED_TRACE_NAME = "merged-trace.jsonl"
 RUN_MANIFEST_NAME = "manifest.json"
 
 POLICY_STATUSES = {"blocked", "would_block"}
@@ -293,12 +297,18 @@ def resolve_input_run_path(path: Path | None) -> tuple[Path, Path]:
         latest_dir = latest_run_dir(TRACE_LIVE_RUNS_DIR)
         if latest_dir is None:
             raise FileNotFoundError(f"no run directories found under {TRACE_LIVE_RUNS_DIR}")
+        candidate = latest_dir / RUN_MERGED_TRACE_NAME
+        if candidate.exists():
+            return candidate, latest_dir
         candidate = latest_dir / RUN_EVENTS_NAME
         if candidate.exists():
             return candidate, latest_dir
         raise FileNotFoundError(f"run directory missing {RUN_EVENTS_NAME}: {latest_dir}")
     resolved = path.resolve()
     if resolved.is_dir():
+        candidate = resolved / RUN_MERGED_TRACE_NAME
+        if candidate.exists():
+            return candidate, resolved
         candidate = resolved / RUN_EVENTS_NAME
         if not candidate.exists():
             raise FileNotFoundError(f"run directory missing {RUN_EVENTS_NAME}: {resolved}")
@@ -994,6 +1004,38 @@ def write_source_trace_copy(bundle_dir: Path, rows: list[TraceRow]) -> dict[int,
     return {entry["originalLine"]: entry["copyLine"] for entry in line_map}
 
 
+def copy_run_trace_sources(bundle_dir: Path, run_dir: Path) -> dict[str, dict[str, Any]]:
+    ensure_dir(bundle_dir / "source")
+    mapping = {
+        "behavior": (run_dir / "behavior-events.jsonl", BEHAVIOR_TRACE_RELATIVE_PATH),
+        "frida": (run_dir / "frida-events.jsonl", FRIDA_TRACE_RELATIVE_PATH),
+        "merged": (run_dir / "merged-trace.jsonl", SOURCE_TRACE_RELATIVE_PATH),
+        "traceIndex": (run_dir / "trace_index.json", TRACE_INDEX_RELATIVE_PATH),
+    }
+    sources: dict[str, dict[str, Any]] = {}
+    for name, (source, relative) in mapping.items():
+        target = bundle_dir / relative
+        if source.exists():
+            if source.resolve() != target.resolve():
+                ensure_dir(target.parent)
+                shutil.copy2(source, target)
+            event_count = None
+            if source.suffix == ".jsonl":
+                event_count = sum(1 for line in target.read_text(encoding="utf-8", errors="replace").splitlines() if line.strip())
+            sources[name] = {
+                "path": relative,
+                "status": "ok",
+                "eventCount": event_count,
+            }
+        else:
+            sources[name] = {
+                "path": relative,
+                "status": "missing",
+                "eventCount": 0 if source.suffix == ".jsonl" else None,
+            }
+    return sources
+
+
 def build_file_ref(path: str, content: Any) -> dict[str, Any]:
     if isinstance(content, str):
         text = content
@@ -1256,6 +1298,7 @@ def export_single_bundle(
         runtime_snapshot = {}
 
     source_line_map = write_source_trace_copy(bundle_dir, rows)
+    trace_sources = copy_run_trace_sources(bundle_dir, run_dir)
     write_json(bundle_dir / OPENCLAW_RUNTIME_RELATIVE_PATH, runtime_record)
     task_description = extract_task_description(rows, bundle_id)
     write_text(bundle_dir / TASK_RELATIVE_PATH, task_description)
@@ -1326,6 +1369,7 @@ def export_single_bundle(
         "bundleDirName": bundle_dir_name,
         "bundlePath": normalize_path(bundle_dir),
         "sourceTracePath": normalize_path(input_file),
+        "inputTraceSources": trace_sources,
         "sourceKind": "run",
         "sourceRunPath": normalize_path(run_dir.resolve()),
         "sourceRunManifestPath": normalize_path((run_dir / RUN_MANIFEST_NAME).resolve()),
@@ -1341,8 +1385,13 @@ def export_single_bundle(
             "stageRanges": STAGE_RANGES_RELATIVE_PATH,
             "runtime": OPENCLAW_RUNTIME_RELATIVE_PATH,
             "sourceTrace": SOURCE_TRACE_RELATIVE_PATH,
+            "behaviorTrace": BEHAVIOR_TRACE_RELATIVE_PATH,
+            "fridaTrace": FRIDA_TRACE_RELATIVE_PATH,
+            "mergedTrace": SOURCE_TRACE_RELATIVE_PATH,
+            "traceIndex": TRACE_INDEX_RELATIVE_PATH,
             "lineMap": LINE_MAP_RELATIVE_PATH,
         },
+        "traceSources": trace_sources,
         "stages": stage_ranges,
     }
     write_json(bundle_dir / MANIFEST_RELATIVE_PATH, manifest)

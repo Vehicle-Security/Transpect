@@ -212,6 +212,102 @@ def read_task_repo_metadata(run_dir: Path) -> dict[str, Any] | None:
     return None
 
 
+def read_security_context_metadata(run_dir: Path) -> dict[str, Any] | None:
+    report = read_json(run_dir / "security-context" / "context_report.json", default=None)
+    if not isinstance(report, dict):
+        manifest = read_json(run_dir / "manifest.json", default=None)
+        security_context = manifest.get("securityContext") if isinstance(manifest, dict) else None
+        if not isinstance(security_context, dict):
+            return None
+        return {
+            "ready": security_context.get("ready"),
+            "decision": security_context.get("decision"),
+            "riskLevel": security_context.get("riskLevel"),
+            "score": security_context.get("score"),
+            "lastRunAt": security_context.get("lastRunAt"),
+            "reportPath": security_context.get("reportPath"),
+            "timelinePath": security_context.get("timelinePath"),
+        }
+    return {
+        "ready": True,
+        "decision": report.get("decision"),
+        "riskLevel": report.get("riskLevel"),
+        "score": report.get("score"),
+        "scenario": report.get("scenario"),
+        "attackType": report.get("attackType"),
+        "evidenceCount": (report.get("summary") or {}).get("evidenceCount") if isinstance(report.get("summary"), dict) else None,
+        "summary": (report.get("summary") or {}).get("why") if isinstance(report.get("summary"), dict) else None,
+        "reportPath": normalize_path((run_dir / "security-context" / "context_report.json").resolve()),
+        "timelinePath": normalize_path((run_dir / "security-context" / "security_context_timeline.json").resolve()),
+    }
+
+
+def read_security_reasoning_metadata(run_dir: Path) -> dict[str, Any] | None:
+    final_judgment = read_json(run_dir / "security-reasoning" / "final_judgment.json", default=None)
+    decision = read_json(run_dir / "security-reasoning" / "defense_decision.json", default=None)
+    if isinstance(final_judgment, dict):
+        evidence = final_judgment.get("evidence") if isinstance(final_judgment.get("evidence"), dict) else {}
+        return {
+            "ready": True,
+            "decision": final_judgment.get("finalDecision"),
+            "riskLevel": final_judgment.get("riskLevel"),
+            "score": decision.get("score") if isinstance(decision, dict) else None,
+            "riskScore": decision.get("riskScore") if isinstance(decision, dict) else None,
+            "scenario": decision.get("scenario") if isinstance(decision, dict) else None,
+            "attackType": decision.get("attackType") if isinstance(decision, dict) else None,
+            "crossStepCorrelation": decision.get("crossStepCorrelation") if isinstance(decision, dict) else None,
+            "decisionPointEventSeq": decision.get("decisionPointEventSeq") if isinstance(decision, dict) else None,
+            "bypassDetected": evidence.get("bypassDetected") if evidence.get("bypassDetected") is not None else (decision.get("bypassDetected") if isinstance(decision, dict) else None),
+            "fridaIncluded": evidence.get("fridaIncluded"),
+            "codeTracerIncluded": evidence.get("codeTracerIncluded"),
+            "fridaCriticalEvidenceCount": evidence.get("fridaCriticalEvidenceCount"),
+            "reasons": final_judgment.get("reasons"),
+            "summary": " | ".join(final_judgment.get("reasons") or []),
+            "decisionPath": normalize_path((run_dir / "security-reasoning" / "defense_decision.json").resolve()) if isinstance(decision, dict) else None,
+            "statePath": normalize_path((run_dir / "security-reasoning" / "security_state.json").resolve()),
+            "finalJudgmentPath": normalize_path((run_dir / "security-reasoning" / "final_judgment.json").resolve()),
+        }
+    if not isinstance(decision, dict):
+        manifest = read_json(run_dir / "manifest.json", default=None)
+        security_reasoning = manifest.get("securityReasoning") if isinstance(manifest, dict) else None
+        if not isinstance(security_reasoning, dict):
+            return None
+        return {
+            "ready": security_reasoning.get("ready"),
+            "decision": security_reasoning.get("decision"),
+            "riskLevel": security_reasoning.get("riskLevel"),
+            "score": security_reasoning.get("score") if security_reasoning.get("score") is not None else security_reasoning.get("riskScore"),
+            "riskScore": security_reasoning.get("riskScore") if security_reasoning.get("riskScore") is not None else security_reasoning.get("score"),
+            "crossStepCorrelation": security_reasoning.get("crossStepCorrelation"),
+            "decisionPointEventSeq": security_reasoning.get("decisionPointEventSeq"),
+            "hardBlockTriggered": security_reasoning.get("hardBlockTriggered"),
+            "lastStage": security_reasoning.get("lastStage"),
+            "realInteraction": security_reasoning.get("realInteraction"),
+            "lastRunAt": security_reasoning.get("lastRunAt"),
+            "decisionPath": security_reasoning.get("decisionPath"),
+            "statePath": security_reasoning.get("statePath"),
+        }
+    return {
+        "ready": True,
+        "decision": decision.get("decision"),
+        "riskLevel": decision.get("riskLevel"),
+        "score": decision.get("score") if decision.get("score") is not None else decision.get("riskScore"),
+        "riskScore": decision.get("riskScore") if decision.get("riskScore") is not None else decision.get("score"),
+        "scenario": decision.get("scenario"),
+        "attackType": decision.get("attackType"),
+        "crossStepCorrelation": decision.get("crossStepCorrelation"),
+        "decisionPointEventSeq": decision.get("decisionPointEventSeq"),
+        "hardBlockTriggered": decision.get("hardBlockTriggered"),
+        "lastStage": decision.get("lastStage"),
+        "realInteraction": decision.get("realInteraction"),
+        "matchedRules": decision.get("matchedRules"),
+        "reasons": decision.get("reasons"),
+        "summary": " -> ".join(decision.get("matchedRules") or []),
+        "decisionPath": normalize_path((run_dir / "security-reasoning" / "defense_decision.json").resolve()),
+        "statePath": normalize_path((run_dir / "security-reasoning" / "security_state.json").resolve()),
+    }
+
+
 def batch_id_from_summary_path(path: Path) -> str:
     name = path.name
     suffix = ".summary.json"
@@ -330,6 +426,8 @@ def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
         run_id = manifest.get("runId")
         batch_link = batch_links.get(str(run_id)) if run_id else None
         task_repo = read_task_repo_metadata(run_dir) or ((batch_link or {}).get("taskRepo"))
+        security_context = read_security_context_metadata(run_dir)
+        security_reasoning = read_security_reasoning_metadata(run_dir)
         summary = {
             "runId": run_id,
             "traceId": manifest.get("traceId"),
@@ -353,6 +451,8 @@ def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
             "batchReportPath": (batch_link or {}).get("batchReportPath"),
             "predictedLabel": (batch_link or {}).get("predictedLabel"),
             "labelMatched": (batch_link or {}).get("labelMatched"),
+            "securityContext": security_context,
+            "securityReasoning": security_reasoning,
         }
         summaries.append(summary)
     summaries.sort(
@@ -489,7 +589,8 @@ def node_executable() -> str:
 
 
 def get_gateway_status(include_probe: bool = False, timeout_seconds: int = 180) -> dict[str, Any]:
-    args = [openclaw_executable(), "gateway", "status", "--json"]
+    cmd = find_openclaw_cmd() or "openclaw"
+    args = [cmd, "gateway", "status", "--json"]
     if not include_probe:
         args.append("--no-probe")
     return run_command_json(args, timeout=max(int(timeout_seconds) + 2, 5))
@@ -570,11 +671,26 @@ def resolve_otelcol_binary() -> Path | None:
 
 
 def find_openclaw_cmd() -> str | None:
-    result = run_command(["where", "openclaw"], timeout=30, check=False)
-    for line in result.stdout.splitlines():
-        line = line.strip()
-        if line:
-            return line
+    try:
+        from app.runtime.agent_scenarios.openclaw_resolver import OpenClawResolver
+        res = OpenClawResolver().resolve()
+        if res.selected_candidate:
+            return res.selected_candidate.path
+    except ImportError:
+        pass
+        
+    resolved = shutil.which("openclaw")
+    if resolved:
+        return resolved
+    try:
+        cmd = ["where", "openclaw"] if sys.platform == "win32" else ["which", "openclaw"]
+        result = run_command(cmd, timeout=30, check=False)
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line:
+                return line
+    except Exception:
+        pass
     candidate = openclaw_executable()
     return candidate if candidate != "openclaw" else None
 

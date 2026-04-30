@@ -206,6 +206,8 @@ def agent_trace_command(args: argparse.Namespace, task_id: str) -> list[str]:
     ]
     if args.skip_diagnosis:
         command.append("--skip-diagnosis")
+    if getattr(args, "skip_context_judge", False):
+        command.append("--skip-context-judge")
     if args.diagnosis_model:
         command.extend(["--diagnosis-model", args.diagnosis_model])
     return command
@@ -252,6 +254,9 @@ def summarize_results(batch_id: str, report_path: Path, results: list[dict[str, 
     ok_runs = sum(1 for result in results if result.get("ok"))
     trace_ok = sum(1 for result in results if (result.get("payload") or {}).get("agentRunSuccess"))
     diagnosis_ok = sum(1 for result in results if ((result.get("payload") or {}).get("diagnosis") or {}).get("ok"))
+    context_blocks = sum(
+        1 for result in results if ((result.get("payload") or {}).get("securityContext") or {}).get("decision") == "block"
+    )
     parsed = sum(1 for result in results if result.get("predictedLabel") in {0, 1})
     matched = sum(1 for result in results if result.get("labelMatched") is True)
     mismatches = [
@@ -274,6 +279,7 @@ def summarize_results(batch_id: str, report_path: Path, results: list[dict[str, 
         "okRuns": ok_runs,
         "traceOk": trace_ok,
         "diagnosisOk": diagnosis_ok,
+        "contextBlocks": context_blocks,
         "parsedLabels": parsed,
         "matchedLabels": matched,
         "accuracy": round(matched / parsed, 4) if parsed else None,
@@ -405,6 +411,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=300, help="Per agent-trace polling timeout.")
     parser.add_argument("--command-timeout-seconds", type=int, default=2400, help="Subprocess timeout per task.")
     parser.add_argument("--skip-diagnosis", action="store_true")
+    parser.add_argument("--skip-context-judge", action="store_true")
     parser.add_argument("--diagnosis-profile", default="detailed")
     parser.add_argument("--diagnosis-model")
     parser.add_argument("--diagnosis-timeout-seconds", type=int, default=1800)

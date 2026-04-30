@@ -428,6 +428,20 @@ def has_terminal_agent_request(rows: list[dict[str, Any]]) -> bool:
     return any(row.get("kind") == "request" and row.get("status") in {"ok", "error"} for row in rows)
 
 
+def find_security_intervention(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for row in rows:
+        status = str(row.get("status") or "")
+        name = str(row.get("name") or "")
+        kind = str(row.get("kind") or "")
+        if kind == "security" and status in {"block", "blocked", "require_confirmation"}:
+            return row
+        if name == "security_intervention":
+            return row
+        if kind == "tool" and status in {"blocked", "would_block"}:
+            return row
+    return None
+
+
 def wait_for_agent_trace_run(
     run_id: str | None,
     *,
@@ -442,6 +456,18 @@ def wait_for_agent_trace_run(
         attempts += 1
         run_dir = resolve_agent_trace_run_dir(run_id)
         latest_rows = read_behavior_events(run_dir)
+        intervention = find_security_intervention(latest_rows)
+        if run_dir and latest_rows and intervention is not None:
+            return {
+                "ok": True,
+                "timedOut": False,
+                "attempts": attempts,
+                "runDir": run_dir,
+                "eventCount": len(latest_rows),
+                "terminalSeen": False,
+                "securityIntervention": True,
+                "securityInterventionEvent": intervention,
+            }
         if run_dir and latest_rows and has_terminal_agent_request(latest_rows):
             return {
                 "ok": True,
@@ -450,6 +476,7 @@ def wait_for_agent_trace_run(
                 "runDir": run_dir,
                 "eventCount": len(latest_rows),
                 "terminalSeen": True,
+                "securityIntervention": False,
             }
         time.sleep(max(int(poll_interval_seconds), 1))
     return {
@@ -459,6 +486,7 @@ def wait_for_agent_trace_run(
         "runDir": run_dir,
         "eventCount": len(latest_rows),
         "terminalSeen": False,
+        "securityIntervention": False,
     }
 
 
@@ -693,6 +721,10 @@ def build_evaluation_inputs_seed(
                 "taskInput": normalize_path((run_dir / "task_input.json").resolve()),
                 "runtimeStatus": normalize_path((run_dir / "runtime_status.json").resolve()),
                 "behaviorEvents": normalize_path((run_dir / "behavior-events.jsonl").resolve()),
+                "fridaEvents": normalize_path((run_dir / "frida-events.jsonl").resolve()),
+                "traceIndex": normalize_path((run_dir / "trace_index.json").resolve()),
+                "mergedTrace": normalize_path((run_dir / "merged-trace.jsonl").resolve()),
+                "finalJudgment": normalize_path((run_dir / "security-reasoning" / "final_judgment.json").resolve()),
             },
             "eventCount": event_count,
         },
@@ -715,9 +747,11 @@ def build_evaluation_inputs_seed(
             "intendedInputs": [
                 "source benchmark metadata",
                 "full behavior-events trajectory",
+                "run-local merged trace with Frida evidence",
                 "final answer candidates",
                 "policy evidence",
                 "CodeTracer diagnosis report",
+                "Agent Defense final judgment",
             ],
             "nonGoalsInThisStep": [
                 "safe/unsafe scoring",

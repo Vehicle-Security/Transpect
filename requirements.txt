@@ -1,3 +1,8 @@
-# Core scripts use the Python standard library only.
-# Install the optional dependency below if you need scripts/capture/capture_frida.py on Windows.
+jsonschema>=4.0.0
+python-dotenv>=1.0.0
+
+# Optional dependencies for Frida-based runtime tracing.
 frida>=16.0.0; platform_system == "Windows"
+frida>=16.0.0; platform_system == "Darwin"
+frida-tools>=13.0.0; platform_system == "Windows"
+frida-tools>=13.0.0; platform_system == "Darwin"

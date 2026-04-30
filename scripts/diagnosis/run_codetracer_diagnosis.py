@@ -156,6 +156,21 @@ def build_diagnosis_report(
     diagnosis_run: dict[str, Any],
 ) -> dict[str, Any]:
     analysis_payload = read_json(output_path, default=None) if output_path.exists() else None
+    bundle_manifest = read_json(bundle_dir / "manifest.json", default=None)
+    trace_sources = {}
+    if isinstance(bundle_manifest, dict) and isinstance(bundle_manifest.get("traceSources"), dict):
+        trace_sources = bundle_manifest["traceSources"]
+    input_trace_sources = [
+        source.get("path")
+        for source in trace_sources.values()
+        if isinstance(source, dict) and source.get("status") == "ok" and source.get("path")
+    ]
+    frida_source = trace_sources.get("frida") if isinstance(trace_sources, dict) else None
+    frida_included = bool(
+        isinstance(frida_source, dict)
+        and frida_source.get("status") == "ok"
+        and int(frida_source.get("eventCount") or 0) > 0
+    )
     return {
         "schemaVersion": "transpect.diagnosis-report.v1",
         "generatedAt": now_utc_iso(),
@@ -165,6 +180,8 @@ def build_diagnosis_report(
         "ok": diagnosis_run.get("ok"),
         "status": diagnosis_run.get("status"),
         "profile": diagnosis_run.get("profile"),
+        "inputTraceSources": input_trace_sources,
+        "fridaIncluded": frida_included,
         "paths": {
             "runDir": normalize_path(run_dir.resolve()),
             "bundleDir": normalize_path(bundle_dir.resolve()),

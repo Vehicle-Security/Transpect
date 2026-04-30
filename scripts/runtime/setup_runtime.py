@@ -20,6 +20,7 @@ from trace_common import (
     TRACE_CONFIG_DIR,
     TRACE_LIVE_DIR,
     TRACE_LIVE_RUNS_DIR,
+    TRACE_ROOT,
     TRACE_SCRIPTS_DIR,
     ensure_dir,
     ensure_trace_layout,
@@ -108,6 +109,15 @@ def configure_behavior_plugin(config: dict, *, enabled: bool) -> None:
             "diagnosisPython": sys.executable,
             "capturePreviewChars": 2000,
             "captureNetwork": True,
+            "securityEnabled": True,
+            "securityMode": "enforce",
+            "policyPath": str((TRACE_ROOT / "config" / "agent-defense-policy.json").resolve()),
+            "llmJudge": {
+                "enabled": True,
+                "mode": "gray_zone_only",
+            },
+            "securityPython": sys.executable,
+            "securityBridgeScript": str((TRACE_ROOT / "app" / "agent_defense" / "bridge.py").resolve()),
             "traceEval": False,
             "redactHeaders": [
                 "authorization",

@@ -459,6 +459,16 @@ code {
   border-left-color: #d97706;
 }
 
+.run-row.context-blocked {
+  border-left-color: #b91c1c;
+  background: #fff7f7;
+}
+
+.run-row.context-confirm {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
 .run-row.diagnosis-failed {
   border-left-color: var(--error);
 }
@@ -498,6 +508,14 @@ code {
   background: #d97706;
 }
 
+.run-issue-dot.context-blocked {
+  background: #b91c1c;
+}
+
+.run-issue-dot.context-confirm {
+  background: #d97706;
+}
+
 .run-issue-dot.diagnosis-failed {
   background: var(--error);
 }
@@ -516,6 +534,16 @@ code {
 .run-badge.mismatch {
   background: rgba(217, 119, 6, 0.14);
   color: #b45309;
+}
+
+.run-badge.context-blocked {
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
+}
+
+.run-badge.context-confirm {
+  background: rgba(217, 119, 6, 0.14);
+  color: #92400e;
 }
 
 .run-badge.diagnosis-failed {
@@ -688,6 +716,10 @@ code {
   box-shadow: inset 2px 0 0 var(--error);
 }
 
+.trace-header-card.context-blocked {
+  box-shadow: inset 2px 0 0 #b91c1c;
+}
+
 .trace-summary-title {
   font-size: 20px;
   line-height: 1.1;
@@ -700,6 +732,10 @@ code {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.security-context-line {
+  color: #7f1d1d;
 }
 
 .timeline-list {

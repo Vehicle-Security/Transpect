@@ -40,6 +40,42 @@
         "type": "boolean",
         "description": "Whether to capture non-LLM fetch evidence as network spans."
       },
+      "securityEnabled": {
+        "type": "boolean",
+        "description": "Whether to run the online Transpect security guards during input, planning, tool, and network phases."
+      },
+      "securityMode": {
+        "type": "string",
+        "enum": ["off", "audit", "enforce"],
+        "description": "Online guard mode. off disables guard calls, audit records decisions without blocking, enforce blocks high-risk actions."
+      },
+      "policyPath": {
+        "type": "string",
+        "description": "Optional absolute path to the local allow/block policy file used by the security bridge."
+      },
+      "llmJudge": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether gray-zone actions may be escalated to an LLM judge."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["gray_zone_only"],
+            "description": "When enabled, only deterministic gray-zone actions are sent to the LLM judge."
+          }
+        }
+      },
+      "securityPython": {
+        "type": "string",
+        "description": "Python executable used to invoke the Transpect security bridge."
+      },
+      "securityBridgeScript": {
+        "type": "string",
+        "description": "Absolute path to app/agent_defense/bridge.py."
+      },
       "traceEval": {
         "type": "boolean",
         "description": "Whether to trace eval and Function constructor activity."

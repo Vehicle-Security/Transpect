@@ -1,0 +1,20 @@
+{
+  "name": "Staged Attack Demo",
+  "repo_root": ".",
+  "type": "task_benchmark",
+  "python": {
+    "preferred": "3.11",
+    "supported": ["3.11", "3.12"],
+    "conda_env_name": "transpect-py311"
+  },
+  "preflight": {
+    "required_files": [
+      "data/xiaohongshu_waterhole_photo_upload.json"
+    ]
+  },
+  "source": {
+    "data_root": "data",
+    "data_pattern": "*.json",
+    "task_id_format": "data/<file>.json#<task_id>"
+  }
+}

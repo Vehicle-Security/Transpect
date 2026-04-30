@@ -9,6 +9,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "diagnosis"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "security_context"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from task_repo_common import (
     attach_source_metadata_to_run,
@@ -26,6 +28,7 @@ from task_repo_common import (
     load_task_repo_adapter,
     load_task_repo_manifest,
     prepare_environment,
+    resolve_agent_trace_run_dir,
     resolve_repo_root,
     run_source_preflight_checks,
     run_preflight_checks,
@@ -34,7 +37,14 @@ from task_repo_common import (
     write_artifact_manifest,
 )
 from run_codetracer_diagnosis import run_codetracer_diagnosis
+from run_context_judge import run_context_judge
 from trace_common import normalize_path, now_utc_iso, run_openclaw_agent, write_json
+from app.agent_defense.final_judge import run_final_judgment
+from app.agent_defense.trace_merge import merge_run_traces
+from app.instrumentation.frida import FridaTraceConfig, FridaTraceManager
+from app.security.context_state import create_security_context
+from app.security.intent_guard import inspect_user_input
+from app.security.plan_guard import inspect_plan
 
 
 def select_command_specs(manifest: dict[str, Any], command_name: str | None) -> list[dict[str, Any]]:
@@ -135,6 +145,92 @@ def _task_report_metadata(task: dict[str, Any]) -> dict[str, Any]:
         "scenario": task.get("scenario"),
         "attackType": task.get("attackType") or task.get("attack_type"),
         "label": task.get("label"),
+    }
+
+
+def _wait_for_run_dir(run_id: str, *, timeout_seconds: int = 3) -> Path | None:
+    import time
+
+    deadline = time.monotonic() + max(timeout_seconds, 1)
+    while time.monotonic() <= deadline:
+        run_dir = resolve_agent_trace_run_dir(run_id)
+        if run_dir is not None:
+            return run_dir
+        time.sleep(0.5)
+    return None
+
+
+def _start_frida(args: argparse.Namespace, run_id: str, run_dir: Path | None) -> tuple[FridaTraceManager | None, dict[str, Any]]:
+    if getattr(args, "frida", "auto") == "off":
+        return None, {"status": "disabled", "ok": False, "reason": "frida_disabled"}
+    if run_dir is None:
+        return None, {"status": "unavailable", "ok": False, "reason": "run_dir_not_available_before_poll"}
+    manager = FridaTraceManager(
+        FridaTraceConfig(
+            enabled=True,
+            target=getattr(args, "frida_target", "auto") or "auto",
+            output=str((run_dir / "frida-events.jsonl").resolve()),
+        )
+    )
+    result = manager.start(run_id=run_id, session_id=None, started_at=now_utc_iso())
+    payload = result.to_dict()
+    if result.ok:
+        payload["status"] = "ok"
+    elif any("permission" in warning or "attach_failed" in warning for warning in result.warnings):
+        payload["status"] = "attach_failed"
+    else:
+        payload["status"] = "unavailable"
+    if not result.ok:
+        (run_dir / "frida-events.jsonl").parent.mkdir(parents=True, exist_ok=True)
+        (run_dir / "frida-events.jsonl").touch(exist_ok=True)
+    return manager if result.ok else None, payload
+
+
+def _stop_frida(manager: FridaTraceManager | None, status: dict[str, Any]) -> dict[str, Any]:
+    if manager is None:
+        return status
+    stop_result = manager.stop().to_dict()
+    merged = dict(status)
+    merged["stop"] = stop_result
+    merged["eventCount"] = stop_result.get("event_count")
+    return merged
+
+
+def _sanitize_task_for_dry_run(task: dict[str, Any]) -> dict[str, Any]:
+    sanitized = dict(task)
+    contents = sanitized.get("contents")
+    if isinstance(contents, str) and len(contents) > 500:
+        sanitized["contents"] = f"[CONTENT_TRUNCATED: {len(contents)} chars] {contents[:200]}..."
+    return sanitized
+
+
+def _build_dry_run_report(
+    *,
+    repo_name: str,
+    manifest: dict[str, Any],
+    task: dict[str, Any],
+    message: str,
+    security_decision: Any,
+    security_context: Any,
+) -> dict[str, Any]:
+    sanitized_task = _sanitize_task_for_dry_run(task)
+    decision_dict = security_decision.to_dict() if hasattr(security_decision, "to_dict") else {}
+    return {
+        "ok": True,
+        "mode": "agent-trace",
+        "dryRun": True,
+        "repo": manifest.get("name") or repo_name,
+        "taskId": task.get("taskId") or task.get("id"),
+        "task": sanitized_task,
+        "message": message,
+        "inputSecurity": {
+            "decision": decision_dict.get("decision"),
+            "riskLevel": decision_dict.get("riskLevel"),
+            "reasons": decision_dict.get("reasons", []),
+        },
+        "willLaunchAgent": False,
+        "willCreateRun": False,
+        "generatedAt": now_utc_iso(),
     }
 
 
@@ -261,6 +357,33 @@ def _run_agent_trace(
 
     task_metadata = _task_report_metadata(task)
     message = adapter.build_agent_input(manifest, prepared_env, task)
+    security_context = create_security_context(run_id=None)
+    security_context = inspect_user_input(message, security_context)
+    security_decision, security_context = inspect_plan(message, security_context)
+    if args.dry_run:
+        return _build_dry_run_report(
+            repo_name=args.repo,
+            manifest=manifest,
+            task=task,
+            message=message,
+            security_decision=security_decision,
+            security_context=security_context,
+        )
+    if security_decision.decision == "block":
+        return build_harness_report(
+            repo_name=args.repo,
+            manifest=manifest,
+            mode="agent-trace",
+            task_metadata=task_metadata,
+            preflight=preflight,
+            framework_success=True,
+            agent_run_success=False,
+            agent_payload=None,
+            resolved_run_dir=None,
+            phase="input_security",
+            reason="security_input_blocked",
+            details={"decision": security_decision.to_dict()},
+        )
     try:
         agent_payload = run_openclaw_agent(
             message=message,
@@ -314,9 +437,22 @@ def _run_agent_trace(
             details={"agentPayload": agent_payload},
         )
 
-    poll = wait_for_agent_trace_run(run_id, timeout_seconds=300, poll_interval_seconds=2)
+    pre_poll_run_dir = _wait_for_run_dir(str(run_id), timeout_seconds=3)
+    frida_manager, frida_status = _start_frida(args, str(run_id), pre_poll_run_dir)
+    try:
+        poll = wait_for_agent_trace_run(run_id, timeout_seconds=int(args.timeout), poll_interval_seconds=2)
+    finally:
+        frida_status = _stop_frida(frida_manager, frida_status)
     resolved_run_dir = poll.get("runDir") if isinstance(poll.get("runDir"), Path) else None
+    if resolved_run_dir is None:
+        resolved_run_dir = pre_poll_run_dir
     timed_out = bool(poll.get("timedOut"))
+    trace_observed = bool(resolved_run_dir is not None and int(poll.get("eventCount") or 0) > 0)
+    security_intervened = bool(poll.get("securityIntervention"))
+    phase = "security_intervened" if security_intervened else (
+        "completed" if not timed_out and resolved_run_dir is not None else ("timeout_with_trace" if timed_out and trace_observed else "polling")
+    )
+    agent_run_success = bool(resolved_run_dir is not None and (not timed_out or security_intervened))
     harness_report = build_harness_report(
         repo_name=args.repo,
         manifest=manifest,
@@ -324,22 +460,29 @@ def _run_agent_trace(
         task_metadata=task_metadata,
         preflight=preflight,
         framework_success=True,
-        agent_run_success=not timed_out and resolved_run_dir is not None,
+        agent_run_success=agent_run_success,
         agent_payload=agent_payload,
         resolved_run_dir=resolved_run_dir,
-        phase="completed" if not timed_out and resolved_run_dir is not None else "polling",
-        reason=None if not timed_out and resolved_run_dir is not None else "agent_run_timeout",
-        details={"polling": {key: value for key, value in poll.items() if key != "runDir"}},
+        phase=phase,
+        reason=None if agent_run_success else ("agent_run_timeout" if timed_out else "agent_trace_missing"),
+        details={
+            "polling": {key: value for key, value in poll.items() if key != "runDir"},
+            "frida": frida_status,
+        },
     )
     if resolved_run_dir is not None:
-        diagnosis_result: dict[str, Any] | None = None
-        if timed_out:
-            diagnosis_result = {
-                "ok": None,
-                "status": "skipped",
-                "reason": "agent_run_timeout",
+        try:
+            trace_merge_result = merge_run_traces(resolved_run_dir, frida_status=frida_status)
+        except Exception as error:  # noqa: BLE001
+            trace_merge_result = {
+                "ok": False,
+                "status": "failed",
+                "reason": "trace_merge_failed",
+                "error": str(error),
             }
-        elif args.skip_diagnosis:
+        harness_report["traceMerge"] = trace_merge_result
+        diagnosis_result: dict[str, Any] | None = None
+        if args.skip_diagnosis:
             diagnosis_result = {
                 "ok": None,
                 "status": "skipped",
@@ -394,6 +537,65 @@ def _run_agent_trace(
             evaluation_inputs_seed=evaluation_inputs_seed,
         )
         harness_report["artifactManifestPath"] = attachment["artifactManifestPath"]
+        if args.skip_context_judge:
+            context_result = {
+                "ok": None,
+                "status": "skipped",
+                "reason": "skip_context_judge_requested",
+            }
+        else:
+            try:
+                context_result = run_context_judge(resolved_run_dir)
+                context_result["status"] = "success" if context_result.get("ok") else "failed"
+            except Exception as error:  # noqa: BLE001
+                context_report_path = resolved_run_dir / "security-context" / "context_report.json"
+                context_result = {
+                    "schemaVersion": "transpect.security-context-report.v1",
+                    "generatedAt": now_utc_iso(),
+                    "runId": resolved_run_dir.name,
+                    "ok": False,
+                    "status": "failed",
+                    "reason": "context_judge_failed",
+                    "error": str(error),
+                    "decision": None,
+                    "riskLevel": None,
+                    "score": None,
+                }
+                write_json(context_report_path, context_result)
+                context_result["reportPath"] = normalize_path(context_report_path.resolve())
+        harness_report["securityContext"] = context_result
+        if isinstance(context_result, dict) and isinstance(context_result.get("securityReasoning"), dict):
+            harness_report["securityReasoning"] = context_result["securityReasoning"]
+        try:
+            final_judgment = run_final_judgment(resolved_run_dir)
+            harness_report["finalJudgment"] = {
+                "ok": True,
+                "decision": final_judgment.get("finalDecision"),
+                "riskLevel": final_judgment.get("riskLevel"),
+                "path": normalize_path((resolved_run_dir / "security-reasoning" / "final_judgment.json").resolve()),
+            }
+        except Exception as error:  # noqa: BLE001
+            final_judgment_path = resolved_run_dir / "security-reasoning" / "final_judgment.json"
+            write_json(
+                final_judgment_path,
+                {
+                    "schemaVersion": "transpect.agent-defense.final-judgment.v1",
+                    "generatedAt": now_utc_iso(),
+                    "runId": resolved_run_dir.name,
+                    "ok": False,
+                    "status": "failed",
+                    "reason": "final_judgment_failed",
+                    "error": str(error),
+                },
+            )
+            harness_report["finalJudgment"] = {
+                "ok": False,
+                "status": "failed",
+                "reason": "final_judgment_failed",
+                "error": str(error),
+                "path": normalize_path(final_judgment_path.resolve()),
+            }
+        write_json(resolved_run_dir / "artifacts" / "task_repo" / "harness_report.json", harness_report)
     return harness_report
 
 
@@ -564,6 +766,7 @@ def main() -> None:
         help="Runner mode. Defaults to repo-native for backward compatibility.",
     )
     parser.add_argument("--preflight-only", action="store_true", help="Only run preflight checks for the selected mode.")
+    parser.add_argument("--dry-run", action="store_true", help="Build agent input and run security checks without launching the agent. Valid only in agent-trace mode.")
     parser.add_argument("--command", help="Run one named command from the manifest. Valid only in repo-native mode.")
     parser.add_argument("--task-id", help="Source task ID for show-task and agent-trace modes.")
     parser.add_argument("--timeout", type=int, default=300, help="Agent execution timeout for agent-trace mode.")
@@ -572,10 +775,15 @@ def main() -> None:
     parser.add_argument("--diagnosis-model", help="Optional model name for CodeTracer diagnosis.")
     parser.add_argument("--diagnosis-timeout-seconds", type=int, default=1800, help="CodeTracer diagnosis timeout.")
     parser.add_argument("--diagnosis-cost-limit", type=float, default=3.0, help="CodeTracer max LLM spend in USD.")
+    parser.add_argument("--skip-context-judge", action="store_true", help="Skip Layer 4 security context judgment for agent-trace mode.")
+    parser.add_argument("--frida", choices=["auto", "off", "on"], default="auto", help="Best-effort Frida runtime trace capture for agent-trace mode.")
+    parser.add_argument("--frida-target", default="auto", help="Frida target selector: auto, node, chrome, pid:<PID>, or name:<NAME>.")
     args = parser.parse_args()
 
     if args.command and args.mode != "repo-native":
         parser.error("--command is only valid with --mode repo-native")
+    if args.dry_run and args.mode != "agent-trace":
+        parser.error("--dry-run is only valid with --mode agent-trace")
     if args.mode in {"show-task", "agent-trace"} and not args.task_id:
         parser.error("--task-id is required for show-task and agent-trace modes")
 

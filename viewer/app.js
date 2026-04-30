@@ -270,6 +270,13 @@ function labelText(value) {
 }
 
 function runIssueClass(run) {
+  const reasoning = run?.securityReasoning || run?.securityContext;
+  if (reasoning?.decision === "block") {
+    return "context-blocked";
+  }
+  if (reasoning?.decision === "require_confirmation") {
+    return "context-confirm";
+  }
   if (run?.status && run.status !== "completed") {
     return "running";
   }
@@ -287,6 +294,12 @@ function runIssueLabel(run) {
   if (issue === "running") {
     return run?.status || "running";
   }
+  if (issue === "context-blocked") {
+    return "context block";
+  }
+  if (issue === "context-confirm") {
+    return "confirm";
+  }
   if (issue === "diagnosis-failed") {
     return "diagnosis failed";
   }
@@ -294,6 +307,17 @@ function runIssueLabel(run) {
     return "mismatch";
   }
   return "ok";
+}
+
+function contextLabel(run) {
+  const context = run?.securityReasoning || run?.securityContext;
+  if (!context) {
+    return "context n/a";
+  }
+  const decision = context.decision || "unknown";
+  const risk = context.riskLevel || "unknown";
+  const score = context.score === null || context.score === undefined ? "?" : context.score;
+  return `context ${decision}/${risk}/${score}`;
 }
 
 function buildRunGroups(runs) {
@@ -383,12 +407,13 @@ function renderTopbar() {
   const taskRuns = state.runs.filter((run) => run.taskRepo?.taskId).length;
   const diagnosisOk = state.runs.filter((run) => run.analysisOk === true).length;
   const mismatches = state.runs.filter((run) => run.labelMatched === false).length;
+  const contextBlocks = state.runs.filter((run) => (run.securityReasoning || run.securityContext)?.decision === "block").length;
 
   elements.liveBadge.className = `live-badge ${state.statusBadge}`;
   elements.liveBadge.textContent = state.statusLabel;
   elements.eventCount.textContent = state.runs.length ? `${state.runs.length} runs` : `${count || 0} events`;
   elements.lastUpdated.textContent = state.runs.length
-    ? `task runs ${taskRuns} · diagnosis ok ${diagnosisOk}/${state.runs.length} · mismatches ${mismatches}`
+    ? `task runs ${taskRuns} · diagnosis ok ${diagnosisOk}/${state.runs.length} · context blocks ${contextBlocks} · mismatches ${mismatches}`
     : `最后更新 ${updated}`;
   elements.sourceLine.textContent = sourceName;
   renderRunSelector();
@@ -473,7 +498,8 @@ function renderRunExplorer() {
   ensureRunGroupDefaults(groups);
   const taskRuns = runs.filter((run) => run.taskRepo?.taskId).length;
   const mismatches = runs.filter((run) => run.labelMatched === false).length;
-  elements.runCount.textContent = `${runs.length} runs · ${taskRuns} task runs · ${mismatches} mismatches`;
+  const contextBlocks = runs.filter((run) => (run.securityReasoning || run.securityContext)?.decision === "block").length;
+  elements.runCount.textContent = `${runs.length} runs · ${taskRuns} task runs · ${contextBlocks} context blocks · ${mismatches} mismatches`;
 
   if (!runs.length) {
     elements.runGroupList.innerHTML = `
@@ -524,6 +550,7 @@ function renderRunExplorer() {
                       <span>${escapeHtml(taskRepo.attackType || "manual")}</span>
                       <span>${escapeHtml(labelPair)}</span>
                       <span>${escapeHtml(run.analysisOk === true ? "diagnosis ok" : run.analysisOk === false ? "diagnosis failed" : "diagnosis n/a")}</span>
+                      <span>${escapeHtml(contextLabel(run))}</span>
                     </div>
                     <div class="run-row-meta">
                       <span>${escapeHtml(formatDateTime(run.completedAt || run.createdAt))}</span>
@@ -622,10 +649,21 @@ function renderHeader(trace) {
 
   const summary = trace.summary;
   const rootCause = summary.status === "error" ? summary.rootCause || "未提供明确原因" : "无";
+  const context = selectedRun()?.securityReasoning || selectedRun()?.securityContext;
+  const contextLine = context
+    ? `
+      <div class="trace-summary-line security-context-line">
+        <span>Context Risk: <strong>${escapeHtml(context.decision || "unknown")}</strong></span>
+        <span>等级: ${escapeHtml(context.riskLevel || "unknown")}</span>
+        <span>分数: ${escapeHtml(context.score ?? "?")}</span>
+        ${context.summary ? `<span>链路: ${escapeHtml(context.summary)}</span>` : ""}
+      </div>
+    `
+    : "";
 
   elements.heroEmpty.classList.add("hidden");
   elements.traceHeaderCard.classList.remove("hidden");
-  elements.traceHeaderCard.className = `panel trace-header-card ${summary.status}`;
+  elements.traceHeaderCard.className = `panel trace-header-card ${summary.status} ${context?.decision === "block" ? "context-blocked" : ""}`;
   elements.traceHeaderCard.innerHTML = `
     <div class="trace-summary-title">${escapeHtml(summary.title)}</div>
     <div class="trace-summary-line">
@@ -634,6 +672,7 @@ function renderHeader(trace) {
       <span>主链: ${escapeHtml(summary.mainPath)}</span>
       <span>总耗时: ${escapeHtml(summary.durationLabel)}</span>
     </div>
+    ${contextLine}
   `;
 }
 

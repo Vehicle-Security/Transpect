@@ -31,6 +31,10 @@ REQUIRED_PATHS = [
     REPO_ROOT / "docs" / "observability.md",
     REPO_ROOT / "docs" / "frida.md",
     REPO_ROOT / "docs" / "runtime-storage-plan.md",
+    REPO_ROOT / "config" / "agent-defense-policy.json",
+    REPO_ROOT / "app" / "agent_defense" / "bridge.py",
+    REPO_ROOT / "app" / "agent_defense" / "trace_merge.py",
+    REPO_ROOT / "app" / "agent_defense" / "final_judge.py",
     REPO_ROOT / "viewer" / "index.html",
     REPO_ROOT / "viewer" / "app.js",
     REPO_ROOT / "viewer" / "app.css",
@@ -43,13 +47,13 @@ REQUIRED_PATHS = [
     REPO_ROOT / "scripts" / "validate" / "run_acceptance.py",
     REPO_ROOT / "scripts" / "export" / "export_codetracer_bundle.py",
     REPO_ROOT / "scripts" / "diagnosis" / "run_codetracer_diagnosis.py",
-    REPO_ROOT / "scripts" / "validate" / "test_codetracer_export.py",
-    REPO_ROOT / "scripts" / "validate" / "test_trace_pipeline.py",
+    REPO_ROOT / "tests" / "validate" / "test_codetracer_export.py",
+    REPO_ROOT / "tests" / "validate" / "test_trace_pipeline.py",
     REPO_ROOT / "scripts" / "validate" / "trace_topology.py",
     REPO_ROOT / "scripts" / "diagnosis" / "segment_behavior_events.py",
     REPO_ROOT / "vendor" / "runtime-hooks" / "openclaw-behavior-mediator" / "tests" / "behavior-mediator.test.mjs",
 ]
-COMPAT_ENTRYPOINTS = [
+REMOVED_LEGACY_ENTRYPOINTS = [
     REPO_ROOT / "scripts" / "start_trace.py",
     REPO_ROOT / "scripts" / "setup_runtime.py",
     REPO_ROOT / "scripts" / "export_codetracer_bundle.py",
@@ -57,6 +61,8 @@ COMPAT_ENTRYPOINTS = [
     REPO_ROOT / "scripts" / "check_repo.py",
 ]
 REQUIRED_GITIGNORE_PATTERNS = [
+    ".venv*/",
+    ".conda*/",
     "live/**",
     "!live/.gitkeep",
     "!live/otel/.gitkeep",
@@ -80,11 +86,12 @@ HARD_CODED_PATTERNS = [
     token("Trace ", "De", "mo"),
 ]
 SCAN_SUFFIXES = {".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".mjs", ".txt", ".css", ".html", ".sh", ".cmd"}
-EXCLUDED_SCAN_PARTS = {".git", "node_modules", "__pycache__", "live", "captures"}
+EXCLUDED_SCAN_PARTS = {".git", "node_modules", "__pycache__", "live", "captures", ".venv-frida-arm64", ".conda-frida-arm64"}
 
 
 def check_python_syntax() -> dict[str, Any]:
-    files = sorted(f for d in (REPO_ROOT / "scripts").rglob("*.py") for f in [d] if d.is_file())
+    roots = [REPO_ROOT / "app", REPO_ROOT / "scripts", REPO_ROOT / "task_repos", REPO_ROOT / "tests"]
+    files = sorted(path for root in roots for path in root.rglob("*.py") if path.is_file())
     entries: list[dict[str, Any]] = []
     ok = True
     for path in files:
@@ -105,6 +112,7 @@ def check_js_syntax() -> dict[str, Any]:
     files = [
         REPO_ROOT / "viewer" / "app.js",
         REPO_ROOT / "viewer" / "shared.js",
+        REPO_ROOT / "vendor" / "runtime-hooks" / "openclaw-behavior-mediator" / "index.js",
     ]
     entries: list[dict[str, Any]] = []
     ok = True
@@ -177,22 +185,14 @@ def scan_hardcoded_paths() -> dict[str, Any]:
 def check_compat_entrypoints() -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     ok = True
-    for path in COMPAT_ENTRYPOINTS:
-        result = run_command(
-            [python_executable(), str(path), "--help"],
-            cwd=REPO_ROOT,
-            timeout=60,
-            check=False,
-        )
-        combined = "\n".join(part for part in [result.stdout.strip(), result.stderr.strip()] if part)
-        passed = result.returncode == 0 and "usage:" in combined.lower()
+    for path in REMOVED_LEGACY_ENTRYPOINTS:
+        passed = not path.exists()
         ok = ok and passed
         entries.append(
             {
                 "path": str(path.relative_to(REPO_ROOT)),
                 "ok": passed,
-                "returncode": result.returncode,
-                "stderr": result.stderr.strip(),
+                "removed": passed,
             }
         )
     return {"ok": ok, "entries": entries}

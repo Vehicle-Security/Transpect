@@ -9,6 +9,8 @@ The canonical storage model is:
 - `live/runs/<runId>/` for canonical per-run evidence
 - `live/runs/<runId>/diagnosis/codetracer/bundle/` for derived CodeTracer input
 - `live/runs/<runId>/diagnosis/codetracer/analysis/` for derived diagnosis output
+- `live/runs/<runId>/security-reasoning/` for online contextual defense state and decisions
+- `live/runs/<runId>/security-context/` for legacy-compatible Layer-4 context reports
 - `live/runs/index.json` for viewer discovery and run listing
 
 The repository does not use a separate `harvest/` layer in the current architecture, and it does not treat a single global `live/behavior-events.jsonl` file as canonical storage.
@@ -24,6 +26,10 @@ Transpect/
 │       ├── canonical-layout.md
 │       └── overview.md
 ├── config/
+├── app/
+│   ├── agent_defense/
+│   ├── instrumentation/frida/
+│   └── security/          guard capability layer
 ├── live/
 │   ├── runs/
 │   ├── logs/        runtime-support only
@@ -37,6 +43,8 @@ Transpect/
 │   ├── runtime/
 │   ├── export/
 │   ├── diagnosis/
+│   ├── security_reasoning/
+│   ├── security_context/
 │   ├── validate/
 │   ├── capture/
 │   └── compat/
@@ -47,7 +55,7 @@ Transpect/
 └── viewer/
 ```
 
-Grouped script paths are the primary interface. Legacy flat entrypoints such as `python scripts/start_trace.py` and `python scripts/check_repo.py` are still supported as compatibility wrappers and emit deprecation warnings.
+Grouped script paths are the primary interface. Legacy flat `scripts/*.py` wrappers have been removed; use `scripts/runtime/`, `scripts/validate/`, `scripts/export/`, and `scripts/diagnosis/`.
 
 ## Quick Start
 
@@ -109,12 +117,22 @@ python scripts/runtime/start_trace.py
 Run one or more R-Judge tasks with the batch helper:
 
 ```bash
-./bin/run-rjudge-tasks.sh --source-path data/Program --count 5 --concurrency 2
-./bin/run-rjudge-tasks.sh --source-path data/Application/chatbot.json --count 3 --label 1
-./bin/run-rjudge-tasks.sh --task-id "data/Application/chatbot.json#37"
+python scripts/runtime/run_rjudge_batch.py --source-path data/Program --count 5 --concurrency 2
+python scripts/runtime/run_rjudge_batch.py --source-path data/Application/chatbot.json --count 3 --label 1
+python scripts/runtime/run_rjudge_batch.py --task-id "data/Application/chatbot.json#37"
 ```
 
 Use `--dry-run --no-start-runtime` to preview the selected tasks without launching agents.
+
+Run the staged attack defense demo:
+
+```bash
+python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
+python scripts/runtime/run_task_repo.py --repo staged_attack --mode show-task --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
+python scripts/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
+```
+
+The demo task gives the agent only a normal browsing prompt. The local HTTP site contains the split attack chain: Xiaohongshu topic viewing, low-trust comment injection, watering-hole navigation, deceptive “详情” click, and a demo photo upload attempt. During the real OpenClaw run, Transpect security guards inspect input, plan-like LLM output, tool calls, and network requests. High-risk execution decisions can block the real tool/API call before it runs. The post-run path merges OpenClaw and Frida evidence, exports the merged trace to CodeTracer, and writes the final Agent Defense judgment.
 
 The viewer opens at `http://127.0.0.1:8711/viewer/index.html?view=traces`.
 
@@ -123,6 +141,9 @@ The viewer opens at `http://127.0.0.1:8711/viewer/index.html?view=traces`.
 Each canonical run directory may contain:
 
 - `behavior-events.jsonl`
+- `frida-events.jsonl`
+- `trace_index.json`
+- `merged-trace.jsonl`
 - `manifest.json`
 - `task_input.json`
 - `runtime_status.json`
@@ -130,6 +151,12 @@ Each canonical run directory may contain:
 - `artifacts/<toolCallId>/output.json`
 - `diagnosis/codetracer/bundle/...`
 - `diagnosis/codetracer/analysis/...`
+- `security-reasoning/security_state.json`
+- `security-reasoning/defense_decision.json`
+- `security-reasoning/evidence_summary.json`
+- `security-reasoning/final_judgment.json`
+- `security-context/security_context_timeline.json`
+- `security-context/context_report.json`
 
 ## Legacy Compatibility
 
@@ -149,19 +176,11 @@ External benchmark repositories can also be onboarded through manifest-driven ta
 ```bash
 node --check viewer/app.js
 node --check viewer/shared.js
+node --check vendor/runtime-hooks/openclaw-behavior-mediator/index.js
+python -m unittest discover -s tests -p 'test_*.py' -v
 python scripts/validate/check_repo.py --skip-start
 python scripts/validate/doctor.py
 python scripts/validate/run_acceptance.py
-```
-
-Compatibility smoke checks:
-
-```bash
-python scripts/start_trace.py --help
-python scripts/setup_runtime.py --help
-python scripts/export_codetracer_bundle.py --help
-python scripts/run_codetracer_diagnosis.py --help
-python scripts/check_repo.py --help
 ```
 
 Diagnosis execution also requires the `codetracer` Python module plus a resolvable source tree via `CODETRACER_ROOT`, `CODETRACER_SRC`, or a sibling `../CodeTracer/src`, which matches `scripts/diagnosis/run_codetracer_diagnosis.py`.
@@ -171,7 +190,7 @@ Diagnosis execution also requires the `codetracer` Python module plus a resolvab
 - `scripts/runtime/setup_runtime.py` updates `~/.openclaw/openclaw.json` and writes timestamped backups under `config/applied/`.
 - `vendor/runtime-hooks/openclaw-behavior-mediator/` is repository-owned runtime integration code.
 - `vendor/external/openclaw-observability-plugin/` is a vendored external dependency.
-- Optional Frida support lives under `scripts/capture/` and writes to `live/frida/`.
+- Optional Frida support lives under `app/instrumentation/frida/`; agent-trace runs write run-local `frida-events.jsonl` when Frida can attach, or record an unavailable/attach-failed status in `trace_index.json`.
 
 ## Further Reading
 
@@ -182,3 +201,4 @@ Diagnosis execution also requires the `codetracer` Python module plus a resolvab
 - [Observability Notes](docs/observability.md)
 - [Frida Notes](docs/frida.md)
 - [Task Repo Adapters](docs/task-repo-adapters.md)
+- [Staged Attack Defense Demo](docs/staged-attack-defense-demo.md)

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { appendCanonicalEvent, cleanObject, createId, createWriterState, nowIso } from "./canonical.js";
 
@@ -45,6 +45,12 @@ function compilePatterns(patterns) {
 
 function parseConfig(value) {
   const config = value && typeof value === "object" ? value : {};
+  const configuredSecurityMode =
+    typeof config.securityMode === "string" && ["off", "audit", "enforce"].includes(config.securityMode)
+      ? config.securityMode
+      : null;
+  const securityMode = configuredSecurityMode || (config.securityEnabled === true ? "enforce" : "off");
+  const llmJudge = config.llmJudge && typeof config.llmJudge === "object" ? config.llmJudge : {};
   const legacyOutputFile = typeof config.outputFile === "string" && config.outputFile ? path.resolve(config.outputFile) : null;
   const runsDirectory =
     typeof config.runsDirectory === "string" && config.runsDirectory
@@ -70,6 +76,24 @@ function parseConfig(value) {
         ? Math.max(128, Math.floor(config.capturePreviewChars))
         : DEFAULT_PREVIEW_CHARS,
     captureNetwork: config.captureNetwork !== false,
+    securityEnabled: securityMode !== "off",
+    securityMode,
+    policyPath:
+      typeof config.policyPath === "string" && config.policyPath.trim()
+        ? path.resolve(config.policyPath)
+        : null,
+    llmJudge: {
+      enabled: llmJudge.enabled === true,
+      mode: typeof llmJudge.mode === "string" && llmJudge.mode.trim() ? llmJudge.mode.trim() : "gray_zone_only",
+    },
+    securityPython:
+      typeof config.securityPython === "string" && config.securityPython.trim()
+        ? config.securityPython.trim()
+        : process.env.PYTHON || "python",
+    securityBridgeScript:
+      typeof config.securityBridgeScript === "string" && config.securityBridgeScript.trim()
+        ? path.resolve(config.securityBridgeScript)
+        : path.resolve(process.cwd(), "app", "agent_defense", "bridge.py"),
     traceEval: config.traceEval === true,
     redactHeaders: Array.isArray(config.redactHeaders)
       ? config.redactHeaders.filter((item) => typeof item === "string" && item.trim()).map((item) => item.toLowerCase())
@@ -267,6 +291,15 @@ function diagnosisPathsForRun(runDir) {
   };
 }
 
+function securityPathsForRun(runDir) {
+  return {
+    dir: path.resolve(runDir, "security-reasoning"),
+    statePath: path.resolve(runDir, "security-reasoning", "security_state.json"),
+    decisionPath: path.resolve(runDir, "security-reasoning", "defense_decision.json"),
+    evidenceSummaryPath: path.resolve(runDir, "security-reasoning", "evidence_summary.json"),
+  };
+}
+
 function createRuntime(config, logger) {
   fs.mkdirSync(config.runsDirectory, { recursive: true });
   return {
@@ -304,6 +337,9 @@ function createRuntime(config, logger) {
     diagnosesTriggered: 0,
     diagnosisInFlight: 0,
     lastDiagnosisError: null,
+    securityBridgeFailures: 0,
+    lastSecurityDecision: null,
+    lastSecurityError: null,
   };
 }
 
@@ -352,6 +388,8 @@ function buildTaskInput(store) {
 function buildRunManifest(state, store) {
   const diagnosisPaths = diagnosisPathsForRun(store.runDir);
   const diagnosisRun = fs.existsSync(diagnosisPaths.diagnosisRunPath) ? readJsonFile(diagnosisPaths.diagnosisRunPath) : null;
+  const securityPaths = securityPathsForRun(store.runDir);
+  const securityDecision = fs.existsSync(securityPaths.decisionPath) ? readJsonFile(securityPaths.decisionPath) : null;
   return {
     schemaVersion: "openclaw.run.v1",
     runId: store.runId || null,
@@ -372,6 +410,7 @@ function buildRunManifest(state, store) {
       artifacts: "artifacts",
       codetracerBundle: fs.existsSync(diagnosisPaths.bundleDir) ? "diagnosis/codetracer/bundle" : null,
       codetracerAnalysis: fs.existsSync(diagnosisPaths.analysisDir) ? "diagnosis/codetracer/analysis" : null,
+      securityReasoning: fs.existsSync(securityPaths.decisionPath) ? "security-reasoning/defense_decision.json" : null,
     },
     diagnosis: {
       codetracer: {
@@ -382,6 +421,19 @@ function buildRunManifest(state, store) {
         status: diagnosisRun?.status ?? null,
       },
     },
+    securityReasoning: securityDecision
+      ? {
+          ready: true,
+          decision: securityDecision.decision || null,
+          riskLevel: securityDecision.riskLevel || null,
+          riskScore: securityDecision.riskScore ?? securityDecision.score ?? null,
+          hardBlockTriggered: securityDecision.hardBlockTriggered ?? null,
+          lastStage: securityDecision.lastStage || null,
+          decisionPath: "security-reasoning/defense_decision.json",
+          statePath: fs.existsSync(securityPaths.statePath) ? "security-reasoning/security_state.json" : null,
+          evidenceSummaryPath: fs.existsSync(securityPaths.evidenceSummaryPath) ? "security-reasoning/evidence_summary.json" : null,
+        }
+      : null,
   };
 }
 
@@ -416,6 +468,7 @@ function writeRunsIndexFile(state) {
         runPath: path.resolve(state.runsDirectory, entry.name).replaceAll("\\", "/"),
         manifestPath: manifestPath.replaceAll("\\", "/"),
         eventsPath: `/live/runs/${entry.name}/behavior-events.jsonl`,
+        securityReasoning: manifest.securityReasoning || null,
       });
     }
   }
@@ -625,6 +678,115 @@ function appendRunEvent(state, row) {
   return { payload, store };
 }
 
+function emitSecurityEvent(state, details = {}, parent = {}) {
+  const decision = details.decision || {};
+  const securityEvent = details.securityEvent || {};
+  const context = ambientContext(state, parent);
+  const name = securityEvent.eventType || details.eventType || `security.decision.${decision.decision || "allow"}`;
+  const status = decision.decision || securityEvent.decision || "allow";
+  appendRunEvent(state, {
+    traceId: context.traceId,
+    spanId: createId("sec"),
+    parentSpanId: context.parentSpanId,
+    kind: "security",
+    name,
+    status,
+    sessionKey: context.sessionKey,
+    runId: context.runId,
+    taskId: context.taskId,
+    toolCallId: context.toolCallId,
+    llmCallId: context.llmCallId,
+    target: cleanObject({
+      stage: securityEvent.stage || details.stage || null,
+      decision: decision.decision || securityEvent.decision || null,
+      riskLevel: decision.riskLevel || securityEvent.riskLevel || null,
+      riskScore: decision.riskScore ?? securityEvent.riskScore ?? null,
+    }),
+    preview: cleanObject({
+      reason:
+        (Array.isArray(decision.reasons) && decision.reasons[0]) ||
+        securityEvent.reason ||
+        details.reason ||
+        null,
+      suggestedUserMessage: decision.suggestedUserMessage || null,
+    }),
+    evidence: cleanObject({
+      eventType: name,
+      stage: securityEvent.stage || details.stage || null,
+      decision: decision.decision || securityEvent.decision || null,
+      riskLevel: decision.riskLevel || securityEvent.riskLevel || null,
+      riskScore: decision.riskScore ?? securityEvent.riskScore ?? null,
+      reason:
+        (Array.isArray(decision.reasons) && decision.reasons[0]) ||
+        securityEvent.reason ||
+        details.reason ||
+        null,
+      securityContextSnapshot: securityEvent.securityContextSnapshot || details.snapshot || null,
+      bridge: cleanObject({
+        operation: details.operation || null,
+        paths: details.paths || null,
+      }),
+    }),
+  });
+}
+
+function callSecurityBridge(state, store, payload) {
+  if (!state.config.securityEnabled || state.config.securityMode === "off") {
+    return null;
+  }
+  const bridgePayload = {
+    ...payload,
+    runDir: store.runDir,
+    runId: store.runId,
+    policyPath: state.config.policyPath,
+    securityMode: state.config.securityMode,
+    llmJudge: state.config.llmJudge,
+  };
+  const completed = spawnSync(state.config.securityPython, [state.config.securityBridgeScript], {
+    cwd: process.cwd(),
+    input: JSON.stringify(bridgePayload),
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024 * 8,
+  });
+  if (completed.error || completed.status !== 0) {
+    state.securityBridgeFailures += 1;
+    state.lastSecurityError = completed.error?.message || completed.stderr || `security bridge exited ${completed.status}`;
+    state.logger?.warn?.(`[behavior] security bridge failed: ${state.lastSecurityError}`);
+    return null;
+  }
+  try {
+    const result = JSON.parse(completed.stdout || "{}");
+    if (!result.ok) {
+      state.securityBridgeFailures += 1;
+      state.lastSecurityError = result.error || "security bridge returned ok=false";
+      return null;
+    }
+    state.lastSecurityDecision = result.decision?.decision || null;
+    state.lastSecurityError = null;
+    emitSecurityEvent(state, result, payload.parent || {});
+    return result;
+  } catch (error) {
+    state.securityBridgeFailures += 1;
+    state.lastSecurityError = error?.message || String(error);
+    state.logger?.warn?.(`[behavior] security bridge JSON parse failed: ${state.lastSecurityError}`);
+    return null;
+  }
+}
+
+function securityBlockResult(result) {
+  const decision = result?.decision || {};
+  return {
+    ok: false,
+    blocked: true,
+    block: true,
+    reason: decision.reasons?.[0] || "security guard blocked this action",
+    decision: decision.decision || "block",
+    riskLevel: decision.riskLevel || "critical",
+    suggestedUserMessage: decision.suggestedUserMessage || "该动作被安全机制阻断。",
+    security: decision,
+  };
+}
+
 function redactStructuredValue(value, state, seen = new WeakSet()) {
   if (value == null) {
     return value;
@@ -756,6 +918,10 @@ function buildRuntimeStatus(state) {
     capturePreviewChars: state.config.capturePreviewChars,
     captureNetwork: state.config.captureNetwork,
     traceEval: state.config.traceEval,
+    securityEnabled: state.config.securityEnabled,
+    securityMode: state.config.securityMode,
+    policyPath: state.config.policyPath,
+    llmJudge: state.config.llmJudge,
     hooksRegistered: state.hookNames.size,
     hookNames: [...state.hookNames],
     hookEventsObserved: state.hookEventsObserved,
@@ -769,6 +935,9 @@ function buildRuntimeStatus(state) {
     diagnosesTriggered: state.diagnosesTriggered,
     diagnosisInFlight: state.diagnosisInFlight,
     lastDiagnosisError: state.lastDiagnosisError,
+    securityBridgeFailures: state.securityBridgeFailures,
+    lastSecurityDecision: state.lastSecurityDecision,
+    lastSecurityError: state.lastSecurityError,
     runStoreCount: state.runStores.size,
     openRequests: state.requestContexts.size,
     openTurns: state.turnContexts.size,
@@ -826,6 +995,71 @@ function parseMaybeJson(value) {
   } catch (error) {
     return null;
   }
+}
+
+function inferActionFromTool(toolName, params = {}, event = {}) {
+  const normalized = String(toolName || "").toLowerCase();
+  const command = params.command || params.cmd || params.script || null;
+  const pathValue = params.path || params.filePath || params.target || null;
+  const url = params.url || params.href || params.targetUrl || params.target || null;
+  const method = String(params.method || params.httpMethod || "GET").toUpperCase();
+  if (["web_fetch", "fetch", "http_fetch", "http_get", "web.fetch"].includes(normalized) && String(url || "").match(/^https?:\/\//i)) {
+    return {
+      actionType: ["POST", "PUT", "PATCH", "DELETE"].includes(method) ? "network_request" : "open_external_link",
+      sourceType: event.sourceType || event.source || "external_website",
+      target: url || "",
+      url: url || "",
+      method,
+      body: params.body || params.data || null,
+      toolName,
+    };
+  }
+  if (["exec", "bash", "shell_command"].includes(normalized)) {
+    return {
+      actionType: "execute_command",
+      sourceType: event.sourceType || event.source || "unknown",
+      target: command || "",
+      command: command || "",
+      toolName,
+    };
+  }
+  if (["read"].includes(normalized)) {
+    return {
+      actionType: "read_local_file",
+      sourceType: event.sourceType || event.source || "unknown",
+      target: pathValue || "",
+      path: pathValue || "",
+    };
+  }
+  if (normalized.includes("upload")) {
+    return {
+      actionType: normalized.includes("photo") ? "upload_photo" : "upload_file",
+      sourceType: event.sourceType || event.source || "unknown",
+      target: pathValue || url || "",
+      url: url || null,
+    };
+  }
+  if (normalized.includes("navigate") || normalized.includes("open")) {
+    return {
+      actionType: "open_external_link",
+      sourceType: event.sourceType || event.source || "unknown",
+      target: url || "",
+      url: url || "",
+    };
+  }
+  if (normalized.includes("click")) {
+    return {
+      actionType: "click_unknown_button",
+      sourceType: event.sourceType || event.source || "button",
+      target: params.buttonText || params.text || params.label || url || "",
+      url: url || null,
+    };
+  }
+  return {
+    actionType: "tool_call",
+    sourceType: event.sourceType || event.source || "unknown",
+    target: toolName || "unknown",
+  };
 }
 
 function summarizeUserPrompt(messages, state) {
@@ -1476,6 +1710,11 @@ function patchFetch(state) {
     }
 
     const parent = ambientContext(state);
+    const store = ensureRunStore(state, {
+      runId: parent.runId,
+      traceId: parent.traceId,
+      sessionKey: parent.sessionKey,
+    });
     const network = createSpanContext(state, {
       kind: "network",
       name: `network.${method.toLowerCase()}`,
@@ -1501,6 +1740,49 @@ function patchFetch(state) {
         headers: requestHeaders,
       },
     });
+
+    const lowerUrl = url.toLowerCase();
+    const lowerBody = String(bodyPreview || "").toLowerCase();
+    const networkAction =
+      lowerUrl.includes("upload") || lowerBody.includes("upload") || lowerBody.includes("photo")
+        ? lowerBody.includes("photo") || lowerBody.includes("local_user_photo")
+          ? "upload_photo"
+          : "upload_file"
+        : method === "POST" || method === "PUT"
+          ? "network_request"
+          : "open_external_link";
+    const securityResult = callSecurityBridge(state, store, {
+      operation: "inspect_action",
+      action: {
+        actionType: networkAction,
+        sourceType: "external_website",
+        target: url,
+        url,
+        method,
+        body: bodyPreview,
+      },
+      parent: {
+        traceId: network.traceId,
+        parentSpanId: network.spanId,
+        sessionKey: parent.sessionKey,
+        runId: parent.runId,
+        toolCallId: parent.toolCallId,
+      },
+    });
+    if (securityResult?.shouldBlock && state.config.securityMode === "enforce") {
+      emitSpanFinished(state, network, {
+        status: "blocked",
+        preview: {
+          error: securityBlockResult(securityResult).reason,
+        },
+        evidence: {
+          surface: "fetch",
+          blockedBy: "behavior-mediator.security",
+          security: securityResult.decision || null,
+        },
+      });
+      throw new Error(securityBlockResult(securityResult).reason);
+    }
 
     try {
       const response = await state.originalFetch(input, init);
@@ -1706,6 +1988,21 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "message_received", async (event, ctx) => {
     try {
       const request = openRequestContext(state, event, ctx);
+      const store = ensureRunStore(state, {
+        runId: request.runId,
+        traceId: request.traceId,
+        sessionKey: request.sessionKey,
+      });
+      callSecurityBridge(state, store, {
+        operation: "inspect_user_input",
+        message: event.text || event.message || event.content || "",
+        parent: {
+          traceId: request.traceId,
+          parentSpanId: request.spanId,
+          sessionKey: request.sessionKey,
+          runId: request.runId,
+        },
+      });
       als.enterWith({
         traceId: request.traceId,
         spanId: request.spanId,
@@ -1719,6 +2016,22 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "before_agent_start", (event, ctx) => {
     try {
       const turn = openTurnContext(state, event, ctx);
+      const store = ensureRunStore(state, {
+        runId: turn.runId,
+        traceId: turn.traceId,
+        sessionKey: turn.sessionKey,
+      });
+      callSecurityBridge(state, store, {
+        operation: "inspect_plan",
+        message: event.prompt || event.task || event.systemPrompt || "",
+        plan: event.plan || event.steps || event.prompt || event.task || event.systemPrompt || "",
+        parent: {
+          traceId: turn.traceId,
+          parentSpanId: turn.spanId,
+          sessionKey: turn.sessionKey,
+          runId: turn.runId,
+        },
+      });
       als.enterWith({
         traceId: turn.traceId,
         spanId: turn.spanId,
@@ -1733,7 +2046,48 @@ function registerTypedHooks(api, state) {
 
   registerHook(api, state, "before_tool_call", (event, ctx) => {
     try {
-      const tool = openToolContext(state, event, ctx);
+      const sessionKey = event.sessionKey || ctx?.sessionKey || "unknown";
+      const runId = event.runId || ctx?.runId || null;
+      const toolCallId = event.toolCallId || createId("tool");
+      const toolName = event.toolName || event.name || "unknown";
+      const toolParams = event.params || event.input || event.arguments || {};
+      const turn = resolveTurnContext(state, sessionKey, runId) || openTurnContext(state, event, ctx);
+      const store = ensureRunStore(state, {
+        runId,
+        traceId: turn.traceId,
+        sessionKey,
+      });
+      const tool = openToolContext(state, { ...event, toolCallId }, ctx);
+      const securityResult = callSecurityBridge(state, store, {
+        operation: "inspect_action",
+        action: inferActionFromTool(toolName, toolParams, event),
+        parent: {
+          traceId: tool.traceId,
+          parentSpanId: tool.spanId,
+          sessionKey,
+          runId,
+          toolCallId,
+        },
+      });
+      if (securityResult?.shouldBlock && state.config.securityMode === "enforce") {
+        emitSpanFinished(state, tool, {
+          status: "blocked",
+          preview: {
+            error: securityBlockResult(securityResult).reason,
+          },
+          evidence: cleanObject({
+            hook: "before_tool_call",
+            surface: "typed-hook",
+            blockedBy: "behavior-mediator.security",
+            security: securityResult.decision || null,
+            artifacts: cleanObject({
+              input: tool.inputArtifact?.relativePath || null,
+            }),
+          }),
+        });
+        state.toolContexts.delete(tool.toolCallId);
+        return securityBlockResult(securityResult);
+      }
       als.enterWith({
         traceId: tool.traceId,
         spanId: tool.spanId,
@@ -1783,7 +2137,33 @@ function registerTypedHooks(api, state) {
 
   registerHook(api, state, "llm_output", (event, ctx) => {
     try {
-      finishLlmContext(state, event, ctx);
+      const llm = finishLlmContext(state, event, ctx);
+      const sessionKey = event?.sessionKey || ctx?.sessionKey || "unknown";
+      const runId = event?.runId || ctx?.runId || null;
+      const parent = llm || resolveTurnContext(state, sessionKey, runId);
+      if (parent) {
+        const store = ensureRunStore(state, {
+          runId,
+          traceId: parent.traceId,
+          sessionKey,
+        });
+        const planText =
+          (Array.isArray(event?.assistantTexts) && event.assistantTexts.join("\n")) ||
+          summarizeAssistant([event?.lastAssistant].filter(Boolean), state) ||
+          "";
+        callSecurityBridge(state, store, {
+          operation: "inspect_plan",
+          message: planText,
+          plan: event?.plan || event?.steps || planText,
+          parent: {
+            traceId: parent.traceId,
+            parentSpanId: parent.spanId,
+            sessionKey,
+            runId,
+            llmCallId: parent.llmCallId,
+          },
+        });
+      }
     } catch (error) {
       state.logger?.warn?.(`[behavior] llm_output failed: ${error?.message || error}`);
     }

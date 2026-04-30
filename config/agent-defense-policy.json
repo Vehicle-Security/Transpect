@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "transpect.agent-defense.policy.v1",
+  "defaultMode": "enforce",
+  "trustedDomains": [
+    "localhost",
+    "127.0.0.1"
+  ],
+  "sensitiveMarkers": [
+    ".env",
+    ".ssh",
+    "id_rsa",
+    "id_ed25519",
+    "credential",
+    "credentials",
+    "cookie",
+    "token",
+    "secret",
+    "password",
+    "api_key",
+    "apikey",
+    "private_key",
+    "local_user_photo_fixture"
+  ],
+  "allow": [
+    {
+      "id": "openclaw-bootstrap-workspace-read",
+      "description": "Allow OpenClaw bootstrap identity and memory initialization files when the user is initializing OpenClaw.",
+      "actions": ["read_local_file", "execute_command"],
+      "paths": [
+        "~/.openclaw/workspace/BOOTSTRAP.md",
+        "~/.openclaw/workspace/IDENTITY.md",
+        "~/.openclaw/workspace/USER.md",
+        "~/.openclaw/workspace/MEMORY.md",
+        "~/.openclaw/workspace/memory/**"
+      ]
+    }
+  ],
+  "confirm": [
+    {
+      "id": "low-trust-external-navigation",
+      "description": "Low-trust external navigation requires user confirmation.",
+      "actions": ["open_external_link", "network_request"]
+    }
+  ],
+  "block": [
+    {
+      "id": "credential-and-secret-files",
+      "description": "Block reads or uploads of credentials, keys, cookies, tokens, and secret-bearing files.",
+      "markers": [".env", ".ssh", "id_rsa", "id_ed25519", "credential", "cookie", "token", "secret", "password", "private_key"]
+    },
+    {
+      "id": "unauthorized-photo-or-local-fixture",
+      "description": "Block unauthorized local photo fixture upload attempts.",
+      "actions": ["upload_photo", "upload_file", "network_request", "execute_command"],
+      "markers": ["local_user_photo_fixture", "photo", "照片"]
+    }
+  ],
+  "bypassRules": [
+    {
+      "id": "curl-wget-after-intervention",
+      "description": "After Agent Defense intervenes on a URL, curl/wget access to the same URL or domain is bypass escalation.",
+      "tools": ["curl", "wget"],
+      "decision": "block"
+    }
+  ]
+}
