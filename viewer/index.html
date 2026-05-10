@@ -29,6 +29,32 @@
       <section id="banner-area" class="banner-area"></section>
 
       <main class="app-layout">
+        <section id="showcase-page" class="page-view hidden">
+          <section class="panel showcase-hero">
+            <div>
+              <p class="panel-kicker">Product Showcase</p>
+              <h1>Transpect Agent Runtime Security</h1>
+              <p class="showcase-lede">
+                Transpect combines runtime traces, Frida low-level evidence, and CodeTracer diagnosis to identify cross-step attacks in Agent workflows before sensitive actions execute.
+              </p>
+            </div>
+            <div id="showcase-dashboard" class="showcase-dashboard"></div>
+          </section>
+
+          <section class="showcase-layout">
+            <aside class="panel showcase-list-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">Frozen Runs</p>
+                  <h2>Showcases</h2>
+                </div>
+              </div>
+              <div id="showcase-list" class="showcase-list"></div>
+            </aside>
+            <section id="showcase-detail" class="showcase-detail"></section>
+          </section>
+        </section>
+
         <section id="traces-page" class="page-view">
           <section id="run-explorer-panel" class="panel run-explorer-panel">
             <div class="panel-head">
@@ -40,6 +66,8 @@
             </div>
             <div id="run-group-list" class="run-group-list"></div>
           </section>
+
+          <section id="risk-chain-card" class="panel risk-chain-card hidden"></section>
 
           <section class="trace-panel panel traces-page-panel">
             <div class="panel-head">

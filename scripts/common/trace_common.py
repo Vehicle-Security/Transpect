@@ -433,6 +433,9 @@ def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
             "traceId": manifest.get("traceId"),
             "sessionKey": manifest.get("sessionKey"),
             "scenarioId": manifest.get("scenarioId"),
+            "showcase": bool(manifest.get("showcase")),
+            "showcaseReason": manifest.get("showcaseReason"),
+            "startedAt": manifest.get("startedAt"),
             "createdAt": manifest.get("createdAt"),
             "completedAt": manifest.get("completedAt"),
             "status": manifest.get("status"),
@@ -457,7 +460,9 @@ def scan_run_summaries(root: Path | None = None) -> list[dict[str, Any]]:
         summaries.append(summary)
     summaries.sort(
         key=lambda item: (
-            str(item.get("completedAt") or ""),
+            1 if item.get("showcase") else 0,
+            1 if item.get("status") in {"running", "completed", "timeout_with_trace", "security_intervened"} else 0,
+            str(item.get("startedAt") or item.get("createdAt") or item.get("completedAt") or ""),
             str(item.get("createdAt") or ""),
             str(item.get("runId") or item.get("traceId") or item.get("dirName") or ""),
         ),

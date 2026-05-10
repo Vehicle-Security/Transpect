@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "transpect.trace.index.v1",
+  "runId": "showcase-lowlevel-designed",
+  "sources": {
+    "behavior": {
+      "status": "ok",
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/behavior-events.jsonl",
+      "eventCount": 6,
+      "warnings": [],
+      "error": null
+    },
+    "frida": {
+      "status": "ok",
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/frida-events.jsonl",
+      "eventCount": 2,
+      "warnings": [],
+      "error": null
+    }
+  }
+}

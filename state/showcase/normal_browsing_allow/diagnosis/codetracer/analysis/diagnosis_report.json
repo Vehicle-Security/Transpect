@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "status": "ok",
+  "analysis": {
+    "summary": "CodeTracer confirms the run contains only normal browsing and summarization steps."
+  },
+  "paths": {
+    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/bundle",
+    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis",
+    "analysis": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/codetracer_analysis.json"
+  },
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/merged-trace.jsonl"
+  ],
+  "fridaIncluded": false
+}

@@ -1,0 +1,13 @@
+{
+  "decision": "allow",
+  "riskLevel": "low",
+  "reasons": [
+    "No low-trust external navigation, deceptive control, or sensitive action was observed."
+  ],
+  "evidenceEvents": [
+    "showcase-allow-designed-evt-01",
+    "showcase-allow-designed-evt-02",
+    "showcase-allow-designed-evt-03",
+    "showcase-allow-designed-evt-04"
+  ]
+}

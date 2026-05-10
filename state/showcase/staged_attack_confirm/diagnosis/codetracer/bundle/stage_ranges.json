@@ -1,0 +1,22 @@
+[
+  {
+    "stage": "low_trust_comment",
+    "startStep": 1,
+    "endStep": 1
+  },
+  {
+    "stage": "external_navigation",
+    "startStep": 2,
+    "endStep": 2
+  },
+  {
+    "stage": "deceptive_detail_button",
+    "startStep": 3,
+    "endStep": 3
+  },
+  {
+    "stage": "no_sensitive_upload",
+    "startStep": 4,
+    "endStep": 4
+  }
+]

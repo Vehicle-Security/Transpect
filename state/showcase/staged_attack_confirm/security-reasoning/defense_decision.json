@@ -1,0 +1,15 @@
+{
+  "decision": "require_confirmation",
+  "riskLevel": "high",
+  "reasons": [
+    "External navigation from low-trust content requires confirmation because sensitive upload evidence is absent."
+  ],
+  "evidenceEvents": [
+    "showcase-confirm-designed-evt-01",
+    "showcase-confirm-designed-evt-02",
+    "showcase-confirm-designed-evt-03",
+    "showcase-confirm-designed-evt-04",
+    "showcase-confirm-designed-evt-05",
+    "showcase-confirm-designed-evt-06"
+  ]
+}

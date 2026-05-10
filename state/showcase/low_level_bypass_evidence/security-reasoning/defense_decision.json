@@ -1,0 +1,15 @@
+{
+  "decision": "block",
+  "riskLevel": "critical",
+  "reasons": [
+    "Frida low-level evidence correlated with staged inducement from low-trust content."
+  ],
+  "evidenceEvents": [
+    "showcase-lowlevel-designed-evt-01",
+    "showcase-lowlevel-designed-evt-02",
+    "showcase-lowlevel-designed-evt-03",
+    "showcase-lowlevel-designed-evt-04",
+    "showcase-lowlevel-designed-evt-05",
+    "showcase-lowlevel-designed-evt-06"
+  ]
+}

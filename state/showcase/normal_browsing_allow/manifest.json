@@ -1,0 +1,10 @@
+{
+  "runId": "showcase-allow-designed",
+  "taskId": "data/showcase_cases.json#xhs-normal-browsing-001",
+  "status": "completed",
+  "showcase": true,
+  "generatedBy": "designed_showcase_fixture",
+  "eventCount": 4,
+  "artifactCount": 2,
+  "createdAt": "2026-05-09T04:14:25Z"
+}

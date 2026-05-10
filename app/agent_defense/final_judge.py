@@ -74,6 +74,55 @@ def _frida_risk(rows: list[dict[str, Any]]) -> tuple[bool, list[str], list[dict[
     return bool(evidence), sorted(set(tags)), evidence
 
 
+def _frida_summary(run_dir: Path, *, index: dict[str, Any], frida_rows: list[dict[str, Any]], tags: list[str], evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    sources = index.get("sources") if isinstance(index.get("sources"), dict) else {}
+    source = sources.get("frida") if isinstance(sources.get("frida"), dict) else {}
+    status = str(source.get("status") or ("ok" if frida_rows else "degraded"))
+    warnings = source.get("warnings") if isinstance(source.get("warnings"), list) else []
+    reason = source.get("error") or ", ".join(str(item) for item in warnings if item)
+    if not reason and status in {"degraded", "unavailable", "attach_failed", "disabled", "empty"}:
+        reason = f"Frida status is {status}."
+    summary = (
+        f"{len(frida_rows)} Frida events, {len(evidence)} high-risk evidence items."
+        if frida_rows
+        else (reason or "No Frida runtime events were recorded.")
+    )
+    return {
+        "status": status,
+        "path": normalize_path((run_dir / "frida-events.jsonl").resolve()) if (run_dir / "frida-events.jsonl").exists() else source.get("path"),
+        "eventCount": int(source.get("eventCount") or len(frida_rows)),
+        "riskTags": tags,
+        "criticalEvidenceCount": len(evidence),
+        "summary": summary,
+        "degradedReason": reason,
+        "confidence": "medium" if frida_rows and not evidence else ("high" if evidence else "low"),
+        "attribution": "uncertain" if frida_rows and not evidence else ("runtime_correlated" if evidence else "not_observed"),
+        "evidencePreview": evidence[:3],
+    }
+
+
+def _codetracer_summary(run_dir: Path, diagnosis: dict[str, Any]) -> dict[str, Any]:
+    manifest = read_json(run_dir / "manifest.json", default={})
+    codetracer = (((manifest or {}).get("diagnosis") or {}).get("codetracer") or {}) if isinstance(manifest, dict) else {}
+    paths = diagnosis.get("paths") if isinstance(diagnosis.get("paths"), dict) else {}
+    analysis = diagnosis.get("analysis") if isinstance(diagnosis.get("analysis"), dict) else {}
+    ok = bool(diagnosis.get("ok")) if diagnosis else bool(codetracer.get("analysisOk"))
+    status = "ok" if ok else (str(diagnosis.get("status") or codetracer.get("status") or "unavailable"))
+    summary = analysis.get("summary") if isinstance(analysis.get("summary"), str) else None
+    return {
+        "status": status,
+        "ok": ok,
+        "bundlePath": paths.get("bundleDir") or codetracer.get("bundlePath"),
+        "analysisDir": paths.get("analysisDir"),
+        "analysisPath": paths.get("analysis") or codetracer.get("analysisPath"),
+        "diagnosisReportPath": normalize_path((run_dir / "diagnosis" / "codetracer" / "analysis" / "diagnosis_report.json").resolve())
+        if diagnosis
+        else codetracer.get("diagnosisReportPath"),
+        "summary": summary or ("CodeTracer diagnosis ready." if ok else "CodeTracer diagnosis unavailable."),
+        "invalidAnalysisReason": (((diagnosis.get("diagnosisRun") or {}) if isinstance(diagnosis.get("diagnosisRun"), dict) else {}).get("invalidAnalysisReason")),
+    }
+
+
 def run_final_judgment(run_dir: Path | str) -> dict[str, Any]:
     resolved = Path(run_dir).resolve()
     merged_rows = read_jsonl(resolved / "merged-trace.jsonl")
@@ -89,6 +138,8 @@ def run_final_judgment(run_dir: Path | str) -> dict[str, Any]:
     task = _task_metadata(resolved)
     interventions = _interventions(merged_rows)
     frida_critical, frida_tags, frida_evidence = _frida_risk(merged_rows)
+    frida_summary = _frida_summary(resolved, index=index, frida_rows=frida_rows, tags=frida_tags, evidence=frida_evidence)
+    codetracer_summary = _codetracer_summary(resolved, diagnosis)
     bypass_detected = any(
         "bypass" in str(row.get("name") or "").lower()
         or "bypass" in " ".join(str(tag).lower() for tag in (row.get("riskTags") or row.get("risk_tags") or []))
@@ -141,9 +192,11 @@ def run_final_judgment(run_dir: Path | str) -> dict[str, Any]:
             "fridaIncluded": frida_included,
             "fridaRiskTags": frida_tags,
             "fridaCriticalEvidenceCount": len(frida_evidence),
+            "frida": frida_summary,
             "bypassDetected": bypass_detected,
             "codeTracerIncluded": code_tracer_included,
             "codeTracerOk": diagnosis.get("ok"),
+            "codeTracer": codetracer_summary,
             "inputTraceSources": diagnosis_sources,
             "traceSources": (index.get("sources") if isinstance(index, dict) else None),
         },

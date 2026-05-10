@@ -20,6 +20,7 @@ captures/**
 !captures/.gitkeep
 bin/**
 !bin/.gitkeep
+.playwright-mcp/
 tmp-*.log
 tmp-*.jsonl
 
@@ -36,3 +37,6 @@ docs/images/*.png
 !docs/images/runtime-timeline.png
 !docs/images/runtime-timeline-detail.png
 !docs/images/runtime-timeline-evidence.png
+!docs/images/console-overview-dashboard.png
+!docs/images/console-staged-attack-report.png
+!docs/images/console-artifact-viewer.png

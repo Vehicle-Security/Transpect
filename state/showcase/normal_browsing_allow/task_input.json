@@ -1,0 +1,5 @@
+{
+  "prompt": "请打开 camping-safe 页面并总结帖子与评论。",
+  "taskId": "data/showcase_cases.json#xhs-normal-browsing-001",
+  "source": "designed_showcase_fixture"
+}

@@ -103,29 +103,26 @@ live/runs/<runId>/security-context/context_report.json
 
 ## 运行命令
 
-启动本地真实网页 demo：
+现场演示推荐只运行一个入口：
 
 ```bash
-conda activate transpect-py311
-python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
+python scripts/demo/run_showcase.py
 ```
 
-另开终端运行 agent trace：
+脚本会检查并启动 staged attack site 和 viewer，运行 staged attack agent trace，启用 Frida auto 模式，合并 behavior + Frida trace，运行 defense reasoner，导出并运行 CodeTracer 诊断，生成 `final_judgment.json`，标记 showcase run，并输出可直接打开的 viewer URL。
+
+现场兜底回放：
 
 ```bash
-conda activate transpect-py311
-python scripts/runtime/setup_runtime.py --mode core
+python scripts/demo/run_showcase.py --reuse-latest
+python scripts/demo/run_showcase.py --no-openclaw-run --run-dir live/runs/<runId>
+```
+
+内部调试仍可单独运行：
+
+```bash
 python scripts/runtime/run_task_repo.py --repo staged_attack --mode list-tasks
 python scripts/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001
-```
-
-检查最近一次 run：
-
-```bash
-RUN_ID=$(ls -t live/runs | head -1)
-jq . live/runs/$RUN_ID/security-reasoning/security_state.json
-jq . live/runs/$RUN_ID/security-reasoning/defense_decision.json
-tail -n 20 live/runs/$RUN_ID/behavior-events.jsonl
 ```
 
 只重跑 Layer 4：

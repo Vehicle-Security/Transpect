@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f7fb;
+  --foreground: #101828;
+  --muted: #667085;
+  --panel: #ffffff;
+  --border: #d9e1ec;
+  --system: #344054;
+  --system-soft: #e8eef7;
+  --danger: #b42318;
+  --danger-soft: #fee4e2;
+  --warning: #b54708;
+  --warning-soft: #fef0c7;
+  --success: #027a48;
+  --success-soft: #dcfae6;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.console-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #eef3f9 0, rgba(238, 243, 249, 0) 360px),
+    var(--background);
+}
+
+.container {
+  width: min(1200px, calc(100vw - 48px));
+  margin: 0 auto;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.report-header {
+  border-radius: 8px;
+  background: linear-gradient(135deg, #101828 0%, #1d2939 58%, #344054 100%);
+  color: white;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}

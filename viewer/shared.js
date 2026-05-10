@@ -1,4 +1,5 @@
 export const RUNS_INDEX_URL = "../live/runs/index.json";
+export const SHOWCASE_INDEX_URL = "../state/showcase/index.json";
 export const REQUIRED_FIELDS = ["schemaVersion", "seq", "ts", "traceId", "spanId", "kind", "name", "status"];
 export const DEMO_VISIBLE_KINDS = ["request", "turn", "llm", "tool", "task"];
 export const MIN_VISIBLE_WATERFALL_PCT = 1.2;
@@ -953,6 +954,86 @@ export async function fetchRunsIndex() {
   return response.json();
 }
 
+export function normalizeDecision(value) {
+  return String(value || "unknown")
+    .trim()
+    .toLowerCase();
+}
+
+export function normalizeRiskLevel(value) {
+  return String(value || "unknown")
+    .trim()
+    .toLowerCase();
+}
+
+export function normalizeEvidenceStatus(value) {
+  const normalized = String(value || "unavailable")
+    .trim()
+    .toLowerCase();
+  if (["ok", "available", "degraded", "unavailable", "failed"].includes(normalized)) {
+    return normalized;
+  }
+  if (["error", "broken", "attach_failed"].includes(normalized)) {
+    return "failed";
+  }
+  if (["missing", "not_running", "disabled", "empty"].includes(normalized)) {
+    return "unavailable";
+  }
+  return normalized || "unavailable";
+}
+
+export async function fetchShowcaseIndex() {
+  const response = await fetch(`${SHOWCASE_INDEX_URL}?t=${Date.now()}`, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+
+function showcaseRunUrl(showcase, relativePath) {
+  const runDir = String(showcase?.runDir || "").replace(/\/+$/, "");
+  const path = String(relativePath || "").replace(/^\/+/, "");
+  if (!runDir || !path) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(runDir) || runDir.startsWith("/")) {
+    return `${runDir}/${path}`;
+  }
+  return `../${runDir}/${path}`;
+}
+
+export async function fetchShowcaseJson(showcase, relativePath) {
+  const url = showcaseRunUrl(showcase, relativePath);
+  if (!url) {
+    return null;
+  }
+  const response = await fetch(`${url}?t=${Date.now()}`, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    return null;
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchShowcaseText(showcase, relativePath) {
+  const url = showcaseRunUrl(showcase, relativePath);
+  if (!url) {
+    return "";
+  }
+  const response = await fetch(`${url}?t=${Date.now()}`);
+  if (!response.ok) {
+    return "";
+  }
+  return response.text();
+}
+
+export function showcaseArtifactHref(showcase, relativePath) {
+  return showcaseRunUrl(showcase, relativePath);
+}
+
 export async function fetchRunText(eventsPath) {
   const response = await fetch(`${eventsPath}?t=${Date.now()}`);
   if (!response.ok) {
@@ -964,4 +1045,3 @@ export async function fetchRunText(eventsPath) {
   }
   return text;
 }
-

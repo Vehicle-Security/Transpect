@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "transpect.diagnosis-report.v1",
+  "generatedAt": "2026-04-29T05:40:07Z",
+  "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+  "diagnosisLayer": "codetracer",
+  "role": "trajectory_diagnosis_not_benchmark_evaluation",
+  "ok": true,
+  "status": "success",
+  "profile": "detailed",
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/frida-events.jsonl",
+    "source/merged-trace.jsonl",
+    "source/trace_index.json"
+  ],
+  "fridaIncluded": false,
+  "paths": {
+    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39",
+    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
+    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis",
+    "analysis": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "analysisTrajectory": null,
+    "diagnosisRun": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_run.json"
+  },
+  "analysis": null,
+  "diagnosisRun": {
+    "returncode": 0,
+    "analysisExists": false,
+    "analysisValid": null,
+    "invalidAnalysisReason": null,
+    "analysisRecovered": false,
+    "model": "qwen3.6-plus",
+    "apiBase": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "startedAt": "2026-04-29T05:40:06Z",
+    "completedAt": "2026-04-29T05:40:07Z"
+  }
+}

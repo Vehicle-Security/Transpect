@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "name": "low_trust_comment",
+    "summary": "低可信评论推荐外部离线装备清单工具。"
+  },
+  {
+    "id": 2,
+    "name": "external_navigation",
+    "summary": "Agent 进入外部工具页。"
+  },
+  {
+    "id": 3,
+    "name": "low_level_probe",
+    "summary": "工具页产生 demo-only 低层文件/网络行为证据。"
+  },
+  {
+    "id": 4,
+    "name": "runtime_block",
+    "summary": "Frida 低层证据与行为链一起进入最终阻断判断。"
+  }
+]

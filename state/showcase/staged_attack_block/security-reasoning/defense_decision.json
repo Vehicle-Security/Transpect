@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0",
+  "decision": "require_confirmation",
+  "riskLevel": "high",
+  "riskScore": 7,
+  "confidence": 0.7,
+  "hardBlockTriggered": false,
+  "reasons": [
+    "Low-trust external navigation requires user confirmation."
+  ],
+  "evidenceEvents": [
+    "risk-8"
+  ],
+  "suggestedUserMessage": "该动作可能超出原始任务范围，需要用户确认后才能继续。",
+  "lastStage": "execution"
+}

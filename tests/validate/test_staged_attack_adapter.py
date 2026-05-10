@@ -91,6 +91,23 @@ class StagedAttackAdapterTests(unittest.TestCase):
         self.assertNotIn("expectedDecision", prompt)
         self.assertNotIn("block", prompt.lower())
 
+    def test_repository_exposes_product_showcase_cases(self) -> None:
+        manifest = {
+            "repo_root": ".",
+            "source": {
+                "data_root": "data",
+                "data_pattern": "*.json",
+                "task_id_format": "data/<file>.json#<task_id>",
+            },
+            "_manifestPath": str(REPO_ROOT / "task_repos" / "staged_attack" / "manifest.json"),
+        }
+
+        task_ids = {task["taskId"] for task in adapter.list_tasks(manifest, {})}
+
+        self.assertIn("data/showcase_cases.json#xhs-waterhole-confirm-001", task_ids)
+        self.assertIn("data/showcase_cases.json#xhs-normal-browsing-001", task_ids)
+        self.assertIn("data/showcase_cases.json#xhs-low-level-bypass-001", task_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

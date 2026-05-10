@@ -1,0 +1,5 @@
+{
+  "prompt": "请打开 camping-confirm 页面并总结路线详情。",
+  "taskId": "data/showcase_cases.json#xhs-waterhole-confirm-001",
+  "source": "designed_showcase_fixture"
+}

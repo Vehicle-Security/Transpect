@@ -1,6 +1,7 @@
 import {
   MIN_VISIBLE_WATERFALL_PCT,
   RUNS_INDEX_URL,
+  SHOWCASE_INDEX_URL,
   buildRawEventEntries,
   buildTraces,
   chooseDefaultSpan,
@@ -9,19 +10,27 @@ import {
   fetchHealth,
   fetchRunText,
   fetchRunsIndex,
+  fetchShowcaseIndex,
+  fetchShowcaseJson,
+  fetchShowcaseText,
   filterTraces,
   findSpanById,
   findTraceById,
   formatClock,
   formatDateTime,
   formatDuration,
+  normalizeDecision,
+  normalizeEvidenceStatus,
+  normalizeRiskLevel,
   parseJsonl,
   prettyJson,
+  showcaseArtifactHref,
   shortId,
 } from "./shared.js?v=20260414-2";
 
 const VIEW_TRACES = "traces";
 const VIEW_TIMELINE = "timeline";
+const VIEW_SHOWCASE = "showcase";
 
 function parseBooleanFlag(value) {
   const text = String(value || "")
@@ -33,12 +42,14 @@ function parseBooleanFlag(value) {
 function parseRouteFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const rawView = params.get("view");
-  const view = rawView === VIEW_TIMELINE ? VIEW_TIMELINE : VIEW_TRACES;
+  const view = rawView === VIEW_TIMELINE ? VIEW_TIMELINE : rawView === VIEW_SHOWCASE ? VIEW_SHOWCASE : VIEW_TRACES;
   const run = params.get("run");
+  const showcaseId = params.get("id");
   const traceId = params.get("traceId");
   return {
     view,
     run: run && run.trim() ? run.trim() : null,
+    showcaseId: showcaseId && showcaseId.trim() ? showcaseId.trim() : null,
     traceId: traceId && traceId.trim() ? traceId.trim() : null,
     evidenceExpanded: view === VIEW_TIMELINE && parseBooleanFlag(params.get("evidence")),
   };
@@ -55,6 +66,10 @@ const state = {
   sourceLabel: "",
   allTraces: [],
   visibleTraces: [],
+  runArtifacts: {},
+  showcases: [],
+  selectedShowcaseId: initialRoute.showcaseId,
+  selectedShowcaseArtifacts: {},
   view: initialRoute.view,
   traceFilter: "important",
   selectedTraceId: initialRoute.traceId,
@@ -78,12 +93,17 @@ const elements = {
   refreshButton: document.getElementById("refresh-button"),
   filterButton: document.getElementById("filter-button"),
   bannerArea: document.getElementById("banner-area"),
+  showcasePage: document.getElementById("showcase-page"),
+  showcaseDashboard: document.getElementById("showcase-dashboard"),
+  showcaseList: document.getElementById("showcase-list"),
+  showcaseDetail: document.getElementById("showcase-detail"),
   tracesPage: document.getElementById("traces-page"),
   timelinePage: document.getElementById("timeline-page"),
   runCount: document.getElementById("run-count"),
   runGroupList: document.getElementById("run-group-list"),
   traceCount: document.getElementById("trace-count"),
   traceList: document.getElementById("trace-list"),
+  riskChainCard: document.getElementById("risk-chain-card"),
   traceJsonlInput: document.getElementById("trace-jsonl-input"),
   heroEmpty: document.getElementById("hero-empty"),
   traceHeaderCard: document.getElementById("trace-header-card"),
@@ -111,15 +131,27 @@ function basename(value) {
   return parts[parts.length - 1] || text;
 }
 
-function buildRouteHref(view, runDir = null, traceId = null, evidenceExpanded = false) {
+function buildRouteHref(view, runDir = null, traceId = null, evidenceExpanded = false, showcaseId = null) {
   const url = new URL(window.location.href);
-  if (runDir) {
+  if (view === VIEW_SHOWCASE) {
+    url.searchParams.delete("run");
+  } else if (runDir) {
     url.searchParams.set("run", runDir);
   } else {
     url.searchParams.delete("run");
   }
-  if (view === VIEW_TIMELINE) {
+  if (view === VIEW_SHOWCASE) {
+    url.searchParams.set("view", VIEW_SHOWCASE);
+    if (showcaseId) {
+      url.searchParams.set("id", showcaseId);
+    } else {
+      url.searchParams.delete("id");
+    }
+    url.searchParams.delete("traceId");
+    url.searchParams.delete("evidence");
+  } else if (view === VIEW_TIMELINE) {
     url.searchParams.set("view", VIEW_TIMELINE);
+    url.searchParams.delete("id");
     if (traceId) {
       url.searchParams.set("traceId", traceId);
     } else {
@@ -132,6 +164,7 @@ function buildRouteHref(view, runDir = null, traceId = null, evidenceExpanded = 
     }
   } else {
     url.searchParams.set("view", VIEW_TRACES);
+    url.searchParams.delete("id");
     url.searchParams.delete("traceId");
     url.searchParams.delete("evidence");
   }
@@ -141,7 +174,7 @@ function buildRouteHref(view, runDir = null, traceId = null, evidenceExpanded = 
 
 function syncRoute(options = {}) {
   const { push = false } = options;
-  const href = buildRouteHref(state.view, state.selectedRunDir, state.selectedTraceId, state.evidenceExpanded);
+  const href = buildRouteHref(state.view, state.selectedRunDir, state.selectedTraceId, state.evidenceExpanded, state.selectedShowcaseId);
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (href === current) {
     return;
@@ -215,6 +248,50 @@ function ensureExpandedRows(trace) {
 
 function selectedRun() {
   return state.runs.find((run) => run.dirName === state.selectedRunDir) || state.runs[0] || null;
+}
+
+function selectedShowcase() {
+  return state.showcases.find((item) => item.id === state.selectedShowcaseId) || state.showcases[0] || null;
+}
+
+function runSortValue(run) {
+  return run?.startedAt || run?.createdAt || run?.completedAt || "";
+}
+
+function riskRank(value) {
+  return { critical: 4, high: 3, medium: 2, low: 1 }[normalizeRiskLevel(value)] || 0;
+}
+
+function chooseShowcase(showcases, requestedId = null) {
+  if (!Array.isArray(showcases) || !showcases.length) {
+    return null;
+  }
+  if (requestedId) {
+    return showcases.find((item) => item.id === requestedId) || null;
+  }
+  return (
+    showcases.find((item) => normalizeDecision(item.decision) === "block") ||
+    [...showcases].sort((left, right) => riskRank(right.riskLevel) - riskRank(left.riskLevel))[0] ||
+    showcases[0]
+  );
+}
+
+function chooseRun(runs, requestedRunDir = null) {
+  if (!Array.isArray(runs) || !runs.length) {
+    return null;
+  }
+  if (requestedRunDir) {
+    return runs.find((item) => item.dirName === requestedRunDir || item.runId === requestedRunDir || item.traceId === requestedRunDir) || null;
+  }
+  const showcase = runs.find((item) => item.showcase === true);
+  if (showcase) {
+    return showcase;
+  }
+  const preferredStatuses = new Set(["running", "completed", "timeout_with_trace", "security_intervened"]);
+  const preferred = runs
+    .filter((item) => preferredStatuses.has(item.status))
+    .sort((left, right) => String(runSortValue(right)).localeCompare(String(runSortValue(left))));
+  return preferred[0] || [...runs].sort((left, right) => String(runSortValue(right)).localeCompare(String(runSortValue(left))))[0] || runs[0];
 }
 
 function selectedTrace() {
@@ -394,14 +471,17 @@ function renderStatusBadge(value) {
 function renderTopbar() {
   const health = state.health || {};
   const activeRun = selectedRun();
-  const sourceName =
-    state.sourceLabel ||
-    activeRun?.runId ||
-    activeRun?.traceId ||
-    activeRun?.dirName ||
-    basename(health.runsIndexPath) ||
-    basename(RUNS_INDEX_URL) ||
-    "runs/index.json";
+  const isShowcase = state.view === VIEW_SHOWCASE;
+  const activeShowcase = selectedShowcase();
+  const sourceName = isShowcase
+    ? activeShowcase?.title || basename(SHOWCASE_INDEX_URL) || "showcase/index.json"
+    : state.sourceLabel ||
+      activeRun?.runId ||
+      activeRun?.traceId ||
+      activeRun?.dirName ||
+      basename(health.runsIndexPath) ||
+      basename(RUNS_INDEX_URL) ||
+      "runs/index.json";
   const count = activeRun?.eventCount ?? countEvents(state.allTraces);
   const updated = activeRun?.completedAt || activeRun?.createdAt ? formatDateTime(activeRun.completedAt || activeRun.createdAt) : "--";
   const taskRuns = state.runs.filter((run) => run.taskRepo?.taskId).length;
@@ -411,13 +491,17 @@ function renderTopbar() {
 
   elements.liveBadge.className = `live-badge ${state.statusBadge}`;
   elements.liveBadge.textContent = state.statusLabel;
-  elements.eventCount.textContent = state.runs.length ? `${state.runs.length} runs` : `${count || 0} events`;
-  elements.lastUpdated.textContent = state.runs.length
-    ? `task runs ${taskRuns} · diagnosis ok ${diagnosisOk}/${state.runs.length} · context blocks ${contextBlocks} · mismatches ${mismatches}`
-    : `最后更新 ${updated}`;
+  elements.eventCount.textContent = isShowcase ? `${state.showcases.length} showcases` : state.runs.length ? `${state.runs.length} runs` : `${count || 0} events`;
+  elements.lastUpdated.textContent = isShowcase
+    ? `frozen replay · ${activeShowcase?.decision || "unknown"}/${activeShowcase?.riskLevel || "unknown"}`
+    : state.runs.length
+      ? `task runs ${taskRuns} · diagnosis ok ${diagnosisOk}/${state.runs.length} · context blocks ${contextBlocks} · mismatches ${mismatches}`
+      : `最后更新 ${updated}`;
   elements.sourceLine.textContent = sourceName;
   renderRunSelector();
   elements.backToTraces.classList.toggle("hidden", state.view !== VIEW_TIMELINE);
+  elements.filterButton.classList.toggle("hidden", isShowcase);
+  elements.runSelect?.classList.toggle("hidden", isShowcase);
   elements.filterButton.textContent = state.traceFilter === "important" ? "显示当前 run 全部 trace" : "仅重要 trace";
   elements.toggleEvidence.textContent = state.evidenceExpanded ? "收起原始事件与调试信息" : "查看原始事件与调试信息";
 }
@@ -637,6 +721,364 @@ function renderTraceList() {
       render();
     });
   }
+}
+
+function chainLabel(stage) {
+  return (
+    {
+      comment_injection: "Low-trust comment",
+      external_navigation: "External navigation",
+      deceptive_detail_button: "Deceptive detail button",
+      sensitive_upload_attempt: "Sensitive upload attempt",
+    }[stage] || stage || "Evidence step"
+  );
+}
+
+function renderRiskChainCard() {
+  if (!elements.riskChainCard) {
+    return;
+  }
+  const run = selectedRun();
+  if (!run) {
+    elements.riskChainCard.classList.add("hidden");
+    elements.riskChainCard.innerHTML = "";
+    return;
+  }
+  const artifacts = state.runArtifacts || {};
+  const finalJudgment = artifacts.finalJudgment || {};
+  const decision = finalJudgment.finalDecision || run.securityReasoning?.decision || run.securityContext?.decision || "unknown";
+  const riskLevel = finalJudgment.riskLevel || run.securityReasoning?.riskLevel || run.securityContext?.riskLevel || "unknown";
+  const reasons = Array.isArray(finalJudgment.reasons) ? finalJudgment.reasons : run.securityReasoning?.reasons || [];
+  const statePayload = artifacts.securityState || {};
+  const causal = Array.isArray(statePayload.causalTriggerChain) ? statePayload.causalTriggerChain : [];
+  const fallbackRules = run.securityReasoning?.matchedRules || [];
+  const chainNodes = causal.length
+    ? causal.map((node) => ({ label: chainLabel(node.stage), eventSeq: node.eventSeq, url: node.url }))
+    : fallbackRules.map((rule) => ({ label: chainLabel(rule), eventSeq: null, url: null }));
+  const frida = finalJudgment.evidence?.frida || {};
+  const codeTracer = finalJudgment.evidence?.codeTracer || {};
+  const traceIndex = artifacts.traceIndex || {};
+  const fridaStatus = frida.status || traceIndex.sources?.frida?.status || "unavailable";
+  const fridaCount = frida.eventCount ?? traceIndex.sources?.frida?.eventCount ?? 0;
+  const codeStatus = codeTracer.status || (artifacts.diagnosisReport?.ok ? "ok" : "unavailable");
+  const codeSummary = codeTracer.summary || artifacts.diagnosisReport?.analysis?.summary || "CodeTracer diagnosis unavailable.";
+  const finalPath = `/live/runs/${run.dirName}/security-reasoning/final_judgment.json`;
+  const artifactCount = run.artifactCount ?? 0;
+  const decisionClass = String(decision).toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "unknown";
+
+  elements.riskChainCard.classList.remove("hidden");
+  elements.riskChainCard.className = `panel risk-chain-card decision-${decisionClass}`;
+  elements.riskChainCard.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <p class="panel-kicker">Runtime Security Chain</p>
+        <h2>Cross-step Risk Chain</h2>
+      </div>
+      <span class="pill-status ${decision === "block" ? "error" : decision === "allow" ? "ok" : "running"}">${escapeHtml(String(decision).toUpperCase())}</span>
+    </div>
+    <div class="risk-chain-summary">
+      <span>Risk: <strong>${escapeHtml(riskLevel)}</strong></span>
+      <span>Artifacts: ${escapeHtml(artifactCount)}</span>
+      <span>Frida: ${escapeHtml(fridaStatus)} · ${escapeHtml(fridaCount)} events</span>
+      <span>CodeTracer: ${escapeHtml(codeStatus)}</span>
+    </div>
+    <div class="risk-chain-nodes">
+      ${
+        chainNodes.length
+          ? chainNodes
+              .map(
+                (node) => `
+                  <div class="risk-chain-node">
+                    <strong>${escapeHtml(node.label)}</strong>
+                    <span>${node.eventSeq == null ? "event n/a" : `event #${escapeHtml(node.eventSeq)}`}</span>
+                    ${node.url ? `<small>${escapeHtml(node.url)}</small>` : ""}
+                  </div>
+                `,
+              )
+              .join("")
+          : `<div class="risk-chain-node muted"><strong>No chain extracted</strong><span>degraded evidence</span></div>`
+      }
+    </div>
+    <div class="risk-chain-evidence">
+      <div><strong>Reason</strong><span>${escapeHtml(reasons[0] || "No final judgment reason recorded.")}</span></div>
+      <div><strong>Frida</strong><span>${escapeHtml(frida.summary || frida.degradedReason || "No Frida runtime evidence summary.")}</span></div>
+      <div><strong>CodeTracer</strong><span>${escapeHtml(codeSummary)}</span></div>
+      <div><strong>Final judgment</strong><span>${escapeHtml(finalPath)}</span></div>
+    </div>
+  `;
+}
+
+function showcasePill(value) {
+  const normalized = normalizeDecision(value);
+  const cls = normalized === "block" ? "error" : normalized === "allow" ? "ok" : "running";
+  return `<span class="pill-status ${cls}">${escapeHtml(String(value || "unknown").toUpperCase())}</span>`;
+}
+
+function countJsonlLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim()).length;
+}
+
+function showcaseEvidenceCounts(showcase, artifacts) {
+  return {
+    runtime: Number(showcase?.evidenceEventCount || 0) || countJsonlLines(artifacts.mergedTraceText || artifacts.behaviorText),
+    frida: Number(showcase?.fridaEventCount || 0) || countJsonlLines(artifacts.fridaText),
+  };
+}
+
+function buildShowcaseChain(artifacts) {
+  const finalJudgment = artifacts.finalJudgment || {};
+  const riskChain = finalJudgment.riskChain;
+  if (riskChain?.nodes?.length) {
+    return riskChain.nodes.map((node, index) => ({
+      label: node.label || chainLabel(node.stage) || `Step ${index + 1}`,
+      detail: node.reason || node.summary || node.text || node.url || "",
+      eventId: node.eventId || node.eventSeq || node.id || null,
+    }));
+  }
+  const statePayload = artifacts.securityState || {};
+  if (Array.isArray(statePayload.causalTriggerChain) && statePayload.causalTriggerChain.length) {
+    return statePayload.causalTriggerChain.map((node) => ({
+      label: chainLabel(node.stage),
+      detail: node.reason || node.url || node.target || "",
+      eventId: node.eventId || node.eventSeq || null,
+    }));
+  }
+  if (Array.isArray(statePayload.riskTimeline) && statePayload.riskTimeline.length) {
+    return statePayload.riskTimeline.slice(0, 6).map((node) => ({
+      label: chainLabel(node.action || node.stage),
+      detail: node.reason || node.target || "",
+      eventId: node.eventId || node.step || null,
+    }));
+  }
+  const stages = finalJudgment.task?.stages;
+  if (Array.isArray(stages) && stages.length) {
+    return stages.map((stage) => ({
+      label: chainLabel(stage.name),
+      detail: stage.text || "",
+      eventId: null,
+    }));
+  }
+  return [];
+}
+
+function summarizeJsonlEvidence(text, limit = 5) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .slice(0, limit)
+    .map((line, index) => {
+      try {
+        const event = JSON.parse(line);
+        return {
+          title: event.name || `${event.kind || "event"}.${event.status || "unknown"}`,
+          detail: event.evidence?.reason || event.preview?.message || event.preview?.result || event.target?.url || event.target?.path || event.target?.toolName || "",
+          id: event.eventId || event.seq || index + 1,
+        };
+      } catch {
+        return { title: "raw event", detail: line.slice(0, 140), id: index + 1 };
+      }
+    });
+}
+
+function artifactRows(showcase, artifacts) {
+  const candidates = [
+    ["manifest.json", artifacts.manifest, "manifest.json"],
+    ["task_input.json", artifacts.taskInput, "task_input.json"],
+    ["final_judgment.json", artifacts.finalJudgment, "security-reasoning/final_judgment.json"],
+    ["security_state.json", artifacts.securityState, "security-reasoning/security_state.json"],
+    ["behavior-events.jsonl", artifacts.behaviorText, "behavior-events.jsonl"],
+    ["merged-trace.jsonl", artifacts.mergedTraceText, "merged-trace.jsonl"],
+    ["frida-events.jsonl", artifacts.fridaText, "frida-events.jsonl"],
+    ["codetracer/steps.json", artifacts.codeTracerSteps, "diagnosis/codetracer/bundle/steps.json"],
+    ["codetracer/task.md", artifacts.codeTracerTask, "diagnosis/codetracer/bundle/task.md"],
+    ["codetracer/manifest.json", artifacts.codeTracerManifest, "diagnosis/codetracer/bundle/manifest.json"],
+    ["codetracer/diagnosis_report.json", artifacts.diagnosisReport, "diagnosis/codetracer/analysis/diagnosis_report.json"],
+  ];
+  return candidates
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([label, , path]) => ({ label, path, href: showcaseArtifactHref(showcase, path) }));
+}
+
+function renderShowcaseDashboard() {
+  const total = state.showcases.length;
+  const blocked = state.showcases.filter((item) => normalizeDecision(item.decision) === "block").length;
+  const confirm = state.showcases.filter((item) => normalizeDecision(item.decision) === "require_confirmation").length;
+  const allowed = state.showcases.filter((item) => normalizeDecision(item.decision) === "allow").length;
+  const frida = state.showcases.filter((item) => ["ok", "available"].includes(normalizeEvidenceStatus(item.fridaStatus))).length;
+  const code = state.showcases.filter((item) => ["ok", "available"].includes(normalizeEvidenceStatus(item.codeTracerStatus))).length;
+  const coverage = total ? "100%" : "0%";
+  elements.showcaseDashboard.innerHTML = [
+    ["Total Showcase Runs", total],
+    ["Blocked", blocked],
+    ["Require Confirmation", confirm],
+    ["Allowed", allowed],
+    ["Frida Available", `${frida}/${total}`],
+    ["CodeTracer Available", `${code}/${total}`],
+    ["Evidence Coverage", coverage],
+  ]
+    .map(([label, value]) => `<div class="showcase-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`)
+    .join("");
+}
+
+function renderShowcaseList() {
+  if (!state.showcases.length) {
+    elements.showcaseList.innerHTML = `<div class="run-empty">尚未冻结 showcase 数据</div>`;
+    return;
+  }
+  elements.showcaseList.innerHTML = state.showcases
+    .map((item) => {
+      const active = item.id === state.selectedShowcaseId;
+      return `
+        <button class="showcase-card ${active ? "active" : ""}" type="button" data-showcase-id="${escapeHtml(item.id)}">
+          <div class="showcase-card-head">
+            <strong>${escapeHtml(item.title || item.id)}</strong>
+            ${showcasePill(item.decision)}
+          </div>
+          <p>${escapeHtml(item.description || "")}</p>
+          <div class="showcase-card-tags">
+            <span>Risk ${escapeHtml(item.riskLevel || "unknown")}</span>
+            <span>Frida ${escapeHtml(item.fridaStatus || "unavailable")}</span>
+            <span>CodeTracer ${escapeHtml(item.codeTracerStatus || "unavailable")}</span>
+          </div>
+        </button>
+      `;
+    })
+    .join("");
+  for (const node of elements.showcaseList.querySelectorAll("[data-showcase-id]")) {
+    node.addEventListener("click", async () => {
+      await selectShowcase(node.dataset.showcaseId);
+    });
+  }
+}
+
+function renderShowcaseDetail() {
+  const showcase = selectedShowcase();
+  if (!showcase) {
+    elements.showcaseDetail.innerHTML = `
+      <section class="panel showcase-empty">
+        <h2>尚未冻结 showcase 数据</h2>
+        <p>先在本机跑完整 run，然后执行：</p>
+        <code>python scripts/demo/freeze_showcase_run.py --run-dir live/runs/&lt;runId&gt; --id staged_attack_block --title "Cross-step Waterhole Attack" --description "..."</code>
+      </section>
+    `;
+    return;
+  }
+  const artifacts = state.selectedShowcaseArtifacts || {};
+  const finalJudgment = artifacts.finalJudgment || {};
+  const decision = normalizeDecision(finalJudgment.finalDecision || finalJudgment.decision || showcase.decision);
+  const riskLevel = normalizeRiskLevel(finalJudgment.riskLevel || finalJudgment.risk_level || showcase.riskLevel);
+  const reasons = Array.isArray(finalJudgment.reasons) ? finalJudgment.reasons : finalJudgment.reason ? [finalJudgment.reason] : [];
+  const frida = finalJudgment.evidence?.frida || {};
+  const code = finalJudgment.evidence?.codeTracer || {};
+  const fridaStatus = normalizeEvidenceStatus(frida.status || showcase.fridaStatus);
+  const codeStatus = normalizeEvidenceStatus(code.status || showcase.codeTracerStatus || (artifacts.diagnosisReport ? "ok" : "unavailable"));
+  const counts = showcaseEvidenceCounts(showcase, artifacts);
+  const chain = buildShowcaseChain(artifacts);
+  const runtimeItems = summarizeJsonlEvidence(artifacts.mergedTraceText || artifacts.behaviorText, 6);
+  const fridaItems = summarizeJsonlEvidence(artifacts.fridaText, 4);
+  const rows = artifactRows(showcase, artifacts);
+  const finalPath = showcase.finalJudgmentPath || `${showcase.runDir}/security-reasoning/final_judgment.json`;
+
+  elements.showcaseDetail.innerHTML = `
+    <section class="panel showcase-summary-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-kicker">Selected Showcase</p>
+          <h2>${escapeHtml(showcase.title || showcase.id)}</h2>
+        </div>
+        ${showcasePill(decision)}
+      </div>
+      <p class="showcase-description">${escapeHtml(showcase.description || "")}</p>
+      <div class="risk-chain-summary">
+        <span>Risk: <strong>${escapeHtml(riskLevel)}</strong></span>
+        <span>Evidence Events: ${escapeHtml(counts.runtime)}</span>
+        <span>Frida: ${escapeHtml(fridaStatus)} · ${escapeHtml(counts.frida)} events</span>
+        <span>CodeTracer: ${escapeHtml(codeStatus)}</span>
+        <span>Final Judgment: ${escapeHtml(finalPath)}</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><p class="panel-kicker">Attack Narrative</p><h2>Cross-step Risk Chain</h2></div></div>
+      <div class="showcase-chain">
+        ${
+          chain.length
+            ? chain
+                .map(
+                  (node, index) => `
+                    <div class="showcase-chain-node">
+                      <span class="showcase-step">${index + 1}</span>
+                      <div>
+                        <strong>${escapeHtml(node.label)}</strong>
+                        <p>${escapeHtml(node.detail || "Evidence linked to this step.")}</p>
+                        ${node.eventId ? `<small>${escapeHtml(node.eventId)}</small>` : ""}
+                      </div>
+                    </div>
+                  `,
+                )
+                .join("")
+            : `<div class="showcase-chain-node unavailable"><span class="showcase-step">?</span><div><strong>Risk chain unavailable</strong><p>Frozen evidence did not include structured chain nodes.</p></div></div>`
+        }
+      </div>
+      <div class="showcase-decision">Decision: <strong>${escapeHtml(decision.toUpperCase())}</strong> · ${escapeHtml(reasons[0] || "No final judgment reason recorded.")}</div>
+    </section>
+
+    <section class="showcase-evidence-grid">
+      <div class="panel evidence-column"><h3>Runtime Trace Evidence</h3>${renderEvidenceList(runtimeItems, "Runtime trace unavailable")}</div>
+      <div class="panel evidence-column"><h3>Frida Evidence</h3><p class="muted">${escapeHtml(frida.summary || frida.degradedReason || `Frida status: ${fridaStatus}`)}</p>${renderEvidenceList(fridaItems, "No Frida events recorded")}</div>
+      <div class="panel evidence-column"><h3>CodeTracer Diagnosis</h3><p>${escapeHtml(code.summary || artifacts.diagnosisReport?.analysis?.summary || "CodeTracer diagnosis unavailable.")}</p><p class="muted">Status: ${escapeHtml(codeStatus)}</p></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><p class="panel-kicker">Audit Trail</p><h2>Evidence Artifacts</h2></div></div>
+      <div class="artifact-list">
+        ${
+          rows.length
+            ? rows
+                .map(
+                  (row) => `
+                    <div class="artifact-row">
+                      <span>${escapeHtml(row.label)}</span>
+                      <a href="${escapeHtml(row.href)}" target="_blank" rel="noreferrer">View</a>
+                      <button type="button" data-copy-path="${escapeHtml(row.href)}">Copy path</button>
+                    </div>
+                  `,
+                )
+                .join("")
+            : `<div class="run-empty">No audit artifacts loaded</div>`
+        }
+      </div>
+    </section>
+  `;
+  for (const node of elements.showcaseDetail.querySelectorAll("[data-copy-path]")) {
+    node.addEventListener("click", async () => {
+      await navigator.clipboard?.writeText(node.dataset.copyPath || "");
+    });
+  }
+}
+
+function renderEvidenceList(items, emptyText) {
+  if (!items.length) {
+    return `<div class="run-empty">${escapeHtml(emptyText)}</div>`;
+  }
+  return `<div class="showcase-mini-events">${items
+    .map(
+      (item) => `
+        <div class="showcase-mini-event">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${escapeHtml(item.detail || `event ${item.id}`)}</span>
+        </div>
+      `,
+    )
+    .join("")}</div>`;
+}
+
+function renderShowcasePage() {
+  renderShowcaseDashboard();
+  renderShowcaseList();
+  renderShowcaseDetail();
 }
 
 function renderHeader(trace) {
@@ -924,7 +1366,16 @@ function renderEvidence(trace) {
 function render() {
   renderTopbar();
   renderBanner();
+  const isShowcaseView = state.view === VIEW_SHOWCASE;
+  elements.showcasePage?.classList.toggle("hidden", !isShowcaseView);
+  if (isShowcaseView) {
+    elements.tracesPage.classList.add("hidden");
+    elements.timelinePage.classList.add("hidden");
+    renderShowcasePage();
+    return;
+  }
   renderRunExplorer();
+  renderRiskChainCard();
   renderTraceList();
 
   const isTimelineView = state.view === VIEW_TIMELINE;
@@ -946,7 +1397,7 @@ function render() {
 }
 
 function applyEvents(events, options = {}) {
-  const { sourceLabel = "", health = null, runs = null, selectedRunDir = null } = options;
+  const { sourceLabel = "", health = null, runs = null, selectedRunDir = null, runArtifacts = null } = options;
   state.allTraces = buildTraces(events);
   if (health) {
     state.health = health;
@@ -956,6 +1407,9 @@ function applyEvents(events, options = {}) {
   }
   if (selectedRunDir) {
     state.selectedRunDir = selectedRunDir;
+  }
+  if (runArtifacts) {
+    state.runArtifacts = runArtifacts;
   }
   state.sourceLabel = sourceLabel;
   state.loadStatus = "ready";
@@ -968,11 +1422,40 @@ function applyEvents(events, options = {}) {
   render();
 }
 
+async function fetchOptionalRunJson(runEntry, relativePath) {
+  if (!runEntry?.dirName || !relativePath) {
+    return null;
+  }
+  const response = await fetch(`/live/runs/${encodeURIComponent(runEntry.dirName)}/${relativePath}?t=${Date.now()}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    return null;
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function loadRunArtifacts(runEntry) {
+  const [securityState, defenseDecision, finalJudgment, traceIndex, diagnosisReport] = await Promise.all([
+    fetchOptionalRunJson(runEntry, "security-reasoning/security_state.json"),
+    fetchOptionalRunJson(runEntry, "security-reasoning/defense_decision.json"),
+    fetchOptionalRunJson(runEntry, "security-reasoning/final_judgment.json"),
+    fetchOptionalRunJson(runEntry, "trace_index.json"),
+    fetchOptionalRunJson(runEntry, "diagnosis/codetracer/analysis/diagnosis_report.json"),
+  ]);
+  return { securityState, defenseDecision, finalJudgment, traceIndex, diagnosisReport };
+}
+
 async function loadRunSnapshot(runEntry, options = {}) {
   if (!runEntry?.eventsPath) {
     throw new Error("run events path missing");
   }
   const text = await fetchRunText(runEntry.eventsPath);
+  const runArtifacts = await loadRunArtifacts(runEntry);
   const events = parseJsonl(text, runEntry.eventsPath);
   state.view = state.view || VIEW_TRACES;
   applyEvents(events, {
@@ -980,6 +1463,7 @@ async function loadRunSnapshot(runEntry, options = {}) {
     health: options.health || state.health,
     runs: options.runs || state.runs,
     selectedRunDir: runEntry.dirName,
+    runArtifacts,
   });
 }
 
@@ -1004,6 +1488,11 @@ async function selectRunDir(nextRunDir, options = {}) {
   state.view = openTimeline ? VIEW_TIMELINE : VIEW_TRACES;
   const nextRun = selectedRun();
   if (!nextRun) {
+    state.loadStatus = "error";
+    state.statusBadge = "schema_error";
+    state.statusLabel = "Run 不存在";
+    state.statusMessage = `runs/index.json 中没有 ${nextRunDir}`;
+    render();
     return;
   }
   await loadRunSnapshot(nextRun, { health: state.health, runs: state.runs });
@@ -1012,7 +1501,109 @@ async function selectRunDir(nextRunDir, options = {}) {
   }
 }
 
+async function loadShowcaseArtifacts(showcase) {
+  if (!showcase) {
+    return {};
+  }
+  const [manifest, taskInput, finalJudgment, securityState, traceIndex, diagnosisReport, codeTracerSteps, codeTracerManifest] = await Promise.all([
+    fetchShowcaseJson(showcase, "manifest.json"),
+    fetchShowcaseJson(showcase, "task_input.json"),
+    fetchShowcaseJson(showcase, "security-reasoning/final_judgment.json"),
+    fetchShowcaseJson(showcase, "security-reasoning/security_state.json"),
+    fetchShowcaseJson(showcase, "trace_index.json"),
+    fetchShowcaseJson(showcase, "diagnosis/codetracer/analysis/diagnosis_report.json"),
+    fetchShowcaseJson(showcase, "diagnosis/codetracer/bundle/steps.json"),
+    fetchShowcaseJson(showcase, "diagnosis/codetracer/bundle/manifest.json"),
+  ]);
+  const [behaviorText, mergedTraceText, fridaText, codeTracerTask] = await Promise.all([
+    fetchShowcaseText(showcase, "behavior-events.jsonl"),
+    fetchShowcaseText(showcase, "merged-trace.jsonl"),
+    fetchShowcaseText(showcase, "frida-events.jsonl"),
+    fetchShowcaseText(showcase, "diagnosis/codetracer/bundle/task.md"),
+  ]);
+  return {
+    manifest,
+    taskInput,
+    finalJudgment,
+    securityState,
+    traceIndex,
+    diagnosisReport,
+    codeTracerSteps,
+    codeTracerManifest,
+    behaviorText,
+    mergedTraceText,
+    fridaText,
+    codeTracerTask,
+  };
+}
+
+async function selectShowcase(showcaseId, options = {}) {
+  const { push = true } = options;
+  const next = state.showcases.find((item) => item.id === showcaseId);
+  if (!next) {
+    state.statusBadge = "schema_error";
+    state.statusLabel = "Showcase 不存在";
+    state.statusMessage = `state/showcase/index.json 中没有 ${showcaseId}`;
+    render();
+    return;
+  }
+  state.selectedShowcaseId = next.id;
+  state.selectedShowcaseArtifacts = await loadShowcaseArtifacts(next);
+  state.statusBadge = "connected";
+  state.statusLabel = "Showcase 已连接";
+  state.statusMessage = "";
+  if (push) {
+    syncRoute({ push: true });
+  }
+  render();
+}
+
+async function loadShowcase() {
+  state.loadStatus = "loading";
+  state.statusBadge = "empty";
+  state.statusLabel = "正在加载";
+  state.statusMessage = "正在读取 frozen showcase index";
+  renderTopbar();
+  try {
+    const payload = await fetchShowcaseIndex();
+    const showcases = Array.isArray(payload.showcases) ? payload.showcases : [];
+    state.showcases = showcases;
+    const active = chooseShowcase(showcases, state.selectedShowcaseId);
+    if (!active) {
+      state.selectedShowcaseId = null;
+      state.selectedShowcaseArtifacts = {};
+      state.statusBadge = "schema_error";
+      state.statusLabel = "Showcase 数据为空";
+      state.statusMessage = "state/showcase/index.json 不存在或没有 showcases。";
+      render();
+      return;
+    }
+    state.selectedShowcaseId = active.id;
+    state.selectedShowcaseArtifacts = await loadShowcaseArtifacts(active);
+    state.loadStatus = "ready";
+    state.statusBadge = "connected";
+    state.statusLabel = "Showcase 已连接";
+    state.statusMessage = "";
+    syncRoute();
+    render();
+  } catch (error) {
+    state.showcases = [];
+    state.selectedShowcaseId = null;
+    state.selectedShowcaseArtifacts = {};
+    state.loadStatus = "error";
+    state.statusBadge = "schema_error";
+    state.statusLabel = "Showcase 未生成";
+    state.statusMessage = `无法读取 ${SHOWCASE_INDEX_URL}: ${String(error?.message || error)}`;
+    syncRoute();
+    render();
+  }
+}
+
 async function loadLive() {
+  if (state.view === VIEW_SHOWCASE) {
+    await loadShowcase();
+    return;
+  }
   state.loadStatus = "loading";
   state.statusBadge = "empty";
   state.statusLabel = "正在加载";
@@ -1049,7 +1640,10 @@ async function loadLive() {
     if (!runs.length) {
       throw new Error("runs index 文件为空");
     }
-    const activeRun = runs.find((item) => item.dirName === state.selectedRunDir) || runs[0];
+    const activeRun = chooseRun(runs, state.selectedRunDir);
+    if (!activeRun) {
+      throw new Error(state.selectedRunDir ? `指定 run 不存在: ${state.selectedRunDir}` : "runs index 文件为空");
+    }
     await loadRunSnapshot(activeRun, {
       health: state.health,
       runs,
@@ -1132,12 +1726,19 @@ elements.traceJsonlInput.addEventListener("change", async (event) => {
 
 window.addEventListener("popstate", async () => {
   const route = parseRouteFromUrl();
+  const viewChanged = route.view !== state.view;
   const runChanged = route.run !== state.selectedRunDir;
+  const showcaseChanged = route.showcaseId !== state.selectedShowcaseId;
   state.view = route.view;
   state.evidenceExpanded = route.evidenceExpanded;
   state.selectedRunDir = route.run;
+  state.selectedShowcaseId = route.showcaseId;
   if (route.traceId !== null) {
     state.selectedTraceId = route.traceId;
+  }
+  if (state.view === VIEW_SHOWCASE && (viewChanged || showcaseChanged)) {
+    await loadShowcase();
+    return;
   }
   if (runChanged) {
     await loadLive();

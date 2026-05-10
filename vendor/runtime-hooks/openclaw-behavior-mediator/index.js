@@ -457,6 +457,9 @@ function writeRunsIndexFile(state) {
         traceId: manifest.traceId || null,
         sessionKey: manifest.sessionKey || null,
         scenarioId: manifest.scenarioId || null,
+        showcase: manifest.showcase === true,
+        showcaseReason: manifest.showcaseReason || null,
+        startedAt: manifest.startedAt || null,
         createdAt: manifest.createdAt || null,
         completedAt: manifest.completedAt || null,
         status: manifest.status || "unknown",
@@ -473,8 +476,9 @@ function writeRunsIndexFile(state) {
     }
   }
   runs.sort((left, right) => {
-    const leftKey = `${left.completedAt || ""}|${left.createdAt || ""}|${left.runId || left.traceId || left.dirName}`;
-    const rightKey = `${right.completedAt || ""}|${right.createdAt || ""}|${right.runId || right.traceId || right.dirName}`;
+    const activeStatuses = new Set(["running", "completed", "timeout_with_trace", "security_intervened"]);
+    const leftKey = `${left.showcase ? 1 : 0}|${activeStatuses.has(left.status) ? 1 : 0}|${left.startedAt || left.createdAt || left.completedAt || ""}|${left.createdAt || ""}|${left.runId || left.traceId || left.dirName}`;
+    const rightKey = `${right.showcase ? 1 : 0}|${activeStatuses.has(right.status) ? 1 : 0}|${right.startedAt || right.createdAt || right.completedAt || ""}|${right.createdAt || ""}|${right.runId || right.traceId || right.dirName}`;
     return rightKey.localeCompare(leftKey);
   });
   const payload = {

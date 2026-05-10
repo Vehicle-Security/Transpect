@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "openclaw.tool-sidecar.v1",
+  "generatedAt": "2026-04-29T05:39:39.022Z",
+  "kind": "input",
+  "status": "started",
+  "traceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
+  "spanId": "spn_f5180905b6754b5685963a6793d9dfc8",
+  "parentSpanId": "spn_32c0cd052fdb4292b2ebf807adcbca1f",
+  "sessionKey": "agent:main:explicit:8832068e-e50f-46b1-a6ba-aff468cc7431",
+  "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+  "toolCallId": "call_00_ecZHwGrCNRSPA3uaTwV68MVG",
+  "toolName": "web_fetch",
+  "payload": {
+    "url": "https://httpbin.org/get",
+    "maxChars": 2000
+  }
+}

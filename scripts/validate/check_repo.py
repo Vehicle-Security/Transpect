@@ -21,6 +21,9 @@ STABLE_SCREENSHOTS = [
     "runtime-timeline.png",
     "runtime-timeline-detail.png",
     "runtime-timeline-evidence.png",
+    "console-overview-dashboard.png",
+    "console-staged-attack-report.png",
+    "console-artifact-viewer.png",
 ]
 REQUIRED_PATHS = [
     REPO_ROOT / "README.md",
@@ -75,6 +78,9 @@ REQUIRED_GITIGNORE_PATTERNS = [
     "!docs/images/runtime-timeline.png",
     "!docs/images/runtime-timeline-detail.png",
     "!docs/images/runtime-timeline-evidence.png",
+    "!docs/images/console-overview-dashboard.png",
+    "!docs/images/console-staged-attack-report.png",
+    "!docs/images/console-artifact-viewer.png",
 ]
 HARD_CODED_PATTERNS = [
     token("D", ":/"),

@@ -97,6 +97,10 @@ class TraceMergeAndFinalJudgeTests(unittest.TestCase):
         self.assertEqual(judgment["finalDecision"], "block")
         self.assertTrue(judgment["evidence"]["fridaIncluded"])
         self.assertTrue(judgment["evidence"]["codeTracerIncluded"])
+        self.assertEqual(judgment["evidence"]["frida"]["status"], "ok")
+        self.assertEqual(judgment["evidence"]["frida"]["eventCount"], 1)
+        self.assertEqual(judgment["evidence"]["codeTracer"]["status"], "ok")
+        self.assertEqual(judgment["evidence"]["codeTracer"]["summary"], "Agent followed a low-trust waterhole chain.")
         self.assertTrue((run_dir / "security-reasoning" / "final_judgment.json").exists())
 
 

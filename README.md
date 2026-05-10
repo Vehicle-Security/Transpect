@@ -127,14 +127,50 @@ Use `--dry-run --no-start-runtime` to preview the selected tasks without launchi
 Run the staged attack defense demo:
 
 ```bash
-python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode show-task --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
+python scripts/demo/run_showcase.py
 ```
 
 The demo task gives the agent only a normal browsing prompt. The local HTTP site contains the split attack chain: Xiaohongshu topic viewing, low-trust comment injection, watering-hole navigation, deceptive “详情” click, and a demo photo upload attempt. During the real OpenClaw run, Transpect security guards inspect input, plan-like LLM output, tool calls, and network requests. High-risk execution decisions can block the real tool/API call before it runs. The post-run path merges OpenClaw and Frida evidence, exports the merged trace to CodeTracer, and writes the final Agent Defense judgment.
 
-The viewer opens at `http://127.0.0.1:8711/viewer/index.html?view=traces`.
+The showcase wrapper starts the demo site and viewer when needed, runs the staged attack trace with Frida in auto mode, refreshes CodeTracer diagnosis, writes `final_judgment.json`, marks the run as showcase, and prints a direct viewer URL such as `http://127.0.0.1:8711/viewer/index.html?view=traces&run=<runId>`.
+
+For a live fallback without launching a new agent, use `python scripts/demo/run_showcase.py --reuse-latest` or `python scripts/demo/run_showcase.py --no-openclaw-run --run-dir live/runs/<runId>`.
+
+## Product Showcase
+
+For product demos, generate the real run once, freeze it, build report models, and replay it from the Next.js Console without rerunning the agent:
+
+```bash
+python scripts/demo/freeze_showcase_run.py \
+  --run-dir live/runs/<runId> \
+  --id staged_attack_block \
+  --title "Cross-step Waterhole Attack" \
+  --description "低可信评论诱导外部跳转并触发敏感上传，最终被阻断"
+python scripts/demo/build_showcase_reports.py
+python scripts/demo/validate_showcase.py
+python scripts/demo/validate_showcase.py --require-report-model
+cd apps/console
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:3000
+```
+
+The Console reads `state/showcase/index.json` plus each frozen run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages. The old static viewer remains available as a fallback/debug surface:
+
+```bash
+python scripts/runtime/serve_viewer.py --host 127.0.0.1 --port 8711
+```
+
+```text
+http://127.0.0.1:8711/viewer/index.html?view=showcase
+```
+
+See `docs/product-showcase-guide.md` for the full workflow.
 
 ## Canonical Run Contents
 

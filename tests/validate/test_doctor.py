@@ -175,6 +175,60 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(summary["verdict"], "broken")
         self.assertTrue(any("behavior-mediator.status" in issue for issue in summary["issues"]))
 
+    def test_build_summary_degrades_when_only_viewer_is_not_running(self) -> None:
+        report = {
+            "runtimeConfig": {
+                "mode": "core",
+                "behaviorEnabled": True,
+                "behaviorConfigAligned": True,
+                "otelPluginEnabled": False,
+                "otelConfigAligned": False,
+                "otelCollectorConfigExists": False,
+                "diagnosticsEnabled": False,
+            },
+            "runs": {
+                "exists": True,
+                "runCount": 1,
+            },
+            "viewerHealth": {
+                "ok": False,
+                "status": None,
+                "error": "Connection refused",
+            },
+            "gatewayHealth": {
+                "ok": True,
+            },
+            "gatewayRpc": {
+                "ok": True,
+                "status": "ok",
+            },
+            "behaviorMediatorStatus": {
+                "ok": True,
+                "status": "ok",
+            },
+            "otelStatus": {
+                "ok": False,
+                "status": "handler_error",
+            },
+            "runtimeResidue": {
+                "tmpArtifacts": {"fileCount": 0},
+                "legacyRootLogs": {"fileCount": 0},
+                "legacyOpenclawFiles": {"fileCount": 0},
+            },
+            "behaviorEvidence": {
+                "ok": True,
+                "latestEvidenceRun": {
+                    "runId": "run-123",
+                    "eventCount": 2,
+                },
+            },
+        }
+
+        summary = build_summary(report)
+        self.assertEqual(summary["verdict"], "degraded")
+        self.assertEqual(summary["issues"], [])
+        self.assertTrue(any("viewer /health is not available" in warning for warning in summary["warnings"]))
+
 
 if __name__ == "__main__":
     unittest.main()

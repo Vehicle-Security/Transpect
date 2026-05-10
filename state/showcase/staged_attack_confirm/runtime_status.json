@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "frida": {
+    "status": "degraded",
+    "eventCount": 0
+  }
+}

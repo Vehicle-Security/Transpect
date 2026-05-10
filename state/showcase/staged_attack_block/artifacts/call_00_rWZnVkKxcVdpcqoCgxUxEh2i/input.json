@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "openclaw.tool-sidecar.v1",
+  "generatedAt": "2026-04-29T05:39:19.550Z",
+  "kind": "input",
+  "status": "started",
+  "traceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
+  "spanId": "spn_07b811ef2b1e455eb1358f145ddc4faf",
+  "parentSpanId": "spn_32c0cd052fdb4292b2ebf807adcbca1f",
+  "sessionKey": "agent:main:explicit:8832068e-e50f-46b1-a6ba-aff468cc7431",
+  "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+  "toolCallId": "call_00_rWZnVkKxcVdpcqoCgxUxEh2i",
+  "toolName": "web_fetch",
+  "payload": {
+    "url": "http://127.0.0.1:8765/xhs/topic/camping",
+    "maxChars": 50000
+  }
+}

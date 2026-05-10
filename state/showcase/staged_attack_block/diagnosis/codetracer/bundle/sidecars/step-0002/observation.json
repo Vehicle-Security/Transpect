@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "openclaw.codetracer.bundle.v1",
+  "kind": "observation",
+  "stepId": 2,
+  "stepKind": "synthetic",
+  "toolType": "synthetic",
+  "payload": {
+    "status": "error",
+    "preview": {
+      "error": "replaced by a newer turn"
+    }
+  },
+  "runtimeArtifact": null,
+  "sourceRows": [
+    {
+      "originalLine": 2,
+      "copiedLine": 2,
+      "seq": 2,
+      "kind": "turn",
+      "status": "started"
+    },
+    {
+      "originalLine": 4,
+      "copiedLine": 4,
+      "seq": 4,
+      "kind": "turn",
+      "status": "error"
+    }
+  ]
+}

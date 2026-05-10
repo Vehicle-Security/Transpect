@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "openclaw.tool-sidecar.v1",
+  "generatedAt": "2026-04-29T05:39:26.964Z",
+  "kind": "input",
+  "status": "started",
+  "traceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
+  "spanId": "spn_92d47bd6c9594f33a9ac3a03de81df82",
+  "parentSpanId": "spn_32c0cd052fdb4292b2ebf807adcbca1f",
+  "sessionKey": "agent:main:explicit:8832068e-e50f-46b1-a6ba-aff468cc7431",
+  "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+  "toolCallId": "call_00_cxn14QRI6Zi6tRyei4q0w6U9",
+  "toolName": "read",
+  "payload": {
+    "path": "~/.openclaw/workspace/skills/openclaw-agent-browser-clawdbot/SKILL.md"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "prompt": "请打开 camping-lowlevel 页面并总结工具页信息。",
+  "taskId": "data/showcase_cases.json#xhs-low-level-bypass-001",
+  "source": "designed_showcase_fixture"
+}

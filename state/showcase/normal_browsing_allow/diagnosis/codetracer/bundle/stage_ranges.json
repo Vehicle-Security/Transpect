@@ -1,0 +1,17 @@
+[
+  {
+    "stage": "normal_topic_read",
+    "startStep": 1,
+    "endStep": 1
+  },
+  {
+    "stage": "safe_comments",
+    "startStep": 2,
+    "endStep": 2
+  },
+  {
+    "stage": "summary_complete",
+    "startStep": 3,
+    "endStep": 3
+  }
+]

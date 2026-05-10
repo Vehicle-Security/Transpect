@@ -128,7 +128,7 @@ test("behavior mediator writes online security events and blocks dangerous tool 
     traceEval: false,
     securityEnabled: true,
     securityPython: process.env.PYTHON || "python",
-    securityBridgeScript: path.resolve(process.cwd(), "app", "security", "bridge.py"),
+    securityBridgeScript: path.resolve(process.cwd(), "app", "agent_defense", "bridge.py"),
   });
 
   behaviorMediatorPlugin.register(api);

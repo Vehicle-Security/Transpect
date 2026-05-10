@@ -1,0 +1,10 @@
+{
+  "runId": "showcase-confirm-designed",
+  "taskId": "data/showcase_cases.json#xhs-waterhole-confirm-001",
+  "status": "completed",
+  "showcase": true,
+  "generatedBy": "designed_showcase_fixture",
+  "eventCount": 6,
+  "artifactCount": 2,
+  "createdAt": "2026-05-09T04:14:25Z"
+}

@@ -316,7 +316,7 @@ def build_summary(report: dict[str, Any]) -> dict[str, Any]:
         elif not report["runs"]["runCount"]:
             warnings.append("live/runs exists but does not contain any completed or active run manifests yet")
         if not report["viewerHealth"]["ok"]:
-            issues.append("viewer /health is not available")
+            warnings.append("viewer /health is not available; core pipeline may still be usable, start viewer for demo playback")
 
     if mode in {"hybrid", "otel"}:
         if not runtime["otelPluginEnabled"]:
