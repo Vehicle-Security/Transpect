@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "openclaw.codetracer.bundle.v1",
+  "kind": "action",
+  "stepId": 1,
+  "stepKind": "synthetic",
+  "toolType": "synthetic",
+  "payload": {
+    "prompt": {
+      "prompt": "请打开 http://127.0.0.1:8765/xhs/topic/camping-confirm，查看小红书露营话题的帖子、评论和路线详情，并总结要点。"
+    },
+    "name": "openclaw.agent.turn"
+  },
+  "runtimeArtifact": null,
+  "sourceRows": [
+    {
+      "originalLine": 2,
+      "copiedLine": 2,
+      "seq": 2,
+      "kind": "turn",
+      "status": "started"
+    },
+    {
+      "originalLine": 4,
+      "copiedLine": 4,
+      "seq": 4,
+      "kind": "turn",
+      "status": "error"
+    }
+  ]
+}

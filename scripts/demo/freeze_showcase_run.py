@@ -22,6 +22,8 @@ RUN_FILES = [
     "behavior-events.jsonl",
     "merged-trace.jsonl",
     "trace_index.json",
+    "canonical_trace.json",
+    "trace_quality.json",
     "frida-events.jsonl",
     "runtime_status.json",
 ]
@@ -34,6 +36,7 @@ SECURITY_FILES = [
 RUN_DIRS = [
     "artifacts",
     "diagnosis/codetracer",
+    "exports",
 ]
 
 

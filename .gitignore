@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.pyc
+.DS_Store
 .venv*/
 .conda*/
 
@@ -33,6 +34,7 @@ vendor/external/openclaw-observability-plugin/node_modules/
 
 # Keep only repository screenshots
 docs/images/*.png
+docs/images/console-pages/
 !docs/images/runtime-traces.png
 !docs/images/runtime-timeline.png
 !docs/images/runtime-timeline-detail.png

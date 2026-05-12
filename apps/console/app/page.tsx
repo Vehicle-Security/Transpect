@@ -24,7 +24,7 @@ export default async function OverviewPage() {
           <div>
             <h1 className="text-4xl font-semibold tracking-normal">Agent Security Overview</h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-slate-200">
-              Replayable security reports for Agent runtime behavior, defense decisions, OS-level evidence, and diagnostic traces.
+              Correlate Agent runtime behavior, defense decisions, OS-level evidence, and diagnostic traces in replayable security reports.
             </p>
           </div>
           <div className="rounded-md border border-white/15 bg-white/10 p-4">
@@ -48,17 +48,17 @@ export default async function OverviewPage() {
         <MetricCard label="Blocked" value={blocked} caption="High-confidence interventions" icon={ShieldAlert} />
         <MetricCard label="Requires Confirmation" value={confirms} caption="User verification required" icon={AlertTriangle} />
         <MetricCard label="Allowed" value={allowed} caption="Normal workflow examples" icon={CheckCircle2} />
-        <MetricCard label="Frida Evidence Available" value={`${fridaAvailable}/${reports.length}`} caption="Runs with OS-level evidence" icon={RadioTower} />
+        <MetricCard label="Frida Evidence Available" value={`${fridaAvailable}/${reports.length}`} caption="Frozen reports with OS-level evidence" icon={RadioTower} />
         <MetricCard label="CodeTracer Available" value={`${codetracerAvailable}/${reports.length}`} caption="Reports with diagnosis bundles" icon={ShieldCheck} />
         <MetricCard label="Critical Cases" value={critical} icon={ShieldAlert} />
-        <MetricCard label="Evidence Coverage" value={reports.length ? "100%" : "0%"} caption="Frozen report model present" icon={Files} />
+        <MetricCard label="Evidence Coverage" value={reports.length ? "100%" : "0%"} caption="Report models generated for all showcases" icon={Files} />
       </section>
 
       <section className="mt-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-slate-950">Showcase Reports</h2>
-          <Link href="/showcases" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-            View Gallery
+          <Link href="/showcases" className="action-button-light">
+            View All Reports
           </Link>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -70,7 +70,7 @@ export default async function OverviewPage() {
                 <Badge value={report.dataSource} />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-950">{report.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{report.description}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{report.executiveSummary || report.description}</p>
               <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-500">Runtime</p>

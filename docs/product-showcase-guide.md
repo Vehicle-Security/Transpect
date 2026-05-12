@@ -58,24 +58,24 @@ Start the enterprise Console:
 ```bash
 cd apps/console
 npm install
-npm run dev
+npm run dev -- --hostname 127.0.0.1 --port 5000
 ```
 
 Open:
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:5000
 ```
 
 Recommended pages:
 
 ```text
-http://127.0.0.1:3000
-http://127.0.0.1:3000/showcases
-http://127.0.0.1:3000/showcases/staged_attack_block
-http://127.0.0.1:3000/showcases/staged_attack_confirm
-http://127.0.0.1:3000/showcases/normal_browsing_allow
-http://127.0.0.1:3000/showcases/low_level_bypass_evidence
+http://127.0.0.1:5000
+http://127.0.0.1:5000/showcases
+http://127.0.0.1:5000/showcases/staged_attack_block
+http://127.0.0.1:5000/showcases/staged_attack_confirm
+http://127.0.0.1:5000/showcases/normal_browsing_allow
+http://127.0.0.1:5000/showcases/low_level_bypass_evidence
 ```
 
 Reference screenshots are available for decks and walkthroughs:

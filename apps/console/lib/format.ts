@@ -70,6 +70,12 @@ export function outcomeLabel(outcome: string | undefined) {
 }
 
 export function sortReportsForDemo(reports: ReportModel[]) {
+  const preferredDemoOrder = new Map([
+    ["staged_attack_block_frida", 0],
+    ["low_level_bypass_real_frida", 1],
+    ["staged_attack_confirm_frida", 2],
+    ["normal_browsing_allow_frida", 3]
+  ]);
   const verdictRank: Record<Verdict, number> = {
     block: 0,
     require_confirmation: 1,
@@ -85,6 +91,17 @@ export function sortReportsForDemo(reports: ReportModel[]) {
     unknown: 5
   };
   return [...reports].sort((a, b) => {
+    const preferredA = preferredDemoOrder.get(a.id);
+    const preferredB = preferredDemoOrder.get(b.id);
+    if (preferredA !== undefined || preferredB !== undefined) {
+      return (preferredA ?? 999) - (preferredB ?? 999);
+    }
+    const fridaA = a.metrics.fridaEvents > 0 ? 0 : 1;
+    const fridaB = b.metrics.fridaEvents > 0 ? 0 : 1;
+    if (fridaA !== fridaB) return fridaA - fridaB;
+    const sourceA = a.dataSource === "real_run" ? 0 : 1;
+    const sourceB = b.dataSource === "real_run" ? 0 : 1;
+    if (sourceA !== sourceB) return sourceA - sourceB;
     const byVerdict = (verdictRank[a.verdict] ?? 6) - (verdictRank[b.verdict] ?? 6);
     if (byVerdict !== 0) return byVerdict;
     return (riskRank[a.riskLevel] ?? 6) - (riskRank[b.riskLevel] ?? 6);

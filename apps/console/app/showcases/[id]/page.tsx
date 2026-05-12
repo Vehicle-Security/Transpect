@@ -73,7 +73,7 @@ export default async function ShowcaseReportPage({ params }: Props) {
       </div>
 
       <div className="mt-6 flex justify-end">
-        <Link href="/showcases" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+        <Link href="/showcases" className="action-button-light">
           Back to Gallery
         </Link>
       </div>

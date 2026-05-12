@@ -35,7 +35,7 @@ export default async function ShowcaseGalleryPage() {
                   <Badge value={report.dataSource} />
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-slate-950">{report.title}</h2>
-                <p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">{report.description}</p>
+                <p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">{report.executiveSummary || report.description}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Badge value={`Frida: ${frida?.status ?? "unknown"}`} />
                   <Badge value={`CodeTracer: ${code?.status ?? "unknown"}`} />

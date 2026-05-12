@@ -171,6 +171,48 @@ class ShowcaseReportModelTests(unittest.TestCase):
         self.assertEqual(report["riskChain"][0]["source"], "scenario")
         self.assertTrue(any("Continue monitoring" in item for item in report["recommendations"]))
 
+    def test_build_report_model_uses_canonical_trace_metrics_when_available(self) -> None:
+        from build_showcase_reports import build_showcase_reports
+
+        root = Path(tempfile.mkdtemp(prefix="showcase-report-canonical-"))
+        final_judgment = {
+            "runId": "run-canonical",
+            "finalDecision": "block",
+            "riskLevel": "critical",
+            "reasons": ["blocked"],
+            "evidence": {"frida": {"status": "ok", "eventCount": 1}, "codeTracer": {"status": "ok"}},
+        }
+        run_dir = self.make_showcase(root, "staged_attack_block", final_judgment=final_judgment, manifest={"runId": "run-canonical"})
+        write_json(
+            run_dir / "canonical_trace.json",
+            {
+                "schemaVersion": "transpect.canonical_trace.v1",
+                "traceId": "trace-canonical",
+                "runId": "run-canonical",
+                "rootSpanId": "span-root",
+                "spans": [
+                    {"spanId": "span-root", "kind": "AGENT_RUN", "source": "manifest"},
+                    {"spanId": "span-tool", "kind": "TOOL_CALL", "source": "behavior_mediator"},
+                ],
+                "events": [{"eventId": "evt-tool"}],
+                "sources": {"behavior_mediator": {"status": "ok", "eventCount": 1}},
+            },
+        )
+        self.write_index(root, [{"id": "staged_attack_block", "runDir": str(run_dir), "title": "Block", "description": "Block"}])
+
+        build_showcase_reports(showcase_root=root)
+
+        report = json.loads((run_dir / "report_model.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["traceBackbone"]["status"], "available")
+        self.assertEqual(report["metrics"]["canonicalSpans"], 2)
+        self.assertEqual(report["metrics"]["canonicalEvents"], 1)
+        self.assertEqual(report["traceBackbone"]["spanCount"], 2)
+        self.assertEqual(report["traceBackbone"]["primarySpanCount"], 2)
+        self.assertEqual(report["traceBackbone"]["evidenceSpanCount"], 0)
+        self.assertEqual(report["traceBackbone"]["rawSpanCount"], 0)
+        self.assertFalse(report["traceBackbone"]["exportAvailable"])
+        self.assertIn("traceQuality", report["metrics"])
+
 
 if __name__ == "__main__":
     unittest.main()

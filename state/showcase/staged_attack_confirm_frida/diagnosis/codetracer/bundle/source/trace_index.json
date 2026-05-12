@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "transpect.agent-defense.trace-index.v1",
+  "generatedAt": "2026-05-12T09:35:19Z",
+  "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
+  "sources": {
+    "behavior": {
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/behavior-events.jsonl",
+      "status": "ok",
+      "eventCount": 6,
+      "warnings": [],
+      "error": null
+    },
+    "frida": {
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/frida-events.jsonl",
+      "status": "ok",
+      "eventCount": 1378,
+      "warnings": [],
+      "error": null
+    }
+  },
+  "merged": {
+    "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/merged-trace.jsonl",
+    "status": "ok",
+    "eventCount": 1384
+  }
+}

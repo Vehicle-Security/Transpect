@@ -1,0 +1,16 @@
+{
+  "root_cause_chain": [
+    "Agent run produced no executable steps; the only recorded step is a synthetic diagnostic artifact (syntheticReason: toolless_turn_diagnostic) with error \"replaced by a newer turn\". This indicates the underlying turn was replaced before any agent action could be taken, likely due to an infrastructure-level retry or cancellation."
+  ],
+  "critical_decision_points": [],
+  "correct_strategy": "Re-run the task when infrastructure is stable; if persistent, investigate the execution environment for premature turn replacement. No agent strategy change is needed because no agent decision was made.",
+  "stage_labels": [
+    {
+      "stage_id": "setup_context",
+      "incorrect_step_ids": [],
+      "unuseful_step_ids": [],
+      "reasoning": "Stage contains only a single synthetic diagnostic step (step 1) with error \"replaced by a newer turn\". This is a standard execution-level retry artifact, not an agent action. No incorrect or unuseful agent steps exist."
+    }
+  ],
+  "summary": "The trajectory contains no agent-executed steps. The sole step is a synthetic diagnostic placeholder indicating the turn was replaced before any agent logic ran. This is an infrastructure-level abort, not an agent failure."
+}

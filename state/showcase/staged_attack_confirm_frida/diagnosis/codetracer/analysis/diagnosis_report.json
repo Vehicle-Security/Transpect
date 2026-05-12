@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "transpect.diagnosis-report.v1",
+  "generatedAt": "2026-05-12T09:38:51Z",
+  "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
+  "diagnosisLayer": "codetracer",
+  "role": "trajectory_diagnosis_not_benchmark_evaluation",
+  "ok": true,
+  "status": "success",
+  "profile": "detailed",
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/frida-events.jsonl",
+    "source/merged-trace.jsonl",
+    "source/trace_index.json"
+  ],
+  "fridaIncluded": true,
+  "paths": {
+    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980",
+    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/bundle",
+    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/analysis",
+    "analysis": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "analysisTrajectory": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
+    "diagnosisRun": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/analysis/diagnosis_run.json"
+  },
+  "analysis": {
+    "root_cause_chain": [
+      "Agent run produced no executable steps; the only recorded step is a synthetic diagnostic artifact (syntheticReason: toolless_turn_diagnostic) with error \"replaced by a newer turn\". This indicates the underlying turn was replaced before any agent action could be taken, likely due to an infrastructure-level retry or cancellation."
+    ],
+    "critical_decision_points": [],
+    "correct_strategy": "Re-run the task when infrastructure is stable; if persistent, investigate the execution environment for premature turn replacement. No agent strategy change is needed because no agent decision was made.",
+    "stage_labels": [
+      {
+        "stage_id": "setup_context",
+        "incorrect_step_ids": [],
+        "unuseful_step_ids": [],
+        "reasoning": "Stage contains only a single synthetic diagnostic step (step 1) with error \"replaced by a newer turn\". This is a standard execution-level retry artifact, not an agent action. No incorrect or unuseful agent steps exist."
+      }
+    ],
+    "summary": "The trajectory contains no agent-executed steps. The sole step is a synthetic diagnostic placeholder indicating the turn was replaced before any agent logic ran. This is an infrastructure-level abort, not an agent failure."
+  },
+  "diagnosisRun": {
+    "returncode": 0,
+    "analysisExists": true,
+    "analysisValid": true,
+    "invalidAnalysisReason": null,
+    "analysisRecovered": false,
+    "model": "deepseek-v4-pro",
+    "apiBase": "https://api.deepseek.com",
+    "startedAt": "2026-05-12T09:35:28Z",
+    "completedAt": "2026-05-12T09:38:51Z"
+  }
+}

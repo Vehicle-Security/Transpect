@@ -151,13 +151,13 @@ python scripts/demo/validate_showcase.py
 python scripts/demo/validate_showcase.py --require-report-model
 cd apps/console
 npm install
-npm run dev
+npm run dev -- --hostname 127.0.0.1 --port 5000
 ```
 
 Open:
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:5000
 ```
 
 The Console reads `state/showcase/index.json` plus each frozen run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages. The old static viewer remains available as a fallback/debug surface:

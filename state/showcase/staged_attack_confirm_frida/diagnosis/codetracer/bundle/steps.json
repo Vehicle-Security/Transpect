@@ -1,0 +1,61 @@
+[
+  {
+    "step_id": 1,
+    "action": "Synthetic turn diagnostic\nStatus: synthetic\n{\n  \"prompt\": {\n    \"prompt\": \"请打开 http://127.0.0.1:8765/xhs/topic/camping-confirm，查看小红书露营话题的帖子、评论和路线详情，并总结要点。\"\n  },\n  \"name\": \"openclaw.agent.turn\"\n}",
+    "observation": "Turn completion\nStatus: error\n{\n  \"status\": \"error\",\n  \"preview\": {\n    \"error\": \"replaced by a newer turn\"\n  }\n}",
+    "tool_type": "synthetic",
+    "step_kind": "synthetic",
+    "openclaw_meta": {
+      "traceId": "trace_9e65eab822bc4fdba3962555529e3683",
+      "spanId": "spn_da0524c4be2048fa8e0e8bb84d39d9ed",
+      "parentSpanId": "spn_3e34d4beb71646eeace3154362fe80d0",
+      "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
+      "sessionKey": "agent:main:explicit:611f7efe-a569-451a-8b77-3f13dc545980",
+      "toolCallId": null,
+      "step_kind_reason": "tool-less turn retained for diagnostic state",
+      "source_kind": "turn",
+      "source_status": "error",
+      "policyMatched": false,
+      "policyObservation": null,
+      "securityScenario": null,
+      "mode": null,
+      "effectiveMode": null,
+      "pathSecurity": null,
+      "expectedMode": null,
+      "expectedOutcome": null,
+      "observedOutcome": null,
+      "expectationMatched": null,
+      "syntheticReason": "toolless_turn_diagnostic",
+      "sourceRows": [
+        {
+          "originalLine": 2,
+          "copiedLine": 2,
+          "seq": 2,
+          "kind": "turn",
+          "status": "started",
+          "path": "source/merged-trace.jsonl"
+        },
+        {
+          "originalLine": 4,
+          "copiedLine": 4,
+          "seq": 4,
+          "kind": "turn",
+          "status": "error",
+          "path": "source/merged-trace.jsonl"
+        }
+      ]
+    },
+    "action_ref": {
+      "path": "sidecars/step-0001/action.json",
+      "line_start": 1,
+      "line_end": 30,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"prompt\": {\n      \"prompt\": \"请打开 http://127.0.0.1:8765/xhs/topic/camping-confirm，查看小红书露营话题的帖子、评论和路线详情，并总结要点。\"\n    },\n    \"name\": \"openclaw.agent.turn\"\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+    },
+    "observation_ref": {
+      "path": "sidecars/step-0001/observation.json",
+      "line_start": 1,
+      "line_end": 30,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"status\": \"error\",\n    \"preview\": {\n      \"error\": \"replaced by a newer turn\"\n    }\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+    }
+  }
+]

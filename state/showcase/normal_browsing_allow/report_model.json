@@ -3,7 +3,7 @@
   "id": "normal_browsing_allow",
   "title": "Normal Browsing Task",
   "description": "正常浏览和总结任务，没有跨步攻击链，系统允许执行",
-  "executiveSummary": "Agent 完成正常浏览和总结任务，未发现跨步骤攻击链。",
+  "executiveSummary": "未发现跨步骤攻击链，系统允许任务继续执行。",
   "verdict": "allow",
   "riskLevel": "low",
   "dataSource": "curated_fixture",
@@ -13,7 +13,41 @@
   "metrics": {
     "runtimeEvents": 4,
     "fridaEvents": 0,
-    "artifacts": 17
+    "artifacts": 17,
+    "canonicalSpans": 0,
+    "canonicalEvents": 0,
+    "traceQuality": "unknown",
+    "traceQualityScore": 0.0,
+    "coverage": {},
+    "exportAvailable": false,
+    "primarySpanCount": 0,
+    "evidenceSpanCount": 0,
+    "rawSpanCount": 0
+  },
+  "traceBackbone": {
+    "status": "fallback",
+    "traceDepth": "unknown",
+    "spanCount": 0,
+    "primarySpanCount": 0,
+    "evidenceSpanCount": 0,
+    "rawSpanCount": 0,
+    "exportAvailable": false,
+    "missingSources": [
+      "canonical_trace.json"
+    ],
+    "warnings": [
+      "canonical_trace.json unavailable"
+    ],
+    "path": null,
+    "eventCount": 0,
+    "quality": {
+      "traceDepth": "unknown",
+      "score": 0.0,
+      "coverage": {},
+      "gaps": [
+        "canonical_trace.json unavailable"
+      ]
+    }
   },
   "pipeline": [
     {

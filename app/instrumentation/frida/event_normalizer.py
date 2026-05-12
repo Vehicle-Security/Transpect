@@ -126,8 +126,10 @@ class FridaEventNormalizer:
 
     @staticmethod
     def _file_risk_tags(path: str) -> list[str]:
-        tags: list[str] = ["local_file_access"]
         path_lower = path.lower()
+        if "/.openclaw/" in path_lower or "/node_modules/openclaw/" in path_lower:
+            return ["runtime_config_access"]
+        tags: list[str] = ["local_file_access"]
         if any(frag in path_lower for frag in SENSITIVE_PATH_FRAGMENTS):
             tags.append("sensitive_file_access")
         if any(tok in path_lower for tok in ("id_rsa", "id_ed25519", "credential", "token", ".env")):

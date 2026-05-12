@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "decision": "warn",
+  "riskLevel": "medium",
+  "riskScore": 5,
+  "confidence": 0.7,
+  "hardBlockTriggered": false,
+  "reasons": [
+    "Plan step open_external_link inspected.",
+    "Plan opens an external link."
+  ],
+  "evidenceEvents": [
+    "risk-2"
+  ],
+  "suggestedUserMessage": "检测到低可信来源或轻微范围扩展，已记录风险并继续执行。",
+  "lastStage": "planning"
+}

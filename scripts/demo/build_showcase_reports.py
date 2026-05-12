@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "common"))
 
 from trace_common import WORKSPACE_ROOT, normalize_path, read_json, write_json  # noqa: E402
@@ -77,8 +80,27 @@ def event_summary(row: dict[str, Any]) -> str:
 def product_event_name(row: dict[str, Any]) -> str:
     name = str(row.get("name") or "").lower()
     kind = str(row.get("kind") or row.get("type") or "").lower()
+    status = str(row.get("status") or "").lower()
+    preview = row.get("preview") if isinstance(row.get("preview"), dict) else {}
+    reason = str(preview.get("reason") or "").lower()
+    if "low_trust_comment" in name:
+        return "Low-trust Trigger"
+    if "security_intervention" in name or "security.decision" in name:
+        if status in {"require_confirmation", "requires_confirmation", "confirm"}:
+            return "User Confirmation Required"
+        return "Runtime Decision"
+    if "security.action" in name:
+        return "Sensitive Action Evidence" if ("file" in reason or "upload" in reason) else "Action Safety Review"
+    upload_or_file_signal = "upload" in name or "file_access" in name or "file access" in reason or "file_read" in name
+    positive_upload_reason = "upload" in reason and "without sensitive upload evidence" not in reason
+    if upload_or_file_signal or positive_upload_reason:
+        return "Sensitive Action Evidence"
+    if name == "openclaw.request":
+        return "Runtime Request"
     if "security.plan" in name:
-        return "Agent Defense plan check"
+        return "External Link Inspection"
+    if "policy" in name or "policy" in reason or status in {"warn", "warning"}:
+        return "Policy Warning"
     if "security" in name or kind == "security":
         return "Agent Defense event"
     if "web_fetch" in name:
@@ -92,7 +114,7 @@ def product_event_name(row: dict[str, Any]) -> str:
     if "frida" in name or kind == "frida":
         return "Frida runtime evidence"
     if "openclaw.agent.turn" in name:
-        return "Agent turn result"
+        return "Agent Execution Interrupted" if status in {"error", "failed", "blocked", "block"} else "Agent Execution Result"
     if name.startswith("openclaw."):
         return "Agent runtime event"
     return str(row.get("name") or row.get("operation") or row.get("eventType") or "Runtime event")
@@ -271,6 +293,8 @@ def build_artifacts(run_dir: Path) -> list[dict[str, Any]]:
         "security-reasoning/defense_decision.json",
         "security-reasoning/evidence_summary.json",
         "trace_index.json",
+        "canonical_trace.json",
+        "trace_quality.json",
         "behavior-events.jsonl",
         "merged-trace.jsonl",
         "frida-events.jsonl",
@@ -281,6 +305,7 @@ def build_artifacts(run_dir: Path) -> list[dict[str, Any]]:
         "diagnosis/codetracer/bundle/stage_ranges.json",
         "diagnosis/codetracer/analysis/diagnosis_report.json",
         "diagnosis/codetracer/analysis/codetracer_analysis.json",
+        "exports/openinference_spans.json",
     ]
     artifacts: list[dict[str, Any]] = []
     for relative in relatives:
@@ -538,13 +563,13 @@ def build_pipeline(
 def executive_summary(entry: dict[str, Any], *, verdict: str, risk_level: str) -> str:
     showcase_id = str(entry.get("id") or "")
     if verdict == "block" and "low_level" in showcase_id:
-        return "Transpect 将浏览器轨迹之外的低层行为证据纳入最终判断，并在高风险链路上给出阻断。"
+        return "浏览器层轨迹之外出现 OS 级低层行为证据，Transpect 将其纳入最终安全判断。"
     if verdict == "block" or risk_level == "critical":
         return "Agent 被低可信评论诱导跳转至外部页面，并在敏感上传前被 Transpect 阻断。"
     if verdict == "require_confirmation":
-        return "Agent 遇到低可信外部跳转链路，Transpect 要求用户确认后再继续。"
+        return "系统发现外部跳转风险，但缺少敏感上传证据，因此要求用户确认。"
     if verdict == "allow":
-        return "Agent 完成正常浏览和总结任务，未发现跨步骤攻击链。"
+        return "未发现跨步骤攻击链，系统允许任务继续执行。"
     return str(entry.get("description") or "Frozen showcase report is ready for review.")
 
 
@@ -627,6 +652,90 @@ def build_recommendations(*, verdict: str, pipeline: list[dict[str, Any]]) -> li
     return recommendations
 
 
+def load_canonical_trace(run_dir: Path) -> dict[str, Any]:
+    payload = read_json(run_dir / "canonical_trace.json", default={})
+    if isinstance(payload, dict) and payload.get("schemaVersion") == "transpect.canonical_trace.v1":
+        return payload
+    return {}
+
+
+def canonical_quality(run_dir: Path, canonical_trace: dict[str, Any]) -> dict[str, Any]:
+    if not canonical_trace:
+        return {
+            "traceDepth": "unknown",
+            "score": 0.0,
+            "coverage": {},
+            "gaps": ["canonical_trace.json unavailable"],
+        }
+    try:
+        from scripts.validate.evaluate_trace_quality import evaluate_trace_quality
+
+        return evaluate_trace_quality(run_dir)
+    except Exception as error:  # noqa: BLE001
+        return {
+            "traceDepth": "unknown",
+            "score": 0.0,
+            "coverage": {},
+            "gaps": [f"trace quality evaluation failed: {error}"],
+        }
+
+
+def canonical_metrics(run_dir: Path, canonical_trace: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
+    spans = canonical_trace.get("spans") if isinstance(canonical_trace.get("spans"), list) else []
+    events = canonical_trace.get("events") if isinstance(canonical_trace.get("events"), list) else []
+    trace_backbone = trace_backbone_summary(run_dir, canonical_trace, quality)
+    return {
+        "canonicalSpans": len(spans),
+        "canonicalEvents": len(events),
+        "traceQuality": quality.get("traceDepth") or "unknown",
+        "traceQualityScore": quality.get("score") or 0.0,
+        "coverage": quality.get("coverage") if isinstance(quality.get("coverage"), dict) else {},
+        "exportAvailable": trace_backbone["exportAvailable"],
+        "primarySpanCount": trace_backbone["primarySpanCount"],
+        "evidenceSpanCount": trace_backbone["evidenceSpanCount"],
+        "rawSpanCount": trace_backbone["rawSpanCount"],
+    }
+
+
+def trace_backbone_summary(run_dir: Path, canonical_trace: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
+    if not canonical_trace:
+        fallback_available = (run_dir / "merged-trace.jsonl").exists() or (run_dir / "behavior-events.jsonl").exists()
+        return {
+            "status": "fallback" if fallback_available else "unavailable",
+            "traceDepth": quality.get("traceDepth") or "unknown",
+            "spanCount": 0,
+            "primarySpanCount": 0,
+            "evidenceSpanCount": 0,
+            "rawSpanCount": 0,
+            "exportAvailable": False,
+            "missingSources": ["canonical_trace.json"],
+            "warnings": list(quality.get("gaps") or ["canonical_trace.json unavailable"]),
+        }
+    spans = canonical_trace.get("spans") if isinstance(canonical_trace.get("spans"), list) else []
+    tier_counts = {"primary": 0, "evidence": 0, "raw": 0}
+    for span in spans:
+        if not isinstance(span, dict):
+            continue
+        default_tier = "primary" if span.get("kind") in {"AGENT_RUN", "AGENT_TURN", "TOOL_CALL", "BROWSER_ACTION", "AGENT_DEFENSE", "FINAL_JUDGMENT"} else "evidence"
+        tier = str(span.get("displayTier") or default_tier)
+        if tier not in tier_counts:
+            tier = "evidence"
+        tier_counts[tier] += 1
+    coverage = quality.get("coverage") if isinstance(quality.get("coverage"), dict) else {}
+    missing_sources = [key for key, value in coverage.items() if not value]
+    return {
+        "status": "available",
+        "traceDepth": quality.get("traceDepth") or "unknown",
+        "spanCount": len(spans),
+        "primarySpanCount": tier_counts["primary"],
+        "evidenceSpanCount": tier_counts["evidence"],
+        "rawSpanCount": tier_counts["raw"],
+        "exportAvailable": (run_dir / "exports" / "openinference_spans.json").exists(),
+        "missingSources": missing_sources,
+        "warnings": list(quality.get("gaps") or []),
+    }
+
+
 def build_report_model(showcase_root: Path, entry: dict[str, Any]) -> dict[str, Any]:
     run_dir = resolve_run_dir(showcase_root, entry.get("runDir"))
     final_judgment = read_json(run_dir / "security-reasoning" / "final_judgment.json", default={})
@@ -639,6 +748,8 @@ def build_report_model(showcase_root: Path, entry: dict[str, Any]) -> dict[str, 
     manifest = manifest if isinstance(manifest, dict) else {}
     diagnosis_report = read_json(run_dir / "diagnosis" / "codetracer" / "analysis" / "diagnosis_report.json", default={})
     diagnosis_report = diagnosis_report if isinstance(diagnosis_report, dict) else {}
+    canonical_trace = load_canonical_trace(run_dir)
+    quality = canonical_quality(run_dir, canonical_trace)
     verdict = normalize_decision(final_judgment.get("finalDecision") or final_judgment.get("decision") or entry.get("decision"))
     risk_level = normalize_risk(final_judgment.get("riskLevel") or final_judgment.get("risk_level") or entry.get("riskLevel"))
     reason = first_reason(final_judgment)
@@ -669,6 +780,13 @@ def build_report_model(showcase_root: Path, entry: dict[str, Any]) -> dict[str, 
             "runtimeEvents": runtime_event_count(run_dir, trace_index),
             "fridaEvents": frida_event_count(run_dir, final_judgment, trace_index),
             "artifacts": len(artifacts),
+            **canonical_metrics(run_dir, canonical_trace, quality),
+        },
+        "traceBackbone": {
+            **trace_backbone_summary(run_dir, canonical_trace, quality),
+            "path": "canonical_trace.json" if canonical_trace else None,
+            "eventCount": len(canonical_trace.get("events") or []) if canonical_trace else 0,
+            "quality": quality,
         },
         "pipeline": pipeline,
         "riskChain": build_risk_chain(final_judgment, security_state),

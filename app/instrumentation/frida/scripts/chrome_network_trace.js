@@ -25,6 +25,21 @@ function emit(kind, payload) {
   });
 }
 
+function findExport(moduleName, symbolName) {
+  try {
+    if (typeof Module.findExportByName === 'function') {
+      var byModule = Module.findExportByName(moduleName, symbolName);
+      if (byModule) return byModule;
+    }
+  } catch (_) { }
+  try {
+    if (typeof Module.findGlobalExportByName === 'function') {
+      return Module.findGlobalExportByName(symbolName);
+    }
+  } catch (_) { }
+  return null;
+}
+
 function summarizeBytes(ptr, length) {
   var requested = Number(length || 0);
   if (!ptr || ptr.isNull() || !requested) {
@@ -50,7 +65,7 @@ function installConnect() {
   var modules = ['libsystem_c.dylib', 'libc.so.6', 'libc.so', null];
   modules.forEach(function (mod) {
     try {
-      var addr = Module.findExportByName(mod, 'connect');
+      var addr = findExport(mod, 'connect');
       if (!addr) return;
       Interceptor.attach(addr, {
         onEnter: function (args) {
@@ -93,7 +108,7 @@ function installSend() {
   var modules = ['libsystem_c.dylib', 'libc.so.6', 'libc.so', null];
   modules.forEach(function (mod) {
     try {
-      var addr = Module.findExportByName(mod, 'send');
+      var addr = findExport(mod, 'send');
       if (!addr) return;
       Interceptor.attach(addr, {
         onEnter: function (args) {

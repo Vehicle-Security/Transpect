@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.agent_defense.final_judge import run_final_judgment  # noqa: E402
 from app.agent_defense.trace_merge import merge_run_traces  # noqa: E402
+from app.trace_model.build_canonical_trace import build_canonical_trace  # noqa: E402
 from mark_showcase_run import mark_showcase_run  # noqa: E402
 from run_codetracer_diagnosis import run_codetracer_diagnosis  # noqa: E402
 from run_defense_reasoner import run_defense_reasoner  # noqa: E402
@@ -154,6 +155,64 @@ def _parse_json_output(text: str) -> dict[str, Any]:
         return {}
 
 
+def check_frida_smoke(*, timeout_seconds: int = 75, verbose: bool = False) -> dict[str, Any]:
+    report_path = ROOT / "live" / "frida" / "smoke" / "frida-smoke-report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    if report_path.exists():
+        report_path.unlink()
+    command = [
+        python_executable(),
+        str(ROOT / "scripts" / "validate" / "frida_smoke.py"),
+        "--report",
+        str(report_path),
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            cwd=str(ROOT),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=None if verbose else subprocess.DEVNULL,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except Exception as error:  # noqa: BLE001
+        return {
+            "ok": False,
+            "status": "failed",
+            "detail": f"frida smoke command failed: {error}",
+        }
+    payload = read_json(report_path, default={})
+    if not payload:
+        return {
+            "ok": False,
+            "status": "failed",
+            "detail": f"frida smoke did not write JSON report (exit={result.returncode})",
+        }
+    return payload
+
+
+def _final_frida_summary(final_judgment: dict[str, Any]) -> dict[str, Any]:
+    evidence = final_judgment.get("evidence") if isinstance(final_judgment, dict) else {}
+    frida = evidence.get("frida") if isinstance(evidence, dict) else {}
+    return frida if isinstance(frida, dict) else {}
+
+
+def require_real_frida_evidence(run_dir: Path, final_judgment: dict[str, Any]) -> None:
+    frida = _final_frida_summary(final_judgment)
+    status = str(frida.get("status") or "").lower()
+    try:
+        event_count = int(frida.get("eventCount") or 0)
+    except (TypeError, ValueError):
+        event_count = 0
+    frida_path = run_dir / "frida-events.jsonl"
+    if status != "ok" or event_count <= 0 or not frida_path.exists() or frida_path.stat().st_size <= 0:
+        raise RuntimeError(
+            "Frida evidence is required but not available: "
+            f"status={status or 'unknown'}, eventCount={event_count}, path={frida_path}"
+        )
+
+
 def run_agent_trace(*, task_id: str = DEFAULT_TASK_ID, timeout_seconds: int, verbose: bool) -> Path:
     command = [
         python_executable(),
@@ -169,10 +228,28 @@ def run_agent_trace(*, task_id: str = DEFAULT_TASK_ID, timeout_seconds: int, ver
         "--frida",
         "auto",
     ]
-    result = run_command(command, cwd=ROOT, timeout=timeout_seconds + 120, check=False)
-    payload = _parse_json_output(result.stdout)
-    if verbose and result.stderr.strip():
-        print(result.stderr.strip())
+    TRACE_LIVE_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = str(int(time.time()))
+    stdout_path = TRACE_LIVE_LOGS_DIR / f"showcase-agent-trace-{stamp}.out.json"
+    stderr_path = TRACE_LIVE_LOGS_DIR / f"showcase-agent-trace-{stamp}.err.log"
+    try:
+        with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
+            result = subprocess.run(
+                command,
+                cwd=str(ROOT),
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                timeout=timeout_seconds + 120,
+                check=False,
+            )
+    except Exception as error:  # noqa: BLE001
+        raise RuntimeError(f"agent trace command failed: {error}; stdout={stdout_path}; stderr={stderr_path}") from error
+    stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace") if stdout_path.exists() else ""
+    stderr_text = stderr_path.read_text(encoding="utf-8", errors="replace") if stderr_path.exists() else ""
+    payload = _parse_json_output(stdout_text)
+    if verbose and stderr_text.strip():
+        print(stderr_text.strip())
     run_dir = payload.get("resolvedRunDir")
     if isinstance(run_dir, str) and run_dir.strip():
         return Path(run_dir).resolve()
@@ -181,7 +258,10 @@ def run_agent_trace(*, task_id: str = DEFAULT_TASK_ID, timeout_seconds: int, ver
         candidate = TRACE_LIVE_RUNS_DIR / run_id
         if candidate.exists():
             return candidate.resolve()
-    raise RuntimeError(payload.get("reason") or result.stderr.strip() or "agent trace did not produce a run directory")
+    detail = payload.get("reason") or stderr_text.strip() or f"agent trace did not produce a run directory; stdout={stdout_path}; stderr={stderr_path}"
+    if result.returncode != 0:
+        detail = f"agent trace failed ({result.returncode}): {detail}"
+    raise RuntimeError(str(detail))
 
 
 def complete_artifacts(run_dir: Path, *, verbose: bool) -> dict[str, Any]:
@@ -196,6 +276,7 @@ def complete_artifacts(run_dir: Path, *, verbose: bool) -> dict[str, Any]:
         if verbose:
             print(f"CodeTracer failed: {error}")
     final_judgment = run_final_judgment(run_dir)
+    canonical_trace = build_canonical_trace(run_dir)
     mark_showcase_run(run_dir, reason="Generated by scripts/demo/run_showcase.py")
     write_runs_index(run_dir.parent)
     return {
@@ -203,6 +284,11 @@ def complete_artifacts(run_dir: Path, *, verbose: bool) -> dict[str, Any]:
         "defense": defense_result,
         "diagnosis": diagnosis_result,
         "finalJudgment": final_judgment,
+        "canonicalTrace": {
+            "path": canonical_trace.get("path"),
+            "spanCount": len(canonical_trace.get("spans") or []),
+            "eventCount": len(canonical_trace.get("events") or []),
+        },
     }
 
 
@@ -261,6 +347,11 @@ def main() -> None:
     parser.add_argument("--viewer-port", type=int, default=8711)
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--task-id", default=DEFAULT_TASK_ID, help="staged_attack task id to run.")
+    parser.add_argument(
+        "--require-frida-ok",
+        action="store_true",
+        help="Fail unless a real Frida smoke check passes and the run records non-empty Frida evidence.",
+    )
     args = parser.parse_args()
 
     steps: list[ShowcaseStep] = []
@@ -290,6 +381,13 @@ def main() -> None:
                 raise RuntimeError("--no-openclaw-run requires --run-dir")
             run_dir = Path(args.run_dir).resolve()
         else:
+            if args.require_frida_ok:
+                smoke = check_frida_smoke(timeout_seconds=75, verbose=args.verbose)
+                smoke_status = str(smoke.get("status") or ("ok" if smoke.get("ok") else "failed"))
+                smoke_events = int(smoke.get("evidenceEventCount") or smoke.get("eventCount") or 0)
+                steps.append(ShowcaseStep("Frida smoke", _status_word(smoke_status), f"{smoke_events} evidence event(s)"))
+                if not smoke.get("ok"):
+                    raise RuntimeError(smoke.get("detail") or smoke.get("status") or "Frida smoke check failed")
             guard = check_runtime_guard()
             steps.append(ShowcaseStep("Runtime guard", _status_word(guard["status"]), str(guard["detail"])))
             run_dir = run_agent_trace(task_id=args.task_id, timeout_seconds=args.timeout, verbose=args.verbose)
@@ -297,6 +395,8 @@ def main() -> None:
 
         artifacts = complete_artifacts(run_dir, verbose=args.verbose)
         final_judgment = artifacts["finalJudgment"]
+        if args.require_frida_ok:
+            require_real_frida_evidence(run_dir, final_judgment)
         print_summary(steps, run_dir=run_dir, final_judgment=final_judgment, host=args.host, viewer_port=args.viewer_port)
     except Exception as error:  # noqa: BLE001
         print("Transpect Showcase\n")

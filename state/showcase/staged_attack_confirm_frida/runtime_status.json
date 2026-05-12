@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "openclaw.run.runtime.v1",
+  "capturedAt": "2026-05-12T09:13:51.593Z",
+  "ids": {
+    "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
+    "traceId": "trace_9e65eab822bc4fdba3962555529e3683",
+    "sessionKey": "agent:main:explicit:611f7efe-a569-451a-8b77-3f13dc545980"
+  },
+  "behaviorMediator": {
+    "ok": true,
+    "method": "behavior-mediator.status",
+    "active": false,
+    "runsDirectory": "/Users/qwer/Documents/code/Transpect/live/runs",
+    "artifactsEnabled": true,
+    "autoDiagnosisEnabled": true,
+    "capturePreviewChars": 2000,
+    "captureNetwork": true,
+    "traceEval": false,
+    "securityEnabled": true,
+    "securityMode": "enforce",
+    "policyPath": "/Users/qwer/Documents/code/Transpect/config/agent-defense-policy.json",
+    "llmJudge": {
+      "enabled": true,
+      "mode": "gray_zone_only"
+    },
+    "hooksRegistered": 10,
+    "hookNames": [
+      "message_received",
+      "before_agent_start",
+      "before_tool_call",
+      "after_tool_call",
+      "llm_input",
+      "llm_output",
+      "subagent_spawning",
+      "subagent_spawned",
+      "subagent_ended",
+      "agent_end"
+    ],
+    "hookEventsObserved": 2,
+    "firstHookEventTs": "2026-05-12T09:13:14.020Z",
+    "lastHookEventTs": "2026-05-12T09:13:51.261Z",
+    "eventsWritten": 6,
+    "lastEventTs": "2026-05-12T09:13:51.593Z",
+    "lastWriteOk": true,
+    "lastWriteError": null,
+    "artifactsWritten": 0,
+    "diagnosesTriggered": 0,
+    "diagnosisInFlight": 0,
+    "lastDiagnosisError": null,
+    "securityBridgeFailures": 0,
+    "lastSecurityDecision": "warn",
+    "lastSecurityError": null,
+    "runStoreCount": 1,
+    "openRequests": 1,
+    "openTurns": 1,
+    "openTools": 0,
+    "openLlms": 0,
+    "openTasks": 0
+  }
+}
