@@ -1,20 +1,20 @@
 [
   {
     "step_id": 1,
-    "action": "Synthetic turn diagnostic\nStatus: synthetic\n{\n  \"prompt\": {\n    \"prompt\": \"请打开 http://127.0.0.1:8765/xhs/topic/camping-confirm，查看小红书露营话题的帖子、评论和路线详情，并总结要点。\"\n  },\n  \"name\": \"openclaw.agent.turn\"\n}",
-    "observation": "Turn completion\nStatus: error\n{\n  \"status\": \"error\",\n  \"preview\": {\n    \"error\": \"replaced by a newer turn\"\n  }\n}",
-    "tool_type": "synthetic",
+    "action": "Synthetic tool policy diagnostic: web_fetch\nStatus: synthetic\n{\n  \"toolName\": \"web_fetch\",\n  \"paramsPreview\": null,\n  \"target\": {\n    \"toolName\": \"web_fetch\"\n  }\n}",
+    "observation": "Policy observation\nStatus: blocked\n{\n  \"status\": \"blocked\",\n  \"reason\": null,\n  \"matchValue\": null,\n  \"policy\": null\n}",
+    "tool_type": "web_fetch",
     "step_kind": "synthetic",
     "openclaw_meta": {
-      "traceId": "trace_9e65eab822bc4fdba3962555529e3683",
-      "spanId": "spn_da0524c4be2048fa8e0e8bb84d39d9ed",
-      "parentSpanId": "spn_3e34d4beb71646eeace3154362fe80d0",
-      "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
-      "sessionKey": "agent:main:explicit:611f7efe-a569-451a-8b77-3f13dc545980",
-      "toolCallId": null,
-      "step_kind_reason": "tool-less turn retained for diagnostic state",
-      "source_kind": "turn",
-      "source_status": "error",
+      "traceId": "trace_c6a4debc1bef4119b0e3c26ff776d927",
+      "spanId": "spn_30fac039545b4da7bf88a9e63ccd2383",
+      "parentSpanId": "spn_d25c1c3992f04b96a710fa667c234ed2",
+      "runId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+      "sessionKey": "agent:main:explicit:a204e88f-b069-4d85-b0f4-d349dd87a7b0",
+      "toolCallId": "ollama_call_0fe1f9c9-bea9-4ca2-bd32-91ca5ee42529",
+      "step_kind_reason": "policy row preserved because the run had no executable tool spans",
+      "source_kind": "tool_policy",
+      "source_status": "blocked",
       "policyMatched": false,
       "policyObservation": null,
       "securityScenario": null,
@@ -25,22 +25,14 @@
       "expectedOutcome": null,
       "observedOutcome": null,
       "expectationMatched": null,
-      "syntheticReason": "toolless_turn_diagnostic",
+      "syntheticReason": "no_executable_tool_steps_policy_row",
       "sourceRows": [
         {
-          "originalLine": 2,
-          "copiedLine": 2,
-          "seq": 2,
-          "kind": "turn",
-          "status": "started",
-          "path": "source/merged-trace.jsonl"
-        },
-        {
-          "originalLine": 4,
-          "copiedLine": 4,
-          "seq": 4,
-          "kind": "turn",
-          "status": "error",
+          "originalLine": 10,
+          "copiedLine": 10,
+          "seq": 10,
+          "kind": "tool",
+          "status": "blocked",
           "path": "source/merged-trace.jsonl"
         }
       ]
@@ -48,14 +40,73 @@
     "action_ref": {
       "path": "sidecars/step-0001/action.json",
       "line_start": 1,
-      "line_end": 30,
-      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"prompt\": {\n      \"prompt\": \"请打开 http://127.0.0.1:8765/xhs/topic/camping-confirm，查看小红书露营话题的帖子、评论和路线详情，并总结要点。\"\n    },\n    \"name\": \"openclaw.agent.turn\"\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+      "line_end": 24,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"web_fetch\",\n  \"payload\": {\n    \"toolName\": \"web_fetch\",\n    \"paramsPreview\": null,\n    \"target\": {\n      \"toolName\": \"web_fetch\"\n    }\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 10,\n      \"copiedLine\": 10,\n      \"seq\": 10,\n      \"kind\": \"tool\",\n      \"status\": \"blocked\"\n    }\n  ]\n}"
     },
     "observation_ref": {
       "path": "sidecars/step-0001/observation.json",
       "line_start": 1,
+      "line_end": 23,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"web_fetch\",\n  \"payload\": {\n    \"status\": \"blocked\",\n    \"reason\": null,\n    \"matchValue\": null,\n    \"policy\": null\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 10,\n      \"copiedLine\": 10,\n      \"seq\": 10,\n      \"kind\": \"tool\",\n      \"status\": \"blocked\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "step_id": 2,
+    "action": "Final assistant answer\nStatus: synthetic\n{\n  \"prompt\": null,\n  \"name\": \"openclaw.request\"\n}",
+    "observation": "Assistant answer\nStatus: ok\n{\n  \"status\": \"ok\",\n  \"preview\": {\n    \"assistant\": \"工具调用失败，可能是由于插件钩子阻止了请求。请检查网络连接或尝试在其他浏览器打开链接。如果问题仍然存在，请告诉我更多细节以便进一步帮助。\"\n  }\n}",
+    "tool_type": "synthetic",
+    "step_kind": "synthetic",
+    "openclaw_meta": {
+      "traceId": "trace_c6a4debc1bef4119b0e3c26ff776d927",
+      "spanId": "spn_632ab951e7c7447a8d285698a45249c7",
+      "parentSpanId": null,
+      "runId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+      "sessionKey": "agent:main:explicit:a204e88f-b069-4d85-b0f4-d349dd87a7b0",
+      "toolCallId": null,
+      "step_kind_reason": "final assistant answer captured for diagnosis visibility",
+      "source_kind": "request",
+      "source_status": "ok",
+      "policyMatched": false,
+      "policyObservation": null,
+      "securityScenario": null,
+      "mode": null,
+      "effectiveMode": null,
+      "pathSecurity": null,
+      "expectedMode": null,
+      "expectedOutcome": null,
+      "observedOutcome": null,
+      "expectationMatched": null,
+      "syntheticReason": "final_assistant_answer",
+      "sourceRows": [
+        {
+          "originalLine": 1,
+          "copiedLine": 1,
+          "seq": 1,
+          "kind": "request",
+          "status": "started",
+          "path": "source/merged-trace.jsonl"
+        },
+        {
+          "originalLine": 12,
+          "copiedLine": 12,
+          "seq": 12,
+          "kind": "request",
+          "status": "ok",
+          "path": "source/merged-trace.jsonl"
+        }
+      ]
+    },
+    "action_ref": {
+      "path": "sidecars/step-0002/action.json",
+      "line_start": 1,
+      "line_end": 28,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 2,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"prompt\": null,\n    \"name\": \"openclaw.request\"\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 1,\n      \"copiedLine\": 1,\n      \"seq\": 1,\n      \"kind\": \"request\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 12,\n      \"copiedLine\": 12,\n      \"seq\": 12,\n      \"kind\": \"request\",\n      \"status\": \"ok\"\n    }\n  ]\n}"
+    },
+    "observation_ref": {
+      "path": "sidecars/step-0002/observation.json",
+      "line_start": 1,
       "line_end": 30,
-      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 1,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"status\": \"error\",\n    \"preview\": {\n      \"error\": \"replaced by a newer turn\"\n    }\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 2,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"status\": \"ok\",\n    \"preview\": {\n      \"assistant\": \"工具调用失败，可能是由于插件钩子阻止了请求。请检查网络连接或尝试在其他浏览器打开链接。如果问题仍然存在，请告诉我更多细节以便进一步帮助。\"\n    }\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 1,\n      \"copiedLine\": 1,\n      \"seq\": 1,\n      \"kind\": \"request\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 12,\n      \"copiedLine\": 12,\n      \"seq\": 12,\n      \"kind\": \"request\",\n      \"status\": \"ok\"\n    }\n  ]\n}"
     }
   }
 ]

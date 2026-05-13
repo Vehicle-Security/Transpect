@@ -40,9 +40,9 @@ export function riskTone(risk: string | undefined) {
 }
 
 export function statusTone(status: string | undefined) {
-  if (["ok", "available", "allowed"].includes(status || "")) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (["ok", "available", "allowed", "deep_trace", "export_ready"].includes(status || "")) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (["blocked", "critical", "failed", "critical_risk"].includes(status || "")) return "bg-red-50 text-red-700 ring-red-200";
-  if (["requires_confirmation", "high", "high_risk", "degraded", "attach_failed"].includes(status || "")) return "bg-amber-50 text-amber-800 ring-amber-200";
+  if (["requires_confirmation", "high", "high_risk", "degraded", "attach_failed", "export_unavailable"].includes(status || "")) return "bg-amber-50 text-amber-800 ring-amber-200";
   return "bg-slate-100 text-slate-700 ring-slate-200";
 }
 
@@ -71,9 +71,9 @@ export function outcomeLabel(outcome: string | undefined) {
 
 export function sortReportsForDemo(reports: ReportModel[]) {
   const preferredDemoOrder = new Map([
-    ["staged_attack_block_frida", 0],
-    ["low_level_bypass_real_frida", 1],
-    ["staged_attack_confirm_frida", 2],
+    ["staged_attack_confirm_frida", 0],
+    ["staged_attack_block_frida", 1],
+    ["low_level_bypass_real_frida", 2],
     ["normal_browsing_allow_frida", 3]
   ]);
   const verdictRank: Record<Verdict, number> = {

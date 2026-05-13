@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "openclaw.codetracer.bundle.v1",
+  "kind": "action",
+  "stepId": 2,
+  "stepKind": "synthetic",
+  "toolType": "synthetic",
+  "payload": {
+    "prompt": null,
+    "name": "openclaw.request"
+  },
+  "runtimeArtifact": null,
+  "sourceRows": [
+    {
+      "originalLine": 1,
+      "copiedLine": 1,
+      "seq": 1,
+      "kind": "request",
+      "status": "started"
+    },
+    {
+      "originalLine": 12,
+      "copiedLine": 12,
+      "seq": 12,
+      "kind": "request",
+      "status": "ok"
+    }
+  ]
+}

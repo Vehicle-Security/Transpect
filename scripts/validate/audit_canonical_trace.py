@@ -95,6 +95,16 @@ def audit_canonical_trace(run_dir: Path | str) -> dict[str, Any]:
     if not isinstance(openclaw_source, dict) or openclaw_source.get("status") != "ok":
         warnings.append("OpenClaw native stream unavailable.")
         recommendations.append("Enable OpenClaw lifecycle/assistant/tool stream export to improve trace depth.")
+    else:
+        streams = openclaw_source.get("streams") if isinstance(openclaw_source.get("streams"), dict) else {}
+        missing_streams = [
+            key
+            for key in ["lifecycle", "assistant", "tool", "plugin_hooks", "session_transcript"]
+            if not isinstance(streams.get(key), dict) or streams[key].get("status") != "ok"
+        ]
+        if missing_streams:
+            warnings.append(f"OpenClaw native source coverage incomplete: {', '.join(missing_streams)}.")
+            recommendations.append("Capture all native source files before using this run as a deep trace demo.")
 
     for span in spans:
         if span.get("kind") != "CODETRACER_DIAGNOSIS":

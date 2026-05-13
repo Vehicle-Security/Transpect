@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -173,12 +178,131 @@ class AgentTraceBackboneTests(unittest.TestCase):
         moderate_report = evaluate_trace_quality(moderate)
         self.assertEqual(moderate_report["traceDepth"], "moderate")
 
-        deep = self.make_run()
-        deep_report = evaluate_trace_quality(deep)
-        self.assertEqual(deep_report["traceDepth"], "deep")
-        self.assertTrue(deep_report["coverage"]["frida"])
-        self.assertTrue(deep_report["coverage"]["codetracer"])
-        self.assertTrue(deep_report["coverage"]["finalJudgment"])
+        complete_without_native = self.make_run()
+        complete_without_native_report = evaluate_trace_quality(complete_without_native)
+        self.assertEqual(complete_without_native_report["traceDepth"], "moderate")
+        self.assertTrue(complete_without_native_report["coverage"]["frida"])
+        self.assertTrue(complete_without_native_report["coverage"]["codetracer"])
+        self.assertTrue(complete_without_native_report["coverage"]["finalJudgment"])
+
+    def test_native_openclaw_sources_create_parented_spans_and_enable_deep_quality(self) -> None:
+        from app.trace_model.build_canonical_trace import build_canonical_trace
+        from scripts.validate.evaluate_trace_quality import evaluate_trace_quality
+
+        run_dir = self.make_run()
+        write_jsonl(
+            run_dir / "openclaw-lifecycle.jsonl",
+            [
+                {
+                    "eventId": "native-message",
+                    "event": "message_received",
+                    "timestamp": "2026-05-01T00:00:00Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-request",
+                    "sessionKey": "session-001",
+                    "runId": "run-001",
+                    "preview": {"message": "Summarize comments"},
+                },
+                {
+                    "eventId": "native-turn-start",
+                    "event": "before_agent_start",
+                    "timestamp": "2026-05-01T00:00:01Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-turn",
+                    "parentSpanId": "native-request",
+                    "sessionKey": "session-001",
+                    "runId": "run-001",
+                    "agentId": "main",
+                },
+                {
+                    "eventId": "native-agent-end",
+                    "event": "agent_end",
+                    "timestamp": "2026-05-01T00:00:09Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-turn",
+                    "parentSpanId": "native-request",
+                    "sessionKey": "session-001",
+                    "runId": "run-001",
+                    "status": "ok",
+                },
+            ],
+        )
+        write_jsonl(
+            run_dir / "openclaw-assistant.jsonl",
+            [
+                {
+                    "eventId": "native-llm-in",
+                    "event": "llm_input",
+                    "timestamp": "2026-05-01T00:00:02Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-llm",
+                    "parentSpanId": "native-turn",
+                    "llmCallId": "llm-1",
+                    "runId": "run-001",
+                    "sessionKey": "session-001",
+                    "model": "demo-model",
+                },
+                {
+                    "eventId": "native-llm-out",
+                    "event": "llm_output",
+                    "timestamp": "2026-05-01T00:00:03Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-llm",
+                    "parentSpanId": "native-turn",
+                    "llmCallId": "llm-1",
+                    "runId": "run-001",
+                    "sessionKey": "session-001",
+                    "status": "ok",
+                },
+            ],
+        )
+        write_jsonl(
+            run_dir / "openclaw-tools.jsonl",
+            [
+                {
+                    "eventId": "native-tool-start",
+                    "event": "before_tool_call",
+                    "timestamp": "2026-05-01T00:00:04Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-tool",
+                    "parentSpanId": "native-turn",
+                    "toolCallId": "tool-1",
+                    "toolName": "browser.open",
+                    "runId": "run-001",
+                    "sessionKey": "session-001",
+                },
+                {
+                    "eventId": "native-tool-end",
+                    "event": "after_tool_call",
+                    "timestamp": "2026-05-01T00:00:05Z",
+                    "traceId": "trace-001",
+                    "spanId": "native-tool",
+                    "parentSpanId": "native-turn",
+                    "toolCallId": "tool-1",
+                    "toolName": "browser.open",
+                    "status": "ok",
+                    "runId": "run-001",
+                    "sessionKey": "session-001",
+                },
+            ],
+        )
+        write_jsonl(run_dir / "openclaw-plugin-hooks.jsonl", [{"eventId": "hook-1", "hook": "before_tool_call", "runId": "run-001"}])
+        write_json(run_dir / "session_transcript.json", {"runId": "run-001", "sessionKey": "session-001", "messages": [{"role": "assistant", "preview": "done"}]})
+
+        trace = build_canonical_trace(run_dir)
+        quality = evaluate_trace_quality(run_dir)
+
+        native = [span for span in trace["spans"] if span["source"] == "openclaw_stream"]
+        by_name = {span["name"]: span for span in native}
+        self.assertEqual(trace["sources"]["openclaw_stream"]["status"], "ok")
+        self.assertEqual(trace["sources"]["openclaw_stream"]["streams"]["lifecycle"]["status"], "ok")
+        self.assertEqual(by_name["openclaw.agent.turn"]["parentSpanId"], by_name["openclaw.request"]["spanId"])
+        self.assertEqual(by_name["llm.demo-model"]["parentSpanId"], by_name["openclaw.agent.turn"]["spanId"])
+        self.assertEqual(by_name["tool.browser.open"]["parentSpanId"], by_name["openclaw.agent.turn"]["spanId"])
+        self.assertEqual(quality["traceDepth"], "deep")
+        self.assertTrue(quality["coverage"]["lifecycle"])
+        self.assertTrue(quality["coverage"]["assistant"])
+        self.assertTrue(quality["coverage"]["llm"])
 
     def test_trace_quality_write_persists_schema_versioned_report(self) -> None:
         from scripts.validate.evaluate_trace_quality import evaluate_trace_quality
@@ -191,7 +315,7 @@ class AgentTraceBackboneTests(unittest.TestCase):
         self.assertEqual(report["schemaVersion"], "transpect.trace-quality.v1")
         self.assertEqual(persisted["schemaVersion"], "transpect.trace-quality.v1")
         self.assertIn("evaluatedAt", persisted)
-        self.assertEqual(persisted["traceDepth"], "deep")
+        self.assertEqual(persisted["traceDepth"], "moderate")
 
     def test_openinference_export_maps_canonical_span_kinds(self) -> None:
         from app.trace_model.build_canonical_trace import build_canonical_trace
@@ -284,6 +408,23 @@ class AgentTraceBackboneTests(unittest.TestCase):
         invalid = validate_openinference_export(bad_path)
         self.assertFalse(invalid["ok"])
         self.assertTrue(any("missing parent" in error for error in invalid["errors"]))
+
+    def test_discover_openclaw_native_sources_reports_run_file_coverage(self) -> None:
+        from scripts.validate.discover_openclaw_native_sources import discover_openclaw_native_sources
+
+        run_dir = self.make_run(with_deep_trace=False)
+        write_jsonl(run_dir / "openclaw-lifecycle.jsonl", [{"event": "message_received"}])
+        write_jsonl(run_dir / "openclaw-tools.jsonl", [{"event": "before_tool_call"}])
+
+        report = discover_openclaw_native_sources(run_dir=run_dir)
+
+        self.assertIn("openclaw", report)
+        self.assertIn("behaviorMediator", report)
+        self.assertEqual(report["runSources"]["lifecycle"]["status"], "ok")
+        self.assertEqual(report["runSources"]["tool"]["status"], "ok")
+        self.assertEqual(report["runSources"]["assistant"]["status"], "missing")
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("openclaw-assistant.jsonl" in item for item in report["recommendations"]))
 
 
 if __name__ == "__main__":

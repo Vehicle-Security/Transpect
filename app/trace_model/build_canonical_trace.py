@@ -67,6 +67,25 @@ def _security_edges(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return edges
 
 
+def _repair_security_parentage(spans: list[dict[str, Any]], root_span_id: str) -> None:
+    latest_runtime: str | None = None
+    latest_defense: str | None = None
+    runtime_kinds = {"AGENT_TURN", "LLM_CALL", "TOOL_CALL", "BROWSER_ACTION"}
+    for span in spans:
+        span_id = str(span.get("spanId") or "")
+        kind = span.get("kind")
+        if kind in runtime_kinds and span_id:
+            latest_runtime = span_id
+            continue
+        if kind == "AGENT_DEFENSE":
+            if span.get("parentSpanId") in {None, root_span_id} and latest_runtime:
+                span["parentSpanId"] = latest_runtime
+            latest_defense = span_id or latest_defense
+            continue
+        if kind == "FINAL_JUDGMENT" and span.get("parentSpanId") in {None, root_span_id}:
+            span["parentSpanId"] = latest_defense or latest_runtime or root_span_id
+
+
 def build_canonical_trace(run_dir: Path | str) -> dict[str, Any]:
     resolved = Path(run_dir).resolve()
     manifest = _manifest(resolved)
@@ -109,6 +128,8 @@ def build_canonical_trace(run_dir: Path | str) -> dict[str, Any]:
     ]:
         spans.extend(next_spans)
         events.extend(next_events)
+
+    _repair_security_parentage(spans, root_span_id)
 
     sources["openclaw_stream"] = native_source
     sources["behavior_mediator"] = _source_status_from_spans(behavior_spans, "behavior_mediator", behavior_source)

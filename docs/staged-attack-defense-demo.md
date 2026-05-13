@@ -109,7 +109,34 @@ live/runs/<runId>/security-context/context_report.json
 python scripts/demo/run_showcase.py
 ```
 
-脚本会检查并启动 staged attack site 和 viewer，运行 staged attack agent trace，启用 Frida auto 模式，合并 behavior + Frida trace，运行 defense reasoner，导出并运行 CodeTracer 诊断，生成 `final_judgment.json`，标记 showcase run，并输出可直接打开的 viewer URL。
+脚本会检查并启动 staged attack site 和 viewer，运行 staged attack agent trace，启用 Frida auto 模式，合并 behavior + Frida trace，运行 defense reasoner，导出并运行 CodeTracer 诊断，生成 `final_judgment.json`，并补齐 Agent Trace Backbone 产物：
+
+```text
+canonical_trace.json
+trace_quality.json
+exports/openinference_spans.json
+```
+
+现场产品展示推荐使用已经冻结的 Next.js Console，而不是每次重新跑 Agent：
+
+```bash
+python scripts/demo/build_showcase_reports.py
+python scripts/demo/validate_showcase.py --require-report-model
+cd apps/console
+npm run dev -- --hostname 127.0.0.1 --port 5000
+```
+
+打开：
+
+```text
+http://127.0.0.1:5000
+```
+
+静态 viewer 仍保留为 fallback/debug 入口：
+
+```text
+http://127.0.0.1:8711/viewer/index.html?view=showcase
+```
 
 现场兜底回放：
 

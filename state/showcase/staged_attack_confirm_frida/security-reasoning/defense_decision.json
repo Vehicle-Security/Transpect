@@ -1,17 +1,16 @@
 {
   "schemaVersion": "1.0",
-  "decision": "warn",
-  "riskLevel": "medium",
-  "riskScore": 5,
+  "decision": "allow",
+  "riskLevel": "low",
+  "riskScore": 1,
   "confidence": 0.7,
   "hardBlockTriggered": false,
   "reasons": [
-    "Plan step open_external_link inspected.",
-    "Plan opens an external link."
+    "Plan step view_page inspected."
   ],
   "evidenceEvents": [
-    "risk-2"
+    "risk-4"
   ],
-  "suggestedUserMessage": "检测到低可信来源或轻微范围扩展，已记录风险并继续执行。",
+  "suggestedUserMessage": "安全检查通过，动作与当前任务范围一致。",
   "lastStage": "planning"
 }

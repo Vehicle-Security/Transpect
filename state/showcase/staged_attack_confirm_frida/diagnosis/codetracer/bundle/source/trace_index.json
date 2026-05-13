@@ -1,26 +1,26 @@
 {
   "schemaVersion": "transpect.agent-defense.trace-index.v1",
-  "generatedAt": "2026-05-12T09:35:19Z",
-  "runId": "611f7efe-a569-451a-8b77-3f13dc545980",
+  "generatedAt": "2026-05-12T22:35:31Z",
+  "runId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
   "sources": {
     "behavior": {
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/behavior-events.jsonl",
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/behavior-events.jsonl",
       "status": "ok",
-      "eventCount": 6,
+      "eventCount": 14,
       "warnings": [],
       "error": null
     },
     "frida": {
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/frida-events.jsonl",
+      "path": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/frida-events.jsonl",
       "status": "ok",
-      "eventCount": 1378,
+      "eventCount": 18,
       "warnings": [],
       "error": null
     }
   },
   "merged": {
-    "path": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/merged-trace.jsonl",
+    "path": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/merged-trace.jsonl",
     "status": "ok",
-    "eventCount": 1384
+    "eventCount": 32
   }
 }

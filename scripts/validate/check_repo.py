@@ -22,6 +22,7 @@ STABLE_SCREENSHOTS = [
     "runtime-timeline-detail.png",
     "runtime-timeline-evidence.png",
     "console-overview-dashboard.png",
+    "console-showcase-gallery.png",
     "console-staged-attack-report.png",
     "console-artifact-viewer.png",
 ]
@@ -79,6 +80,7 @@ REQUIRED_GITIGNORE_PATTERNS = [
     "!docs/images/runtime-timeline-detail.png",
     "!docs/images/runtime-timeline-evidence.png",
     "!docs/images/console-overview-dashboard.png",
+    "!docs/images/console-showcase-gallery.png",
     "!docs/images/console-staged-attack-report.png",
     "!docs/images/console-artifact-viewer.png",
 ]

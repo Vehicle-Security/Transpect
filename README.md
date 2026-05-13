@@ -100,6 +100,7 @@ Configure OpenClaw for canonical trace capture and auto-diagnosis:
 ```bash
 conda activate transpect-py311
 python scripts/runtime/setup_runtime.py --mode core
+python scripts/validate/discover_openclaw_native_sources.py
 python scripts/validate/doctor.py
 ```
 
@@ -136,16 +137,31 @@ The showcase wrapper starts the demo site and viewer when needed, runs the stage
 
 For a live fallback without launching a new agent, use `python scripts/demo/run_showcase.py --reuse-latest` or `python scripts/demo/run_showcase.py --no-openclaw-run --run-dir live/runs/<runId>`.
 
+Build the Agent Trace Backbone artifacts for any run:
+
+```bash
+python scripts/validate/discover_openclaw_native_sources.py --run-dir live/runs/<runId>
+python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
+python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
+python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
+python scripts/validate/validate_openinference_export.py --path live/runs/<runId>/exports/openinference_spans.json
+```
+
+`canonical_trace.json` is a derived standard trace view. It does not replace raw `behavior-events.jsonl`, native OpenClaw source files, Frida events, CodeTracer output, or `final_judgment.json`.
+
 ## Product Showcase
 
 For product demos, generate the real run once, freeze it, build report models, and replay it from the Next.js Console without rerunning the agent:
 
 ```bash
+python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
+python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
+python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
 python scripts/demo/freeze_showcase_run.py \
   --run-dir live/runs/<runId> \
-  --id staged_attack_block \
-  --title "Cross-step Waterhole Attack" \
-  --description "低可信评论诱导外部跳转并触发敏感上传，最终被阻断"
+  --id staged_attack_confirm_frida \
+  --title "Suspicious External Navigation" \
+  --description "系统发现外部跳转和低层运行时证据，并将 native OpenClaw trace、Frida、CodeTracer 与最终判断统一为 deep trace。"
 python scripts/demo/build_showcase_reports.py
 python scripts/demo/validate_showcase.py
 python scripts/demo/validate_showcase.py --require-report-model
@@ -162,6 +178,14 @@ http://127.0.0.1:5000
 
 The Console reads `state/showcase/index.json` plus each frozen run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages. The old static viewer remains available as a fallback/debug surface:
 
+Current frozen showcase data includes 8 replayable reports. The recommended product path starts with the real Frida + deep Trace Backbone case `staged_attack_confirm_frida`, followed by real Frida block/allow examples and curated fallback fixtures. The Console overview exposes Deep Trace readiness and OpenInference export availability, while each report card shows runtime, Frida, artifact, trace-depth, canonical span, and export status.
+
+Reference screenshots:
+
+![Transpect Console overview](docs/images/console-overview-dashboard.png)
+
+![Transpect showcase gallery](docs/images/console-showcase-gallery.png)
+
 ```bash
 python scripts/runtime/serve_viewer.py --host 127.0.0.1 --port 8711
 ```
@@ -177,9 +201,17 @@ See `docs/product-showcase-guide.md` for the full workflow.
 Each canonical run directory may contain:
 
 - `behavior-events.jsonl`
+- `openclaw-lifecycle.jsonl`
+- `openclaw-assistant.jsonl`
+- `openclaw-tools.jsonl`
+- `openclaw-plugin-hooks.jsonl`
+- `session_transcript.json`
 - `frida-events.jsonl`
 - `trace_index.json`
 - `merged-trace.jsonl`
+- `canonical_trace.json`
+- `trace_quality.json`
+- `exports/openinference_spans.json`
 - `manifest.json`
 - `task_input.json`
 - `runtime_status.json`
@@ -235,6 +267,7 @@ Diagnosis execution also requires the `codetracer` Python module plus a resolvab
 - [Directory Layout](docs/directory-layout.md)
 - [Runtime Storage Plan](docs/runtime-storage-plan.md)
 - [Observability Notes](docs/observability.md)
+- [Agent Trace Backbone v1](docs/agent-trace-backbone-v1.md)
 - [Frida Notes](docs/frida.md)
 - [Task Repo Adapters](docs/task-repo-adapters.md)
 - [Staged Attack Defense Demo](docs/staged-attack-defense-demo.md)

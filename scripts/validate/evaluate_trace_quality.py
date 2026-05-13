@@ -48,6 +48,9 @@ def _coverage(trace: dict[str, Any], counts: dict[str, int]) -> dict[str, bool]:
     return {
         "lifecycle": isinstance(streams.get("lifecycle"), dict) and streams["lifecycle"].get("status") == "ok",
         "assistant": isinstance(streams.get("assistant"), dict) and streams["assistant"].get("status") == "ok",
+        "openclawTool": isinstance(streams.get("tool"), dict) and streams["tool"].get("status") == "ok",
+        "pluginHooks": isinstance(streams.get("plugin_hooks"), dict) and streams["plugin_hooks"].get("status") == "ok",
+        "sessionTranscript": isinstance(streams.get("session_transcript"), dict) and streams["session_transcript"].get("status") == "ok",
         "llm": counts.get("LLM_CALL", 0) > 0,
         "tool": counts.get("TOOL_CALL", 0) > 0,
         "browser": counts.get("BROWSER_ACTION", 0) > 0,
@@ -77,7 +80,10 @@ def _depth(coverage: dict[str, bool], counts: dict[str, int]) -> str:
     substantive_runtime = coverage["tool"] or coverage["browser"] or coverage["agentDefense"] or coverage["frida"]
     if not substantive_runtime:
         return "shallow"
-    if (coverage["tool"] or coverage["browser"]) and coverage["agentDefense"] and coverage["finalJudgment"] and coverage["codetracer"]:
+    native_core = coverage["lifecycle"] and coverage["assistant"] and coverage["openclawTool"]
+    diagnosis_complete = coverage["agentDefense"] and coverage["finalJudgment"] and coverage["codetracer"]
+    runtime_complete = coverage["llm"] and (coverage["tool"] or coverage["browser"])
+    if native_core and runtime_complete and diagnosis_complete and coverage["frida"]:
         return "deep"
     return "moderate"
 
@@ -102,6 +108,12 @@ def evaluate_trace_quality(run_dir: Path | str, *, write: bool = False) -> dict[
         recommendations.append("Enable OpenClaw native lifecycle stream export for deeper turn reconstruction.")
     if not coverage["assistant"]:
         gaps.append("OpenClaw assistant stream unavailable.")
+    if not coverage["openclawTool"]:
+        gaps.append("OpenClaw native tool stream unavailable.")
+    if not coverage["pluginHooks"]:
+        gaps.append("OpenClaw plugin hook stream unavailable.")
+    if not coverage["sessionTranscript"]:
+        gaps.append("OpenClaw session transcript unavailable.")
     if not coverage["llm"]:
         gaps.append("LLM call spans not observed.")
     if not coverage["frida"]:

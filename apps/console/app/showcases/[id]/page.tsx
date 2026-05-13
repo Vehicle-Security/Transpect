@@ -10,16 +10,12 @@ import { FindingsList } from "@/components/findings-list";
 import { RecommendationList } from "@/components/recommendation-list";
 import { ArtifactTable } from "@/components/artifact-table";
 import { ReportActions } from "@/components/report-actions";
+import { TraceBackboneCard } from "@/components/trace-backbone-card";
 import { readReportModel } from "@/lib/showcase";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
-
-function shortRunId(value: string) {
-  if (value.length <= 18) return value;
-  return `${value.slice(0, 8)}...${value.slice(-6)}`;
-}
 
 export default async function ShowcaseReportPage({ params }: Props) {
   const { id } = await params;
@@ -56,12 +52,13 @@ export default async function ShowcaseReportPage({ params }: Props) {
 
       <section className="mt-6 grid gap-4 md:grid-cols-4">
         <MetricCard label="Runtime Events" value={report.metrics.runtimeEvents} />
+        <MetricCard label="Canonical Spans" value={report.traceBackbone?.spanCount ?? report.metrics.canonicalSpans ?? 0} caption={report.traceBackbone?.traceDepth ? `Trace quality: ${report.traceBackbone.traceDepth}` : "Canonical trace fallback"} />
         <MetricCard label="Frida Events" value={report.metrics.fridaEvents} />
-        <MetricCard label="Artifacts" value={report.metrics.artifacts} />
-        <MetricCard label="Source Run" value={shortRunId(report.sourceRunId)} caption="Full id is shown in the report header." />
+        <MetricCard label="OpenInference" value={report.traceBackbone?.exportAvailable || report.metrics.exportAvailable ? "Ready" : "N/A"} caption="Standard span export artifact" />
       </section>
 
       <div className="mt-6 space-y-6">
+        <TraceBackboneCard report={report} />
         <PipelineStrip stages={report.pipeline} />
         <RiskChainTimeline nodes={report.riskChain} />
         <EvidenceTabs report={report} />

@@ -213,6 +213,68 @@ class ShowcaseReportModelTests(unittest.TestCase):
         self.assertFalse(report["traceBackbone"]["exportAvailable"])
         self.assertIn("traceQuality", report["metrics"])
 
+    def test_build_report_model_surfaces_deep_trace_backbone_and_export(self) -> None:
+        from build_showcase_reports import build_showcase_reports
+
+        root = Path(tempfile.mkdtemp(prefix="showcase-report-deep-canonical-"))
+        final_judgment = {
+            "runId": "run-deep",
+            "finalDecision": "block",
+            "riskLevel": "critical",
+            "reasons": ["blocked"],
+            "evidence": {"frida": {"status": "ok", "eventCount": 1}, "codeTracer": {"status": "ok"}},
+        }
+        run_dir = self.make_showcase(root, "staged_attack_block_frida", final_judgment=final_judgment, manifest={"runId": "run-deep"})
+        write_json(
+            run_dir / "canonical_trace.json",
+            {
+                "schemaVersion": "transpect.canonical_trace.v1",
+                "traceId": "trace-deep",
+                "runId": "run-deep",
+                "rootSpanId": "span-root",
+                "spans": [
+                    {"spanId": "span-root", "kind": "AGENT_RUN", "source": "manifest", "displayTier": "primary"},
+                    {"spanId": "span-turn", "parentSpanId": "span-root", "kind": "AGENT_TURN", "source": "openclaw_stream", "displayTier": "primary"},
+                    {"spanId": "span-llm", "parentSpanId": "span-turn", "kind": "LLM_CALL", "source": "openclaw_stream", "displayTier": "primary"},
+                    {"spanId": "span-tool", "parentSpanId": "span-turn", "kind": "TOOL_CALL", "source": "openclaw_stream", "displayTier": "primary"},
+                    {"spanId": "span-defense", "parentSpanId": "span-tool", "kind": "AGENT_DEFENSE", "source": "behavior_mediator", "displayTier": "primary"},
+                    {"spanId": "span-frida", "parentSpanId": "span-root", "kind": "FRIDA_EVIDENCE", "source": "frida", "displayTier": "evidence"},
+                    {"spanId": "span-code", "parentSpanId": "span-root", "kind": "CODETRACER_DIAGNOSIS", "source": "codetracer", "displayTier": "evidence"},
+                    {"spanId": "span-judge", "parentSpanId": "span-root", "kind": "FINAL_JUDGMENT", "source": "final_judgment", "displayTier": "primary"},
+                ],
+                "events": [{"eventId": "evt-tool"}],
+                "sources": {
+                    "openclaw_stream": {
+                        "status": "ok",
+                        "eventCount": 5,
+                        "streams": {
+                            "lifecycle": {"status": "ok", "eventCount": 2},
+                            "assistant": {"status": "ok", "eventCount": 2},
+                            "tool": {"status": "ok", "eventCount": 2},
+                            "plugin_hooks": {"status": "ok", "eventCount": 1},
+                            "session_transcript": {"status": "ok", "eventCount": 1},
+                        },
+                    },
+                    "behavior_mediator": {"status": "ok", "eventCount": 1},
+                    "frida": {"status": "ok", "eventCount": 1},
+                    "codetracer": {"status": "ok", "eventCount": 1},
+                    "final_judgment": {"status": "ok", "eventCount": 1},
+                },
+            },
+        )
+        write_json(run_dir / "trace_quality.json", {"schemaVersion": "transpect.trace-quality.v1", "traceDepth": "deep", "gaps": []})
+        write_json(run_dir / "exports" / "openinference_spans.json", {"spans": [{"spanId": "span-root"}]})
+        self.write_index(root, [{"id": "staged_attack_block_frida", "runDir": str(run_dir), "title": "Block", "description": "Block"}])
+
+        build_showcase_reports(showcase_root=root)
+
+        report = json.loads((run_dir / "report_model.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["traceBackbone"]["status"], "available")
+        self.assertEqual(report["traceBackbone"]["traceDepth"], "deep")
+        self.assertEqual(report["traceBackbone"]["spanCount"], 8)
+        self.assertTrue(report["traceBackbone"]["exportAvailable"])
+        self.assertEqual(report["traceBackbone"]["missingSources"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

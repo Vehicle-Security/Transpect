@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Files, RadioTower, ShieldAlert, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Files, GitBranch, RadioTower, Share2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { MetricCard } from "@/components/metric-card";
 import { Badge } from "@/components/verdict-badge";
@@ -14,7 +14,8 @@ export default async function OverviewPage() {
   const allowed = countBy(reports, (report) => report.verdict === "allow");
   const fridaAvailable = countBy(reports, (report) => ["ok", "available"].includes(report.pipeline.find((stage) => stage.key === "frida")?.status || ""));
   const codetracerAvailable = countBy(reports, (report) => ["ok", "available"].includes(report.pipeline.find((stage) => stage.key === "codetracer")?.status || ""));
-  const critical = countBy(reports, (report) => report.riskLevel === "critical");
+  const deepTrace = countBy(reports, (report) => (report.traceBackbone?.traceDepth || report.metrics.traceQuality) === "deep");
+  const openInference = countBy(reports, (report) => Boolean(report.traceBackbone?.exportAvailable || report.metrics.exportAvailable));
 
   return (
     <AppShell>
@@ -50,8 +51,8 @@ export default async function OverviewPage() {
         <MetricCard label="Allowed" value={allowed} caption="Normal workflow examples" icon={CheckCircle2} />
         <MetricCard label="Frida Evidence Available" value={`${fridaAvailable}/${reports.length}`} caption="Frozen reports with OS-level evidence" icon={RadioTower} />
         <MetricCard label="CodeTracer Available" value={`${codetracerAvailable}/${reports.length}`} caption="Reports with diagnosis bundles" icon={ShieldCheck} />
-        <MetricCard label="Critical Cases" value={critical} icon={ShieldAlert} />
-        <MetricCard label="Evidence Coverage" value={reports.length ? "100%" : "0%"} caption="Report models generated for all showcases" icon={Files} />
+        <MetricCard label="Deep Trace Ready" value={`${deepTrace}/${reports.length}`} caption="Canonical trace quality reached deep" icon={GitBranch} />
+        <MetricCard label="OpenInference Export" value={`${openInference}/${reports.length}`} caption="Reports with standard span exports" icon={Share2} />
       </section>
 
       <section className="mt-8">
@@ -71,7 +72,7 @@ export default async function OverviewPage() {
               </div>
               <h3 className="mt-4 text-lg font-semibold text-slate-950">{report.title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">{report.executiveSummary || report.description}</p>
-              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-4 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-slate-500">Runtime</p>
                   <p className="font-semibold text-slate-950">{report.metrics.runtimeEvents}</p>
@@ -84,6 +85,15 @@ export default async function OverviewPage() {
                   <p className="text-xs text-slate-500">Artifacts</p>
                   <p className="font-semibold text-slate-950">{report.metrics.artifacts}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-slate-500">Trace</p>
+                  <p className="font-semibold text-slate-950">{report.traceBackbone?.traceDepth || report.metrics.traceQuality || "fallback"}</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <span className="font-semibold text-slate-950">{report.traceBackbone?.spanCount ?? report.metrics.canonicalSpans ?? 0}</span> canonical spans
+                <span className="px-2 text-slate-300">·</span>
+                {report.traceBackbone?.exportAvailable || report.metrics.exportAvailable ? "OpenInference export ready" : "Export unavailable"}
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-slate-900">
                 <span>Open Security Report</span>

@@ -1,25 +1,25 @@
 {
   "schemaVersion": "openclaw.codetracer.bundle.v1",
-  "exportedAt": "2026-05-12T09:35:27Z",
-  "bundleId": "611f7efe-a569-451a-8b77-3f13dc545980",
-  "bundleDirName": "611f7efe-a569-451a-8b77-3f13dc545980",
-  "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/diagnosis/codetracer/bundle",
-  "sourceTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/merged-trace.jsonl",
+  "exportedAt": "2026-05-12T22:35:39Z",
+  "bundleId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "bundleDirName": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/diagnosis/codetracer/bundle",
+  "sourceTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/merged-trace.jsonl",
   "inputTraceSources": {
     "behavior": {
       "path": "source/behavior-events.jsonl",
       "status": "ok",
-      "eventCount": 6
+      "eventCount": 14
     },
     "frida": {
       "path": "source/frida-events.jsonl",
       "status": "ok",
-      "eventCount": 1378
+      "eventCount": 18
     },
     "merged": {
       "path": "source/merged-trace.jsonl",
       "status": "ok",
-      "eventCount": 1384
+      "eventCount": 32
     },
     "traceIndex": {
       "path": "source/trace_index.json",
@@ -28,13 +28,13 @@
     }
   },
   "sourceKind": "run",
-  "sourceRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980",
-  "sourceRunManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/611f7efe-a569-451a-8b77-3f13dc545980/manifest.json",
-  "primaryRunId": "611f7efe-a569-451a-8b77-3f13dc545980",
-  "primaryTraceId": "trace_9e65eab822bc4fdba3962555529e3683",
-  "rowCount": 1384,
-  "stepCount": 1,
-  "syntheticStepCount": 1,
+  "sourceRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "sourceRunManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/manifest.json",
+  "primaryRunId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "primaryTraceId": "trace_c6a4debc1bef4119b0e3c26ff776d927",
+  "rowCount": 32,
+  "stepCount": 2,
+  "syntheticStepCount": 2,
   "policyMatchedStepCount": 0,
   "files": {
     "steps": "steps.json",
@@ -52,17 +52,17 @@
     "behavior": {
       "path": "source/behavior-events.jsonl",
       "status": "ok",
-      "eventCount": 6
+      "eventCount": 14
     },
     "frida": {
       "path": "source/frida-events.jsonl",
       "status": "ok",
-      "eventCount": 1378
+      "eventCount": 18
     },
     "merged": {
       "path": "source/merged-trace.jsonl",
       "status": "ok",
-      "eventCount": 1384
+      "eventCount": 32
     },
     "traceIndex": {
       "path": "source/trace_index.json",
@@ -75,6 +75,11 @@
       "stage": "setup_context",
       "start_step_id": 1,
       "end_step_id": 1
+    },
+    {
+      "stage": "verification_completion",
+      "start_step_id": 2,
+      "end_step_id": 2
     }
   ]
 }

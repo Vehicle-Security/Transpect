@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "transpect.trace-quality.v1",
+  "evaluatedAt": "2026-05-13T02:53:36Z",
+  "ok": true,
+  "traceDepth": "deep",
+  "substantiveAgentBehavior": true,
+  "coverage": {
+    "lifecycle": true,
+    "assistant": true,
+    "openclawTool": true,
+    "pluginHooks": true,
+    "sessionTranscript": true,
+    "llm": true,
+    "tool": true,
+    "browser": false,
+    "agentDefense": true,
+    "frida": true,
+    "codetracer": true,
+    "finalJudgment": true
+  },
+  "counts": {
+    "AGENT_RUN": 1,
+    "AGENT_TURN": 16,
+    "LLM_CALL": 3,
+    "TOOL_CALL": 4,
+    "AGENT_DEFENSE": 4,
+    "FRIDA_EVIDENCE": 1,
+    "CODETRACER_DIAGNOSIS": 1,
+    "FINAL_JUDGMENT": 1
+  },
+  "gaps": [],
+  "score": 0.992,
+  "recommendations": []
+}

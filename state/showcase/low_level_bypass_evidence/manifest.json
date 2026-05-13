@@ -6,5 +6,17 @@
   "generatedBy": "designed_showcase_fixture",
   "eventCount": 6,
   "artifactCount": 2,
-  "createdAt": "2026-05-09T04:14:25Z"
+  "createdAt": "2026-05-09T04:14:25Z",
+  "paths": {
+    "canonicalTrace": "canonical_trace.json"
+  },
+  "traceBackbone": {
+    "canonicalTrace": {
+      "schemaVersion": "transpect.canonical_trace.v1",
+      "path": "canonical_trace.json",
+      "spanCount": 12,
+      "eventCount": 11,
+      "generatedAt": "2026-05-12T14:37:53Z"
+    }
+  }
 }

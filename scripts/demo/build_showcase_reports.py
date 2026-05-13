@@ -722,7 +722,15 @@ def trace_backbone_summary(run_dir: Path, canonical_trace: dict[str, Any], quali
             tier = "evidence"
         tier_counts[tier] += 1
     coverage = quality.get("coverage") if isinstance(quality.get("coverage"), dict) else {}
-    missing_sources = [key for key, value in coverage.items() if not value]
+    missing_sources: list[str] = []
+    for key, value in coverage.items():
+        if value:
+            continue
+        if key == "browser" and coverage.get("tool"):
+            continue
+        if key == "tool" and coverage.get("browser"):
+            continue
+        missing_sources.append(key)
     return {
         "status": "available",
         "traceDepth": quality.get("traceDepth") or "unknown",

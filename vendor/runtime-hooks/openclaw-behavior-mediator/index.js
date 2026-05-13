@@ -14,6 +14,12 @@ const DEFAULT_REDACT_PATTERNS = [
   "sk-[A-Za-z0-9_-]+",
   "(?:api[_-]?key|token|secret|password)\\s*[:=]\\s*['\\\"]?[^'\\\"\\s,}]+",
 ];
+const NATIVE_SOURCE_FILES = {
+  lifecycle: "openclaw-lifecycle.jsonl",
+  assistant: "openclaw-assistant.jsonl",
+  tool: "openclaw-tools.jsonl",
+  plugin_hooks: "openclaw-plugin-hooks.jsonl",
+};
 
 function safeStringify(value) {
   try {
@@ -405,6 +411,11 @@ function buildRunManifest(state, store) {
     hasTaskInput: true,
     paths: {
       events: "behavior-events.jsonl",
+      openclawLifecycle: fs.existsSync(path.resolve(store.runDir, "openclaw-lifecycle.jsonl")) ? "openclaw-lifecycle.jsonl" : null,
+      openclawAssistant: fs.existsSync(path.resolve(store.runDir, "openclaw-assistant.jsonl")) ? "openclaw-assistant.jsonl" : null,
+      openclawTools: fs.existsSync(path.resolve(store.runDir, "openclaw-tools.jsonl")) ? "openclaw-tools.jsonl" : null,
+      openclawPluginHooks: fs.existsSync(path.resolve(store.runDir, "openclaw-plugin-hooks.jsonl")) ? "openclaw-plugin-hooks.jsonl" : null,
+      sessionTranscript: fs.existsSync(path.resolve(store.runDir, "session_transcript.json")) ? "session_transcript.json" : null,
       runtimeStatus: "runtime_status.json",
       taskInput: "task_input.json",
       artifacts: "artifacts",
@@ -534,10 +545,39 @@ function moveRunDirectory(store, nextDirName) {
     fs.renameSync(store.runDir, nextRunDir);
   } else {
     fs.mkdirSync(nextRunDir, { recursive: true });
+    if (fs.existsSync(store.runDir) && store.runDir !== nextRunDir) {
+      mergeRunDirectoryContents(store.runDir, nextRunDir);
+    }
   }
   store.dirName = nextDirName;
   store.runDir = nextRunDir;
   store.writer.outputFile = path.resolve(nextRunDir, "behavior-events.jsonl");
+}
+
+function mergeRunDirectoryContents(sourceDir, targetDir) {
+  if (!fs.existsSync(sourceDir) || !fs.existsSync(targetDir)) {
+    return;
+  }
+  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = path.resolve(sourceDir, entry.name);
+    const targetPath = path.resolve(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      fs.mkdirSync(targetPath, { recursive: true });
+      mergeRunDirectoryContents(sourcePath, targetPath);
+      continue;
+    }
+    if (!fs.existsSync(targetPath)) {
+      fs.copyFileSync(sourcePath, targetPath);
+      continue;
+    }
+    if (entry.name.endsWith(".jsonl")) {
+      const sourceText = fs.readFileSync(sourcePath, "utf8");
+      if (sourceText.trim()) {
+        const targetText = fs.readFileSync(targetPath, "utf8");
+        fs.writeFileSync(targetPath, `${sourceText}${targetText}`, "utf8");
+      }
+    }
+  }
 }
 
 function ensureRunStore(state, details = {}) {
@@ -563,6 +603,7 @@ function ensureRunStore(state, details = {}) {
       policyObservations: new Map(),
       artifactCount: 0,
       diagnosisTriggered: false,
+      transcriptMessages: [],
     };
     state.runStores.set(store.storeId, store);
   }
@@ -680,6 +721,85 @@ function appendRunEvent(state, row) {
   state.lastWriteError = store.writer.lastWriteError;
   updateRunStoreFromPayload(state, store, payload);
   return { payload, store };
+}
+
+function appendJsonl(filePath, row) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.appendFileSync(filePath, `${JSON.stringify(row)}\n`, "utf8");
+}
+
+function nativeEventBase(span, hookName, event = {}, extra = {}) {
+  return cleanObject({
+    schemaVersion: "transpect.openclaw-native-source.v1",
+    eventId: event.eventId || createId("native"),
+    event: hookName,
+    timestamp: event.timestamp || event.ts || nowIso(),
+    traceId: span?.traceId || event.traceId || null,
+    spanId: span?.spanId || event.spanId || null,
+    parentSpanId: span?.parentSpanId ?? event.parentSpanId ?? null,
+    runId: span?.runId || event.runId || null,
+    sessionKey: span?.sessionKey || event.sessionKey || null,
+    status: event.status || null,
+    ...extra,
+  });
+}
+
+function writeNativeSourceEvent(state, sourceKey, span, hookName, event = {}, extra = {}) {
+  if (!span) {
+    return null;
+  }
+  const store = ensureRunStore(state, {
+    runId: span.runId,
+    traceId: span.traceId,
+    sessionKey: span.sessionKey,
+  });
+  const row = nativeEventBase(span, hookName, event, extra);
+  const sourceFile = NATIVE_SOURCE_FILES[sourceKey];
+  if (sourceFile) {
+    appendJsonl(path.resolve(store.runDir, sourceFile), row);
+  }
+  appendJsonl(
+    path.resolve(store.runDir, NATIVE_SOURCE_FILES.plugin_hooks),
+    {
+      ...row,
+      hook: hookName,
+      sourceFile: sourceFile || null,
+    },
+  );
+  return { row, store };
+}
+
+function writeSessionTranscript(state, span, message) {
+  if (!span || !message || !message.role || !message.preview) {
+    return;
+  }
+  const store = ensureRunStore(state, {
+    runId: span.runId,
+    traceId: span.traceId,
+    sessionKey: span.sessionKey,
+  });
+  store.transcriptMessages = Array.isArray(store.transcriptMessages) ? store.transcriptMessages : [];
+  store.transcriptMessages.push({
+    role: message.role,
+    preview: message.preview,
+    timestamp: message.timestamp || nowIso(),
+    source: message.source || null,
+  });
+  fs.writeFileSync(
+    path.resolve(store.runDir, "session_transcript.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "transpect.openclaw-session-transcript.v1",
+        runId: store.runId || null,
+        traceId: store.traceId || null,
+        sessionKey: store.sessionKey || null,
+        messages: store.transcriptMessages,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
 }
 
 function emitSecurityEvent(state, details = {}, parent = {}) {
@@ -1992,6 +2112,21 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "message_received", async (event, ctx) => {
     try {
       const request = openRequestContext(state, event, ctx);
+      writeNativeSourceEvent(state, "lifecycle", request, "message_received", event, {
+        preview: {
+          message: previewText(event.text || event.message || event.content || null, state),
+        },
+        target: cleanObject({
+          channel: event.channel || null,
+          from: event.from || event.senderId || null,
+        }),
+      });
+      writeSessionTranscript(state, request, {
+        role: "user",
+        preview: previewText(event.text || event.message || event.content || null, state),
+        timestamp: event.timestamp || event.ts || null,
+        source: "message_received",
+      });
       const store = ensureRunStore(state, {
         runId: request.runId,
         traceId: request.traceId,
@@ -2020,6 +2155,13 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "before_agent_start", (event, ctx) => {
     try {
       const turn = openTurnContext(state, event, ctx);
+      writeNativeSourceEvent(state, "lifecycle", turn, "before_agent_start", event, {
+        agentId: event.agentId || ctx?.agentId || null,
+        model: event.model || ctx?.model || null,
+        preview: {
+          prompt: previewText(event.prompt || event.task || event.systemPrompt || null, state),
+        },
+      });
       const store = ensureRunStore(state, {
         runId: turn.runId,
         traceId: turn.traceId,
@@ -2062,6 +2204,14 @@ function registerTypedHooks(api, state) {
         sessionKey,
       });
       const tool = openToolContext(state, { ...event, toolCallId }, ctx);
+      writeNativeSourceEvent(state, "tool", tool, "before_tool_call", event, {
+        toolCallId,
+        toolName,
+        target: tool.target,
+        preview: {
+          params: previewText(toolParams || null, state),
+        },
+      });
       const securityResult = callSecurityBridge(state, store, {
         operation: "inspect_action",
         action: inferActionFromTool(toolName, toolParams, event),
@@ -2107,7 +2257,21 @@ function registerTypedHooks(api, state) {
 
   registerHook(api, state, "after_tool_call", (event, ctx) => {
     try {
-      finishToolContext(state, event, ctx);
+      const tool = finishToolContext(state, event, ctx);
+      if (tool) {
+        writeNativeSourceEvent(state, "tool", tool, "after_tool_call", event, {
+          toolCallId: tool.toolCallId,
+          toolName: tool.toolName,
+          status: event.error ? "error" : "ok",
+          metrics: cleanObject({
+            durationMs: event.durationMs || null,
+          }),
+          preview: {
+            result: summarizeToolResult(event.result || null, state, tool),
+            error: previewText(event.error || null, state),
+          },
+        });
+      }
       const turn = resolveTurnContext(state, event?.sessionKey || ctx?.sessionKey, event?.runId || ctx?.runId);
       if (turn) {
         als.enterWith({
@@ -2126,6 +2290,14 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "llm_input", (event, ctx) => {
     try {
       const llm = openLlmContext(state, event, ctx);
+      writeNativeSourceEvent(state, "assistant", llm, "llm_input", event, {
+        llmCallId: llm.llmCallId,
+        provider: event.provider || null,
+        model: event.model || null,
+        preview: {
+          user: summarizeUserPrompt(event.messages, state),
+        },
+      });
       als.enterWith({
         traceId: llm.traceId,
         spanId: llm.spanId,
@@ -2142,6 +2314,28 @@ function registerTypedHooks(api, state) {
   registerHook(api, state, "llm_output", (event, ctx) => {
     try {
       const llm = finishLlmContext(state, event, ctx);
+      if (llm) {
+        const assistantPreview =
+          (Array.isArray(event.assistantTexts) && event.assistantTexts.map((item) => previewText(item, state)).filter(Boolean).join("\n")) ||
+          summarizeAssistant([event.lastAssistant].filter(Boolean), state);
+        writeNativeSourceEvent(state, "assistant", llm, "llm_output", event, {
+          llmCallId: llm.llmCallId,
+          provider: event.provider || llm.target?.provider || null,
+          model: event.model || llm.target?.model || null,
+          status: event.error ? "error" : "ok",
+          metrics: extractUsageMetrics(event.usage || event.lastAssistant?.usage || null),
+          preview: {
+            response: assistantPreview,
+            error: previewText(event.error || event.lastAssistant?.errorMessage || null, state),
+          },
+        });
+        writeSessionTranscript(state, llm, {
+          role: "assistant",
+          preview: assistantPreview,
+          timestamp: event.timestamp || event.ts || null,
+          source: "llm_output",
+        });
+      }
       const sessionKey = event?.sessionKey || ctx?.sessionKey || "unknown";
       const runId = event?.runId || ctx?.runId || null;
       const parent = llm || resolveTurnContext(state, sessionKey, runId);
@@ -2240,7 +2434,28 @@ function registerTypedHooks(api, state) {
     try {
       const sessionKey = event?.sessionKey || ctx?.sessionKey || "unknown";
       const runId = event?.runId || ctx?.runId || null;
-      closeTurnContext(state, event, ctx);
+      const turn = closeTurnContext(state, event, ctx);
+      if (turn) {
+        writeNativeSourceEvent(state, "lifecycle", turn, "agent_end", event, {
+          status: event?.success === false || event?.error ? "error" : "ok",
+          metrics: cleanObject({
+            durationMs: event?.durationMs || null,
+          }),
+          preview: {
+            assistant: summarizeAgentOutcome(event?.messages, state),
+            error: previewText(event?.error || null, state),
+          },
+        });
+        const assistantPreview = summarizeAgentOutcome(event?.messages, state);
+        if (assistantPreview) {
+          writeSessionTranscript(state, turn, {
+            role: "assistant",
+            preview: assistantPreview,
+            timestamp: event.timestamp || event.ts || null,
+            source: "agent_end",
+          });
+        }
+      }
       const request = closeRequestContext(state, sessionKey, {
         status: event?.success === false || event?.error ? "error" : "ok",
         durationMs: event?.durationMs,
@@ -2253,6 +2468,15 @@ function registerTypedHooks(api, state) {
           surface: "typed-hook",
         },
       });
+      if (request) {
+        writeNativeSourceEvent(state, "lifecycle", request, "request_completed", event, {
+          status: event?.success === false || event?.error ? "error" : "ok",
+          preview: {
+            assistant: summarizeAgentOutcome(event?.messages, state),
+            error: previewText(event?.error || null, state),
+          },
+        });
+      }
 
       const task = resolveTaskContext(state, sessionKey, runId);
       if (task) {

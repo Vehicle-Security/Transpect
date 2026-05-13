@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "openclaw.tool-sidecar.v1",
+  "generatedAt": "2026-05-12T17:33:11.019Z",
+  "kind": "input",
+  "status": "started",
+  "traceId": "trace_c6a4debc1bef4119b0e3c26ff776d927",
+  "spanId": "spn_30fac039545b4da7bf88a9e63ccd2383",
+  "parentSpanId": "spn_d25c1c3992f04b96a710fa667c234ed2",
+  "sessionKey": "agent:main:explicit:a204e88f-b069-4d85-b0f4-d349dd87a7b0",
+  "runId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "toolCallId": "ollama_call_0fe1f9c9-bea9-4ca2-bd32-91ca5ee42529",
+  "toolName": "web_fetch",
+  "payload": {
+    "url": "http://127.0.0.1:8765/xhs/topic/camping-confirm"
+  }
+}

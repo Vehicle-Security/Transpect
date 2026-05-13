@@ -3,28 +3,21 @@
   "kind": "observation",
   "stepId": 1,
   "stepKind": "synthetic",
-  "toolType": "synthetic",
+  "toolType": "web_fetch",
   "payload": {
-    "status": "error",
-    "preview": {
-      "error": "replaced by a newer turn"
-    }
+    "status": "blocked",
+    "reason": null,
+    "matchValue": null,
+    "policy": null
   },
   "runtimeArtifact": null,
   "sourceRows": [
     {
-      "originalLine": 2,
-      "copiedLine": 2,
-      "seq": 2,
-      "kind": "turn",
-      "status": "started"
-    },
-    {
-      "originalLine": 4,
-      "copiedLine": 4,
-      "seq": 4,
-      "kind": "turn",
-      "status": "error"
+      "originalLine": 10,
+      "copiedLine": 10,
+      "seq": 10,
+      "kind": "tool",
+      "status": "blocked"
     }
   ]
 }

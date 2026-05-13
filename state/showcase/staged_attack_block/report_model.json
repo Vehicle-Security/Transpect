@@ -13,39 +13,98 @@
   "metrics": {
     "runtimeEvents": 24,
     "fridaEvents": 0,
-    "artifacts": 16,
-    "canonicalSpans": 0,
-    "canonicalEvents": 0,
-    "traceQuality": "unknown",
-    "traceQualityScore": 0.0,
-    "coverage": {},
-    "exportAvailable": false,
-    "primarySpanCount": 0,
-    "evidenceSpanCount": 0,
+    "artifacts": 19,
+    "canonicalSpans": 27,
+    "canonicalEvents": 26,
+    "traceQuality": "moderate",
+    "traceQualityScore": 0.633,
+    "coverage": {
+      "lifecycle": false,
+      "assistant": false,
+      "openclawTool": false,
+      "pluginHooks": false,
+      "sessionTranscript": false,
+      "llm": false,
+      "tool": true,
+      "browser": false,
+      "agentDefense": true,
+      "frida": false,
+      "codetracer": true,
+      "finalJudgment": true
+    },
+    "exportAvailable": true,
+    "primarySpanCount": 26,
+    "evidenceSpanCount": 1,
     "rawSpanCount": 0
   },
   "traceBackbone": {
-    "status": "fallback",
-    "traceDepth": "unknown",
-    "spanCount": 0,
-    "primarySpanCount": 0,
-    "evidenceSpanCount": 0,
+    "status": "available",
+    "traceDepth": "moderate",
+    "spanCount": 27,
+    "primarySpanCount": 26,
+    "evidenceSpanCount": 1,
     "rawSpanCount": 0,
-    "exportAvailable": false,
+    "exportAvailable": true,
     "missingSources": [
-      "canonical_trace.json"
+      "lifecycle",
+      "assistant",
+      "openclawTool",
+      "pluginHooks",
+      "sessionTranscript",
+      "llm",
+      "frida"
     ],
     "warnings": [
-      "canonical_trace.json unavailable"
+      "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+      "OpenClaw assistant stream unavailable.",
+      "OpenClaw native tool stream unavailable.",
+      "OpenClaw plugin hook stream unavailable.",
+      "OpenClaw session transcript unavailable.",
+      "LLM call spans not observed.",
+      "Frida evidence unavailable or empty."
     ],
-    "path": null,
-    "eventCount": 0,
+    "path": "canonical_trace.json",
+    "eventCount": 26,
     "quality": {
-      "traceDepth": "unknown",
-      "score": 0.0,
-      "coverage": {},
+      "schemaVersion": "transpect.trace-quality.v1",
+      "evaluatedAt": "2026-05-13T11:00:10Z",
+      "ok": true,
+      "traceDepth": "moderate",
+      "substantiveAgentBehavior": true,
+      "coverage": {
+        "lifecycle": false,
+        "assistant": false,
+        "openclawTool": false,
+        "pluginHooks": false,
+        "sessionTranscript": false,
+        "llm": false,
+        "tool": true,
+        "browser": false,
+        "agentDefense": true,
+        "frida": false,
+        "codetracer": true,
+        "finalJudgment": true
+      },
+      "counts": {
+        "AGENT_RUN": 1,
+        "AGENT_TURN": 4,
+        "AGENT_DEFENSE": 8,
+        "TOOL_CALL": 12,
+        "CODETRACER_DIAGNOSIS": 1,
+        "FINAL_JUDGMENT": 1
+      },
       "gaps": [
-        "canonical_trace.json unavailable"
+        "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+        "OpenClaw assistant stream unavailable.",
+        "OpenClaw native tool stream unavailable.",
+        "OpenClaw plugin hook stream unavailable.",
+        "OpenClaw session transcript unavailable.",
+        "LLM call spans not observed.",
+        "Frida evidence unavailable or empty."
+      ],
+      "score": 0.633,
+      "recommendations": [
+        "Enable OpenClaw native lifecycle stream export for deeper turn reconstruction."
       ]
     }
   },
@@ -200,7 +259,7 @@
       "path": "manifest.json",
       "displayPath": "state/showcase/staged_attack_block/manifest.json",
       "kind": "json",
-      "sizeBytes": 3567
+      "sizeBytes": 3853
     },
     {
       "name": "task_input.json",
@@ -255,6 +314,24 @@
       "displayPath": "state/showcase/staged_attack_block/trace_index.json",
       "kind": "json",
       "sizeBytes": 1009
+    },
+    {
+      "name": "canonical_trace.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "canonical_trace.json",
+      "displayPath": "state/showcase/staged_attack_block/canonical_trace.json",
+      "kind": "json",
+      "sizeBytes": 44694
+    },
+    {
+      "name": "trace_quality.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "trace_quality.json",
+      "displayPath": "state/showcase/staged_attack_block/trace_quality.json",
+      "kind": "json",
+      "sizeBytes": 1162
     },
     {
       "name": "behavior-events.jsonl",
@@ -336,6 +413,15 @@
       "displayPath": "state/showcase/staged_attack_block/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
       "sizeBytes": 1591
+    },
+    {
+      "name": "openinference_spans.json",
+      "source": "Run",
+      "status": "available",
+      "path": "exports/openinference_spans.json",
+      "displayPath": "state/showcase/staged_attack_block/exports/openinference_spans.json",
+      "kind": "json",
+      "sizeBytes": 36227
     }
   ],
   "previews": {
