@@ -27,6 +27,7 @@ STABLE_SCREENSHOTS = [
     "console-artifact-viewer.png",
 ]
 REQUIRED_PATHS = [
+    REPO_ROOT / ".env.example",
     REPO_ROOT / "README.md",
     REPO_ROOT / "requirements.txt",
     REPO_ROOT / "requirements-frida.txt",
@@ -69,6 +70,9 @@ REMOVED_LEGACY_ENTRYPOINTS = [
     REPO_ROOT / "scripts" / "check_repo.py",
 ]
 REQUIRED_GITIGNORE_PATTERNS = [
+    ".env",
+    ".env.*",
+    "!.env.example",
     ".venv*/",
     ".conda*/",
     "live/**",

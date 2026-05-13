@@ -87,6 +87,30 @@ http://127.0.0.1:5000
 
 The Console reads committed frozen data under `state/showcase/` and each run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages.
 
+## LLM Configuration
+
+Frozen showcase replay does not need an LLM or a `.env` file. Create one only when you want to run live Agent tasks, enable the Agent Defense LLM gray-zone judge, or run CodeTracer diagnosis:
+
+```bash
+cp .env.example .env
+```
+
+Then fill in the OpenAI-compatible model settings:
+
+```bash
+BASE_URL=https://api.openai.com/v1
+API_KEY=...
+MODEL_ID=gpt-4o-mini
+```
+
+These values are consumed by:
+
+- `app/security/model_judge.py` for Agent Defense gray-zone decisions.
+- `scripts/common/task_repo_common.py`, which maps `BASE_URL/API_KEY/MODEL_ID` to `MODEL_BASE_URL/MODEL_API_KEY/MODEL_NAME` for task repos.
+- `scripts/diagnosis/run_codetracer_diagnosis.py`, which maps them to `CODETRACER_API_BASE/CODETRACER_API_KEY/CODETRACER_MODEL` unless explicit `CODETRACER_*` overrides are set.
+
+`.env` is ignored by git. Commit only `.env.example`.
+
 ## Deployment Levels
 
 ### Level 0: Frozen Showcase Replay
@@ -134,6 +158,7 @@ http://127.0.0.1:8711/viewer/index.html?view=showcase
 Use this to generate new real Agent traces. This level requires OpenClaw gateway access, behavior mediator hooks, and model/provider configuration.
 
 ```bash
+cp .env.example .env  # fill BASE_URL/API_KEY/MODEL_ID before LLM-backed runs
 python scripts/runtime/setup_runtime.py --mode core
 python scripts/validate/discover_openclaw_native_sources.py
 python scripts/validate/doctor.py

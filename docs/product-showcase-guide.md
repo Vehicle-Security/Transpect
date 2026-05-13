@@ -27,11 +27,24 @@ Open `http://127.0.0.1:5000`.
 
 Replay mode must work without CodeTracer or R-Judge. If those components are missing, Transpect reports `unavailable` for the affected diagnosis or evaluation layer and continues serving the Console.
 
+## Optional LLM Configuration
+
+Frozen showcase replay does not require an LLM key or a `.env` file.
+
+For live Agent runs, Agent Defense gray-zone LLM judging, or CodeTracer diagnosis, copy the example file and fill the OpenAI-compatible endpoint:
+
+```bash
+cp .env.example .env
+```
+
+Set `BASE_URL`, `API_KEY`, and `MODEL_ID` in `.env`. CodeTracer-specific variables such as `CODETRACER_ROOT`, `CODETRACER_SRC`, and `CODETRACER_MODEL` are optional overrides. If CodeTracer or R-Judge is not installed, Transpect records `unavailable` or `degraded` status and still allows replay, validation, and Console startup.
+
 ## Generate a Real Run
 
 From the repository root:
 
 ```bash
+cp .env.example .env  # fill BASE_URL/API_KEY/MODEL_ID for LLM-backed runs
 python scripts/validate/doctor.py
 python scripts/demo/run_showcase.py --verbose
 ```
