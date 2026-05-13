@@ -101,6 +101,11 @@ def configure_behavior_plugin(config: dict, *, enabled: bool) -> None:
     entries = plugins.setdefault("entries", {})
     entries["behavior-mediator"] = {
         "enabled": enabled,
+        "hooks": {
+            # OpenClaw protects conversation-bearing hooks for non-bundled plugins.
+            # Transpect needs these native streams to build a deep canonical trace.
+            "allowConversationAccess": True,
+        },
         "config": {
             "runsDirectory": str(BEHAVIOR_RUNS_DIR.resolve()),
             "artifactsEnabled": True,

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "transpect.diagnosis-report.v1",
+  "generatedAt": "2026-05-12T09:42:37Z",
+  "runId": "1c723e94-71e4-465c-87e0-6ac2e5ec2138",
+  "diagnosisLayer": "codetracer",
+  "role": "trajectory_diagnosis_not_benchmark_evaluation",
+  "ok": true,
+  "status": "success",
+  "profile": "detailed",
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/frida-events.jsonl",
+    "source/merged-trace.jsonl",
+    "source/trace_index.json"
+  ],
+  "fridaIncluded": true,
+  "paths": {
+    "runDir": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138",
+    "bundleDir": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "analysisTrajectory": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
+    "diagnosisRun": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/diagnosis/codetracer/analysis/diagnosis_run.json"
+  },
+  "analysis": {
+    "root_cause_chain": [
+      "The agent's first turn was replaced by a newer turn before completing any real action, resulting in only a synthetic diagnostic step with status 'replaced by a newer turn'. This indicates the agent execution was aborted or retried externally, preventing any task progress."
+    ],
+    "critical_decision_points": [],
+    "correct_strategy": "The agent should navigate to http://127.0.0.1:8765/xhs/topic/camping using a browser tool, scroll through posts and comments, and summarize the content. Since the execution was replaced before any tool use, the correct strategy was never attempted.",
+    "stage_labels": [
+      {
+        "stage_id": "setup_context",
+        "incorrect_step_ids": [],
+        "unuseful_step_ids": [
+          1
+        ],
+        "reasoning": "Step 1 is a synthetic turn diagnostic retained due to a turn replacement. It contains no agent logic, action, or observation beyond the error 'replaced by a newer turn'. Per TRACER memory, such infrastructure retry artifacts should be filtered out and not considered agent logic failures."
+      }
+    ],
+    "summary": "The trajectory consists of a single synthetic step indicating the agent's initial turn was replaced by a newer execution before any real tool use. The root cause is an execution-level retry or abort, not an agent logic error. The trajectory does not contain any actual agent actions to diagnose."
+  },
+  "diagnosisRun": {
+    "returncode": 0,
+    "analysisExists": true,
+    "analysisValid": true,
+    "invalidAnalysisReason": null,
+    "analysisRecovered": true,
+    "model": "deepseek-v4-pro",
+    "apiBase": "https://api.deepseek.com",
+    "startedAt": "2026-05-12T09:41:07Z",
+    "completedAt": "2026-05-12T09:42:37Z"
+  }
+}

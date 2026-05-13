@@ -1,0 +1,18 @@
+{
+  "root_cause_chain": [
+    "Trajectory contains only a synthetic diagnostic step (step 1), indicating a platform-level execution failure. No agent actions were executed."
+  ],
+  "critical_decision_points": [],
+  "correct_strategy": "Re-run with stable environment and higher timeouts.",
+  "stage_labels": [
+    {
+      "stage_id": "setup_context",
+      "incorrect_step_ids": [],
+      "unuseful_step_ids": [
+        1
+      ],
+      "reasoning": "Step 1 is a synthetic diagnostic, not a meaningful agent action."
+    }
+  ],
+  "summary": "Truncated trajectory; only synthetic step exists. No agent logic failure can be identified."
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "transpect.trace-quality.v1",
+  "evaluatedAt": "2026-05-12T14:37:52Z",
+  "ok": true,
+  "traceDepth": "moderate",
+  "substantiveAgentBehavior": true,
+  "coverage": {
+    "lifecycle": false,
+    "assistant": false,
+    "openclawTool": false,
+    "pluginHooks": false,
+    "sessionTranscript": false,
+    "llm": false,
+    "tool": true,
+    "browser": false,
+    "agentDefense": true,
+    "frida": false,
+    "codetracer": true,
+    "finalJudgment": true
+  },
+  "counts": {
+    "AGENT_RUN": 1,
+    "AGENT_TURN": 4,
+    "AGENT_DEFENSE": 8,
+    "TOOL_CALL": 12,
+    "CODETRACER_DIAGNOSIS": 1,
+    "FINAL_JUDGMENT": 1
+  },
+  "gaps": [
+    "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+    "OpenClaw assistant stream unavailable.",
+    "OpenClaw native tool stream unavailable.",
+    "OpenClaw plugin hook stream unavailable.",
+    "OpenClaw session transcript unavailable.",
+    "LLM call spans not observed.",
+    "Frida evidence unavailable or empty."
+  ],
+  "score": 0.633,
+  "recommendations": [
+    "Enable OpenClaw native lifecycle stream export for deeper turn reconstruction."
+  ]
+}

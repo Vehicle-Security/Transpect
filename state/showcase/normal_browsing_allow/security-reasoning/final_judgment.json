@@ -48,8 +48,8 @@
     ]
   },
   "evidence": {
-    "traceIndexPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/trace_index.json",
-    "mergedTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/merged-trace.jsonl",
+    "traceIndexPath": "<transpect_root>/live/runs/showcase-allow-designed/trace_index.json",
+    "mergedTracePath": "<transpect_root>/live/runs/showcase-allow-designed/merged-trace.jsonl",
     "onlineDecision": "allow",
     "securityInterventionCount": 0,
     "fridaIncluded": false,
@@ -57,7 +57,7 @@
     "fridaCriticalEvidenceCount": 0,
     "frida": {
       "status": "unavailable",
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/frida-events.jsonl",
+      "path": "<transpect_root>/live/runs/showcase-allow-designed/frida-events.jsonl",
       "eventCount": 0,
       "riskTags": [],
       "criticalEvidenceCount": 0,
@@ -73,10 +73,10 @@
     "codeTracer": {
       "status": "ok",
       "ok": true,
-      "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/bundle",
-      "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis",
-      "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
-      "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
+      "bundlePath": "<transpect_root>/live/runs/showcase-allow-designed/diagnosis/codetracer/bundle",
+      "analysisDir": "<transpect_root>/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis",
+      "analysisPath": "<transpect_root>/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
+      "diagnosisReportPath": "<transpect_root>/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
       "summary": "CodeTracer confirms the run contains only normal browsing and summarization steps."
     },
     "inputTraceSources": [
@@ -96,7 +96,7 @@
     }
   },
   "diagnosis": {
-    "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
+    "path": "<transpect_root>/live/runs/showcase-allow-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
     "summary": "CodeTracer confirms the run contains only normal browsing and summarization steps.",
     "fridaIncluded": false
   }

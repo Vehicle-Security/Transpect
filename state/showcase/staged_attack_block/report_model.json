@@ -13,7 +13,100 @@
   "metrics": {
     "runtimeEvents": 24,
     "fridaEvents": 0,
-    "artifacts": 16
+    "artifacts": 19,
+    "canonicalSpans": 27,
+    "canonicalEvents": 26,
+    "traceQuality": "moderate",
+    "traceQualityScore": 0.633,
+    "coverage": {
+      "lifecycle": false,
+      "assistant": false,
+      "openclawTool": false,
+      "pluginHooks": false,
+      "sessionTranscript": false,
+      "llm": false,
+      "tool": true,
+      "browser": false,
+      "agentDefense": true,
+      "frida": false,
+      "codetracer": true,
+      "finalJudgment": true
+    },
+    "exportAvailable": true,
+    "primarySpanCount": 26,
+    "evidenceSpanCount": 1,
+    "rawSpanCount": 0
+  },
+  "traceBackbone": {
+    "status": "available",
+    "traceDepth": "moderate",
+    "spanCount": 27,
+    "primarySpanCount": 26,
+    "evidenceSpanCount": 1,
+    "rawSpanCount": 0,
+    "exportAvailable": true,
+    "missingSources": [
+      "lifecycle",
+      "assistant",
+      "openclawTool",
+      "pluginHooks",
+      "sessionTranscript",
+      "llm",
+      "frida"
+    ],
+    "warnings": [
+      "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+      "OpenClaw assistant stream unavailable.",
+      "OpenClaw native tool stream unavailable.",
+      "OpenClaw plugin hook stream unavailable.",
+      "OpenClaw session transcript unavailable.",
+      "LLM call spans not observed.",
+      "Frida evidence unavailable or empty."
+    ],
+    "path": "canonical_trace.json",
+    "eventCount": 26,
+    "quality": {
+      "schemaVersion": "transpect.trace-quality.v1",
+      "evaluatedAt": "2026-05-13T11:50:21Z",
+      "ok": true,
+      "traceDepth": "moderate",
+      "substantiveAgentBehavior": true,
+      "coverage": {
+        "lifecycle": false,
+        "assistant": false,
+        "openclawTool": false,
+        "pluginHooks": false,
+        "sessionTranscript": false,
+        "llm": false,
+        "tool": true,
+        "browser": false,
+        "agentDefense": true,
+        "frida": false,
+        "codetracer": true,
+        "finalJudgment": true
+      },
+      "counts": {
+        "AGENT_RUN": 1,
+        "AGENT_TURN": 4,
+        "AGENT_DEFENSE": 8,
+        "TOOL_CALL": 12,
+        "CODETRACER_DIAGNOSIS": 1,
+        "FINAL_JUDGMENT": 1
+      },
+      "gaps": [
+        "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+        "OpenClaw assistant stream unavailable.",
+        "OpenClaw native tool stream unavailable.",
+        "OpenClaw plugin hook stream unavailable.",
+        "OpenClaw session transcript unavailable.",
+        "LLM call spans not observed.",
+        "Frida evidence unavailable or empty."
+      ],
+      "score": 0.633,
+      "recommendations": [
+        "Enable OpenClaw native lifecycle stream export for deeper turn reconstruction."
+      ]
+    }
   },
   "pipeline": [
     {
@@ -166,7 +259,7 @@
       "path": "manifest.json",
       "displayPath": "state/showcase/staged_attack_block/manifest.json",
       "kind": "json",
-      "sizeBytes": 3567
+      "sizeBytes": 3673
     },
     {
       "name": "task_input.json",
@@ -184,7 +277,7 @@
       "path": "security-reasoning/final_judgment.json",
       "displayPath": "state/showcase/staged_attack_block/security-reasoning/final_judgment.json",
       "kind": "json",
-      "sizeBytes": 5388
+      "sizeBytes": 5188
     },
     {
       "name": "security_state.json",
@@ -220,7 +313,25 @@
       "path": "trace_index.json",
       "displayPath": "state/showcase/staged_attack_block/trace_index.json",
       "kind": "json",
-      "sizeBytes": 1009
+      "sizeBytes": 949
+    },
+    {
+      "name": "canonical_trace.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "canonical_trace.json",
+      "displayPath": "state/showcase/staged_attack_block/canonical_trace.json",
+      "kind": "json",
+      "sizeBytes": 44514
+    },
+    {
+      "name": "trace_quality.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "trace_quality.json",
+      "displayPath": "state/showcase/staged_attack_block/trace_quality.json",
+      "kind": "json",
+      "sizeBytes": 1162
     },
     {
       "name": "behavior-events.jsonl",
@@ -229,7 +340,7 @@
       "path": "behavior-events.jsonl",
       "displayPath": "state/showcase/staged_attack_block/behavior-events.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 36494
+      "sizeBytes": 36014
     },
     {
       "name": "merged-trace.jsonl",
@@ -238,7 +349,7 @@
       "path": "merged-trace.jsonl",
       "displayPath": "state/showcase/staged_attack_block/merged-trace.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 40106
+      "sizeBytes": 39626
     },
     {
       "name": "frida-events.jsonl",
@@ -256,7 +367,7 @@
       "path": "diagnosis/codetracer/bundle/steps.json",
       "displayPath": "state/showcase/staged_attack_block/diagnosis/codetracer/bundle/steps.json",
       "kind": "json",
-      "sizeBytes": 14690
+      "sizeBytes": 14650
     },
     {
       "name": "task.md",
@@ -274,7 +385,7 @@
       "path": "diagnosis/codetracer/bundle/manifest.json",
       "displayPath": "state/showcase/staged_attack_block/diagnosis/codetracer/bundle/manifest.json",
       "kind": "json",
-      "sizeBytes": 2431
+      "sizeBytes": 2351
     },
     {
       "name": "openclaw_runtime.json",
@@ -283,7 +394,7 @@
       "path": "diagnosis/codetracer/bundle/openclaw_runtime.json",
       "displayPath": "state/showcase/staged_attack_block/diagnosis/codetracer/bundle/openclaw_runtime.json",
       "kind": "json",
-      "sizeBytes": 1762
+      "sizeBytes": 1722
     },
     {
       "name": "stage_ranges.json",
@@ -301,7 +412,16 @@
       "path": "diagnosis/codetracer/analysis/diagnosis_report.json",
       "displayPath": "state/showcase/staged_attack_block/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
-      "sizeBytes": 1591
+      "sizeBytes": 1491
+    },
+    {
+      "name": "openinference_spans.json",
+      "source": "Run",
+      "status": "available",
+      "path": "exports/openinference_spans.json",
+      "displayPath": "state/showcase/staged_attack_block/exports/openinference_spans.json",
+      "kind": "json",
+      "sizeBytes": 36047
     }
   ],
   "previews": {
@@ -309,21 +429,21 @@
       {
         "eventId": "evt_542f83653e444407a48590299520c03d",
         "kind": "security",
-        "name": "Agent Defense plan check",
+        "name": "External Link Inspection",
         "status": "warn",
         "summary": "Plan step open_external_link inspected."
       },
       {
         "eventId": "evt_82bc20b180ac4ae5bf2f62e96f3213a2",
         "kind": "turn",
-        "name": "Agent turn result",
+        "name": "Agent Execution Interrupted",
         "status": "error",
         "summary": "Agent turn stopped after a security intervention or runtime error."
       },
       {
         "eventId": "evt_8e16e5df1d64467a99b094655d35cafb",
         "kind": "security",
-        "name": "Agent Defense plan check",
+        "name": "External Link Inspection",
         "status": "warn",
         "summary": "Plan step open_external_link inspected."
       },
@@ -337,7 +457,7 @@
       {
         "eventId": "evt_615f5b39c77c4f7199215477026052e8",
         "kind": "security",
-        "name": "Agent Defense event",
+        "name": "User Confirmation Required",
         "status": "require_confirmation",
         "summary": "Low-trust external navigation requires user confirmation."
       },
@@ -358,7 +478,7 @@
       {
         "eventId": "evt_5638317c0bd24096aae9f592d1e34d9e",
         "kind": "security",
-        "name": "Agent Defense event",
+        "name": "Runtime Decision",
         "status": "block",
         "summary": "Bypass escalation detected after a prior Agent Defense intervention."
       }

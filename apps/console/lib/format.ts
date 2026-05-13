@@ -40,9 +40,9 @@ export function riskTone(risk: string | undefined) {
 }
 
 export function statusTone(status: string | undefined) {
-  if (["ok", "available", "allowed"].includes(status || "")) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  if (["ok", "available", "allowed", "deep_trace", "export_ready"].includes(status || "")) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
   if (["blocked", "critical", "failed", "critical_risk"].includes(status || "")) return "bg-red-50 text-red-700 ring-red-200";
-  if (["requires_confirmation", "high", "high_risk", "degraded", "attach_failed"].includes(status || "")) return "bg-amber-50 text-amber-800 ring-amber-200";
+  if (["requires_confirmation", "high", "high_risk", "degraded", "attach_failed", "export_unavailable"].includes(status || "")) return "bg-amber-50 text-amber-800 ring-amber-200";
   return "bg-slate-100 text-slate-700 ring-slate-200";
 }
 
@@ -70,6 +70,12 @@ export function outcomeLabel(outcome: string | undefined) {
 }
 
 export function sortReportsForDemo(reports: ReportModel[]) {
+  const preferredDemoOrder = new Map([
+    ["staged_attack_confirm_frida", 0],
+    ["staged_attack_block_frida", 1],
+    ["low_level_bypass_real_frida", 2],
+    ["normal_browsing_allow_frida", 3]
+  ]);
   const verdictRank: Record<Verdict, number> = {
     block: 0,
     require_confirmation: 1,
@@ -85,6 +91,17 @@ export function sortReportsForDemo(reports: ReportModel[]) {
     unknown: 5
   };
   return [...reports].sort((a, b) => {
+    const preferredA = preferredDemoOrder.get(a.id);
+    const preferredB = preferredDemoOrder.get(b.id);
+    if (preferredA !== undefined || preferredB !== undefined) {
+      return (preferredA ?? 999) - (preferredB ?? 999);
+    }
+    const fridaA = a.metrics.fridaEvents > 0 ? 0 : 1;
+    const fridaB = b.metrics.fridaEvents > 0 ? 0 : 1;
+    if (fridaA !== fridaB) return fridaA - fridaB;
+    const sourceA = a.dataSource === "real_run" ? 0 : 1;
+    const sourceB = b.dataSource === "real_run" ? 0 : 1;
+    if (sourceA !== sourceB) return sourceA - sourceB;
     const byVerdict = (verdictRank[a.verdict] ?? 6) - (verdictRank[b.verdict] ?? 6);
     if (byVerdict !== 0) return byVerdict;
     return (riskRank[a.riskLevel] ?? 6) - (riskRank[b.riskLevel] ?? 6);

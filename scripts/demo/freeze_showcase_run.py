@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "common"))
 
 from trace_common import WORKSPACE_ROOT, ensure_dir, normalize_path, read_json, safe_slug, write_json  # noqa: E402
 
+from sanitize_showcase_paths import sanitize_showcase_paths  # noqa: E402
+
 
 SHOWCASE_SCHEMA = "transpect.showcase.index.v1"
 DEFAULT_SHOWCASE_ROOT = WORKSPACE_ROOT / "state" / "showcase"
@@ -20,8 +22,15 @@ RUN_FILES = [
     "manifest.json",
     "task_input.json",
     "behavior-events.jsonl",
+    "openclaw-lifecycle.jsonl",
+    "openclaw-assistant.jsonl",
+    "openclaw-tools.jsonl",
+    "openclaw-plugin-hooks.jsonl",
+    "session_transcript.json",
     "merged-trace.jsonl",
     "trace_index.json",
+    "canonical_trace.json",
+    "trace_quality.json",
     "frida-events.jsonl",
     "runtime_status.json",
 ]
@@ -34,6 +43,7 @@ SECURITY_FILES = [
 RUN_DIRS = [
     "artifacts",
     "diagnosis/codetracer",
+    "exports",
 ]
 
 
@@ -193,6 +203,7 @@ def freeze_showcase_run(
         if copytree_if_exists(source / relative, frozen_dir / relative):
             copied.append(relative)
 
+    sanitize_report = sanitize_showcase_paths(frozen_dir, repo_root=WORKSPACE_ROOT)
     final_judgment = read_final_judgment(frozen_dir)
     trace_index = read_json(frozen_dir / "trace_index.json", default={})
     trace_index = trace_index if isinstance(trace_index, dict) else {}
@@ -219,6 +230,7 @@ def freeze_showcase_run(
         "runDir": display_path(frozen_dir),
         "indexPath": display_path(index_path),
         "copied": copied,
+        "sanitizeReport": sanitize_report,
         "entry": entry,
     }
 

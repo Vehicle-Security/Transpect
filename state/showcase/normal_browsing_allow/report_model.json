@@ -3,7 +3,7 @@
   "id": "normal_browsing_allow",
   "title": "Normal Browsing Task",
   "description": "正常浏览和总结任务，没有跨步攻击链，系统允许执行",
-  "executiveSummary": "Agent 完成正常浏览和总结任务，未发现跨步骤攻击链。",
+  "executiveSummary": "未发现跨步骤攻击链，系统允许任务继续执行。",
   "verdict": "allow",
   "riskLevel": "low",
   "dataSource": "curated_fixture",
@@ -13,7 +13,101 @@
   "metrics": {
     "runtimeEvents": 4,
     "fridaEvents": 0,
-    "artifacts": 17
+    "artifacts": 20,
+    "canonicalSpans": 7,
+    "canonicalEvents": 6,
+    "traceQuality": "moderate",
+    "traceQualityScore": 0.633,
+    "coverage": {
+      "lifecycle": false,
+      "assistant": false,
+      "openclawTool": false,
+      "pluginHooks": false,
+      "sessionTranscript": false,
+      "llm": false,
+      "tool": true,
+      "browser": true,
+      "agentDefense": false,
+      "frida": false,
+      "codetracer": true,
+      "finalJudgment": true
+    },
+    "exportAvailable": true,
+    "primarySpanCount": 6,
+    "evidenceSpanCount": 1,
+    "rawSpanCount": 0
+  },
+  "traceBackbone": {
+    "status": "available",
+    "traceDepth": "moderate",
+    "spanCount": 7,
+    "primarySpanCount": 6,
+    "evidenceSpanCount": 1,
+    "rawSpanCount": 0,
+    "exportAvailable": true,
+    "missingSources": [
+      "lifecycle",
+      "assistant",
+      "openclawTool",
+      "pluginHooks",
+      "sessionTranscript",
+      "llm",
+      "agentDefense",
+      "frida"
+    ],
+    "warnings": [
+      "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+      "OpenClaw assistant stream unavailable.",
+      "OpenClaw native tool stream unavailable.",
+      "OpenClaw plugin hook stream unavailable.",
+      "OpenClaw session transcript unavailable.",
+      "LLM call spans not observed.",
+      "Frida evidence unavailable or empty."
+    ],
+    "path": "canonical_trace.json",
+    "eventCount": 6,
+    "quality": {
+      "schemaVersion": "transpect.trace-quality.v1",
+      "evaluatedAt": "2026-05-13T11:50:21Z",
+      "ok": true,
+      "traceDepth": "moderate",
+      "substantiveAgentBehavior": true,
+      "coverage": {
+        "lifecycle": false,
+        "assistant": false,
+        "openclawTool": false,
+        "pluginHooks": false,
+        "sessionTranscript": false,
+        "llm": false,
+        "tool": true,
+        "browser": true,
+        "agentDefense": false,
+        "frida": false,
+        "codetracer": true,
+        "finalJudgment": true
+      },
+      "counts": {
+        "AGENT_RUN": 1,
+        "AGENT_TURN": 2,
+        "BROWSER_ACTION": 1,
+        "TOOL_CALL": 1,
+        "CODETRACER_DIAGNOSIS": 1,
+        "FINAL_JUDGMENT": 1
+      },
+      "gaps": [
+        "OpenClaw native lifecycle stream unavailable; behavior-mediator provides partial runtime coverage.",
+        "OpenClaw assistant stream unavailable.",
+        "OpenClaw native tool stream unavailable.",
+        "OpenClaw plugin hook stream unavailable.",
+        "OpenClaw session transcript unavailable.",
+        "LLM call spans not observed.",
+        "Frida evidence unavailable or empty."
+      ],
+      "score": 0.633,
+      "recommendations": [
+        "Enable OpenClaw native lifecycle stream export for deeper turn reconstruction."
+      ]
+    }
   },
   "pipeline": [
     {
@@ -130,7 +224,7 @@
       "path": "manifest.json",
       "displayPath": "state/showcase/normal_browsing_allow/manifest.json",
       "kind": "json",
-      "sizeBytes": 276
+      "sizeBytes": 577
     },
     {
       "name": "task_input.json",
@@ -148,7 +242,7 @@
       "path": "security-reasoning/final_judgment.json",
       "displayPath": "state/showcase/normal_browsing_allow/security-reasoning/final_judgment.json",
       "kind": "json",
-      "sizeBytes": 3800
+      "sizeBytes": 3640
     },
     {
       "name": "security_state.json",
@@ -184,7 +278,25 @@
       "path": "trace_index.json",
       "displayPath": "state/showcase/normal_browsing_allow/trace_index.json",
       "kind": "json",
-      "sizeBytes": 589
+      "sizeBytes": 549
+    },
+    {
+      "name": "canonical_trace.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "canonical_trace.json",
+      "displayPath": "state/showcase/normal_browsing_allow/canonical_trace.json",
+      "kind": "json",
+      "sizeBytes": 14030
+    },
+    {
+      "name": "trace_quality.json",
+      "source": "Runtime",
+      "status": "available",
+      "path": "trace_quality.json",
+      "displayPath": "state/showcase/normal_browsing_allow/trace_quality.json",
+      "kind": "json",
+      "sizeBytes": 1162
     },
     {
       "name": "behavior-events.jsonl",
@@ -265,7 +377,7 @@
       "path": "diagnosis/codetracer/analysis/diagnosis_report.json",
       "displayPath": "state/showcase/normal_browsing_allow/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
-      "sizeBytes": 684
+      "sizeBytes": 624
     },
     {
       "name": "codetracer_analysis.json",
@@ -275,6 +387,15 @@
       "displayPath": "state/showcase/normal_browsing_allow/diagnosis/codetracer/analysis/codetracer_analysis.json",
       "kind": "json",
       "sizeBytes": 120
+    },
+    {
+      "name": "openinference_spans.json",
+      "source": "Run",
+      "status": "available",
+      "path": "exports/openinference_spans.json",
+      "displayPath": "state/showcase/normal_browsing_allow/exports/openinference_spans.json",
+      "kind": "json",
+      "sizeBytes": 8731
     }
   ],
   "previews": {

@@ -1,0 +1,12 @@
+[
+  {
+    "stage": "setup_context",
+    "start_step_id": 1,
+    "end_step_id": 1
+  },
+  {
+    "stage": "verification_completion",
+    "start_step_id": 2,
+    "end_step_id": 2
+  }
+]

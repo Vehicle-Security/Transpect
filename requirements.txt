@@ -1,8 +1,6 @@
 jsonschema>=4.0.0
 python-dotenv>=1.0.0
 
-# Optional dependencies for Frida-based runtime tracing.
-frida>=16.0.0; platform_system == "Windows"
-frida>=16.0.0; platform_system == "Darwin"
-frida-tools>=13.0.0; platform_system == "Windows"
-frida-tools>=13.0.0; platform_system == "Darwin"
+# Frida is optional and is only required for full OS-level evidence capture.
+# Install it with:
+#   python -m pip install -r requirements-frida.txt

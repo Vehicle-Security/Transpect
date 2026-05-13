@@ -33,17 +33,19 @@ architecture. For Transpect's OpenClaw gateway on this machine, use an arm64
 conda environment instead of the x86_64 Anaconda base interpreter.
 
 ```bash
-# Create a project-local arm64 conda environment.
+# Create an arm64 conda environment for Frida capture.
 CONDA_SUBDIR=osx-arm64 conda create -y \
-  -p ./.conda-frida-arm64 \
+  -n transpect-frida-arm64 \
   -c conda-forge --override-channels \
   python=3.12 pip
+conda activate transpect-frida-arm64
 
-# Install Transpect's runtime deps, including official Frida bindings/CLI.
-.conda-frida-arm64/bin/python -m pip install -r requirements.txt
+# Install Transpect's runtime deps and official Frida bindings/CLI.
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-frida.txt
 
 # Optional: install local CodeTracer into the same env for dry-run diagnosis.
-.conda-frida-arm64/bin/python -m pip install -e /Users/qwer/Documents/code/CodeTracer
+python -m pip install -e "$CODETRACER_ROOT"
 
 # Grant Terminal / IDE the "Developer Tools" or "Full Disk Access" permission
 # in System Preferences → Security & Privacy → Privacy.
@@ -55,8 +57,8 @@ CONDA_SUBDIR=osx-arm64 conda create -y \
 ### Verification
 
 ```bash
-.conda-frida-arm64/bin/python -c "import frida, platform, sys; print(frida.__version__, platform.machine(), sys.executable)"
-.conda-frida-arm64/bin/frida-ps --version
+python -c "import frida, platform, sys; print(frida.__version__, platform.machine(), sys.executable)"
+frida-ps --version
 ```
 
 If this fails, the runner will still work — Frida is optional and the runner gracefully degrades.
@@ -64,9 +66,9 @@ If this fails, the runner will still work — Frida is optional and the runner g
 Expected local shape on Apple Silicon:
 
 - `platform.machine()` prints `arm64`.
-- `sys.executable` points inside `.conda-frida-arm64`.
-- `frida-ps` is `.conda-frida-arm64/bin/frida-ps`.
-- It does not point at `/opt/anaconda3/bin/frida-ps`.
+- `sys.executable` points inside the selected Frida environment.
+- `frida-ps` resolves from the same environment.
+- It does not point at a different base interpreter or package manager prefix.
 
 ---
 

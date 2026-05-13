@@ -110,7 +110,7 @@ function EvidenceSummary({
         {artifact ? (
           <Link
             href={`/artifacts/${showcaseId}?path=${encodeURIComponent(artifact.path)}`}
-            className="inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            className="action-button-light"
           >
             {actionLabel}
           </Link>
@@ -138,12 +138,38 @@ function PreviewList({ rows, empty }: { rows: EventPreview[]; empty: string }) {
             {row.kind ? <Badge value={row.kind} /> : null}
             {row.status ? <Badge value={row.status} /> : null}
           </div>
-          <h3 className="mt-3 text-sm font-semibold text-slate-950">{row.name || "Runtime event"}</h3>
+          <h3 className="mt-3 text-sm font-semibold text-slate-950">{displayEventName(row.name) || "Runtime event"}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">{row.summary}</p>
         </div>
       ))}
     </div>
   );
+}
+
+function displayEventName(name?: string | null) {
+  const normalized = String(name || "").trim();
+  const aliases: Record<string, string> = {
+    "Agent Defense plan check": "External Link Inspection",
+    "Agent turn result": "Agent Execution Interrupted",
+    "openclaw.request": "Runtime Request",
+    "policy warning": "Policy Warning",
+    "security warn": "Policy Warning",
+    "security.low_trust_comment_observed": "Low-trust Trigger",
+    "security_intervention": "Runtime Decision",
+    "security.decision": "Runtime Decision",
+    "security.action": "Action Safety Review",
+    "upload": "Sensitive Action Evidence",
+    "file access": "Sensitive Action Evidence"
+  };
+  const direct = aliases[normalized];
+  if (direct) return direct;
+  const lowered = normalized.toLowerCase();
+  if (lowered.includes("low_trust_comment")) return "Low-trust Trigger";
+  if (lowered.includes("security_intervention") || lowered.includes("security.decision")) return "Runtime Decision";
+  if (lowered.includes("security.action")) return "Action Safety Review";
+  if (lowered.includes("upload") || lowered.includes("file access")) return "Sensitive Action Evidence";
+  if (lowered.includes("policy") || lowered.includes("security warn")) return "Policy Warning";
+  return normalized;
 }
 
 function FindingPreview({ report, source }: { report: ReportModel; source: string }) {

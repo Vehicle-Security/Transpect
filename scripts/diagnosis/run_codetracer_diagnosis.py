@@ -179,6 +179,8 @@ def build_diagnosis_report(
         "role": "trajectory_diagnosis_not_benchmark_evaluation",
         "ok": diagnosis_run.get("ok"),
         "status": diagnosis_run.get("status"),
+        "reason": diagnosis_run.get("reason"),
+        "suggestion": diagnosis_run.get("suggestion"),
         "profile": diagnosis_run.get("profile"),
         "inputTraceSources": input_trace_sources,
         "fridaIncluded": frida_included,
@@ -326,12 +328,83 @@ def run_codetracer_diagnosis(
     if config_path:
         args.extend(["--config", str(config_path.resolve())])
 
+    try:
+        env = build_env(api_base=effective_api_base, api_key=effective_api_key)
+    except FileNotFoundError as exc:
+        finished_at = now_utc_iso()
+        traj_path = output_path.parent / f"{output_path.stem}.traj.json"
+        diagnosis_run = {
+            "schemaVersion": DIAGNOSIS_SCHEMA_VERSION,
+            "runId": resolved_run_dir.name,
+            "bundlePath": normalize_path(bundle_dir.resolve()),
+            "analysisPath": normalize_path(output_path.resolve()),
+            "trajPath": None,
+            "startedAt": started_at,
+            "completedAt": finished_at,
+            "command": redact_command_args(args),
+            "model": effective_model,
+            "apiBase": effective_api_base,
+            "profile": profile or "detailed",
+            "returncode": None,
+            "analysisExists": False,
+            "analysisValid": False,
+            "invalidAnalysisReason": "codetracer_not_installed",
+            "analysisRecovered": False,
+            "ok": False,
+            "status": "unavailable",
+            "reason": "codetracer_not_installed",
+            "suggestion": "Set CODETRACER_ROOT or CODETRACER_SRC, or install CodeTracer if diagnosis is required.",
+            "stdout": "",
+            "stderr": redact_sensitive_text(str(exc), extra_values=[effective_api_key]),
+        }
+        diagnosis_run_path = analysis_root / "diagnosis_run.json"
+        diagnosis_report_path = analysis_root / "diagnosis_report.json"
+        diagnosis_run["diagnosisRunPath"] = normalize_path(diagnosis_run_path.resolve())
+        diagnosis_run["diagnosisReportPath"] = normalize_path(diagnosis_report_path.resolve())
+        write_json(diagnosis_run_path, diagnosis_run)
+        diagnosis_report = build_diagnosis_report(
+            run_dir=resolved_run_dir,
+            bundle_dir=bundle_dir,
+            analysis_dir=analysis_root,
+            output_path=output_path,
+            traj_path=traj_path,
+            diagnosis_run=diagnosis_run,
+        )
+        write_json(diagnosis_report_path, diagnosis_report)
+        update_run_manifest(
+            resolved_run_dir,
+            bundle_dir=bundle_dir,
+            analysis_dir=analysis_root,
+            diagnosis_run=diagnosis_run,
+        )
+        update_evaluation_inputs_seed(resolved_run_dir, diagnosis_run)
+        write_runs_index(resolved_run_dir.parent)
+        return {
+            "ok": False,
+            "status": "unavailable",
+            "reason": "codetracer_not_installed",
+            "suggestion": diagnosis_run["suggestion"],
+            "runDir": normalize_path(resolved_run_dir.resolve()),
+            "bundleDir": normalize_path(bundle_dir.resolve()),
+            "analysisDir": normalize_path(analysis_root.resolve()),
+            "analysisPath": diagnosis_run["analysisPath"],
+            "analysisTrajPath": None,
+            "diagnosisRunPath": diagnosis_run["diagnosisRunPath"],
+            "diagnosisReportPath": diagnosis_run["diagnosisReportPath"],
+            "returncode": None,
+            "analysisExists": False,
+            "analysisValid": False,
+            "invalidAnalysisReason": "codetracer_not_installed",
+            "stdout": "",
+            "stderr": diagnosis_run["stderr"],
+        }
+
     result = run_command(
         args,
         cwd=resolved_run_dir,
         timeout=timeout_seconds,
         check=False,
-        env=build_env(api_base=effective_api_base, api_key=effective_api_key),
+        env=env,
     )
 
     # ── Fix 1: recover misplaced analysis output from bundle/ ──
@@ -409,6 +482,7 @@ def run_codetracer_diagnosis(
         "analysisTrajPath": diagnosis_run["trajPath"],
         "diagnosisRunPath": diagnosis_run["diagnosisRunPath"],
         "diagnosisReportPath": diagnosis_run["diagnosisReportPath"],
+        "status": diagnosis_run["status"],
         "returncode": diagnosis_run["returncode"],
         "analysisExists": diagnosis_run["analysisExists"],
         "analysisValid": diagnosis_run["analysisValid"],

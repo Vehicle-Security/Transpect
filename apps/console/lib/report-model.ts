@@ -66,6 +66,34 @@ export type ReportModel = {
     runtimeEvents: number;
     fridaEvents: number;
     artifacts: number;
+    canonicalSpans?: number;
+    canonicalEvents?: number;
+    traceQuality?: string;
+    traceQualityScore?: number;
+    coverage?: Record<string, boolean>;
+    exportAvailable?: boolean;
+    primarySpanCount?: number;
+    evidenceSpanCount?: number;
+    rawSpanCount?: number;
+  };
+  traceBackbone?: {
+    status: "available" | "fallback" | "unavailable" | string;
+    traceDepth?: string;
+    spanCount?: number;
+    primarySpanCount?: number;
+    evidenceSpanCount?: number;
+    rawSpanCount?: number;
+    exportAvailable?: boolean;
+    missingSources?: string[];
+    warnings?: string[];
+    path?: string;
+    eventCount?: number;
+    quality?: {
+      score?: number;
+      coverage?: Record<string, boolean>;
+      gaps?: string[];
+      traceDepth?: string;
+    };
   };
   pipeline: PipelineStage[];
   riskChain: RiskChainNode[];

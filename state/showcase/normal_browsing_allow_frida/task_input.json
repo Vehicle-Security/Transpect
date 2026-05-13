@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "openclaw.run.task-input.v1",
+  "capturedAt": "2026-05-12T09:28:38.467Z",
+  "userInput": {
+    "message": null,
+    "source": null
+  },
+  "agentTask": {
+    "prompt": "请打开 http://127.0.0.1:8765/xhs/topic/camping-safe，查看小红书露营话题的帖子与评论，并总结要点。",
+    "source": "turn.started.preview.prompt"
+  },
+  "securityScenario": null,
+  "policyObservations": []
+}

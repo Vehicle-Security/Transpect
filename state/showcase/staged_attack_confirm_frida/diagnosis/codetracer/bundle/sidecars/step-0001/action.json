@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "openclaw.codetracer.bundle.v1",
+  "kind": "action",
+  "stepId": 1,
+  "stepKind": "synthetic",
+  "toolType": "web_fetch",
+  "payload": {
+    "toolName": "web_fetch",
+    "paramsPreview": null,
+    "target": {
+      "toolName": "web_fetch"
+    }
+  },
+  "runtimeArtifact": null,
+  "sourceRows": [
+    {
+      "originalLine": 10,
+      "copiedLine": 10,
+      "seq": 10,
+      "kind": "tool",
+      "status": "blocked"
+    }
+  ]
+}

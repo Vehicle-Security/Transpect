@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -15,7 +16,7 @@ SCRIPTS_ROOT = SCRIPT_DIR.parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS_ROOT / "common"))
 sys.path.insert(0, str(SCRIPTS_ROOT / "demo"))
 
-from trace_common import CommandResult, build_runs_index_payload, write_json  # noqa: E402
+from trace_common import build_runs_index_payload, write_json  # noqa: E402
 
 
 class ShowcaseWrapperTests(unittest.TestCase):
@@ -111,12 +112,15 @@ class ShowcaseWrapperTests(unittest.TestCase):
         run_dir = self.make_run(root, "custom-run", created_at="2026-05-08T10:00:00Z")
         captured: dict[str, list[str]] = {}
 
-        def fake_run_command(command: list[str], **_: object) -> CommandResult:
+        def fake_subprocess_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
             captured["command"] = command
-            return CommandResult(command, 0, json.dumps({"resolvedRunDir": str(run_dir)}), "")
+            stdout = kwargs.get("stdout")
+            if hasattr(stdout, "write"):
+                stdout.write(json.dumps({"resolvedRunDir": str(run_dir)}))
+            return subprocess.CompletedProcess(command, 0)
 
         custom_task_id = "data/showcase_cases.json#xhs-waterhole-confirm-001"
-        with patch.object(run_showcase, "run_command", fake_run_command), patch.object(run_showcase, "TRACE_LIVE_RUNS_DIR", root):
+        with patch.object(run_showcase.subprocess, "run", fake_subprocess_run), patch.object(run_showcase, "TRACE_LIVE_RUNS_DIR", root):
             resolved = run_showcase.run_agent_trace(task_id=custom_task_id, timeout_seconds=10, verbose=False)
 
         self.assertEqual(resolved, run_dir.resolve())

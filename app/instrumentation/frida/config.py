@@ -47,7 +47,6 @@ SENSITIVE_PATH_FRAGMENTS: tuple[str, ...] = (
     "token",
     "credential",
     "key",
-    ".openclaw",
     "/tmp/openclaw/uploads",
 )
 

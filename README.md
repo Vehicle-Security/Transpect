@@ -59,127 +59,175 @@ Grouped script paths are the primary interface. Legacy flat `scripts/*.py` wrapp
 
 ## Quick Start
 
-Recommended local layout:
-
-```text
-code/
-├── Transpect/
-├── CodeTracer/
-└── R-Judge/
-```
-
-Create the runtime environment used by Transpect and CodeTracer:
+The lowest supported deployment path is **frozen showcase replay**. It does not require OpenClaw, Frida, CodeTracer, or R-Judge; those components are higher-level capture and diagnosis capabilities.
 
 ```bash
-conda create -n transpect-py311 python=3.11 -y
-conda activate transpect-py311
-pip install -r requirements.txt
-pip install -e ../CodeTracer
-python --version
-node --version
-openclaw --version
-```
+git clone <repo-url> Transpect
+cd Transpect
 
-Optional: create a separate environment for repo-native R-Judge runs:
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
-```bash
-conda create -n rjudge-py310 python=3.10 -y
-conda activate rjudge-py310
-pip install -r ../R-Judge/requirements.txt
-```
-
-If `CodeTracer/` or `R-Judge/` are not siblings of `Transpect/`, set explicit roots:
-
-```bash
-export CODETRACER_ROOT="$HOME/path/to/CodeTracer"
-export R_JUDGE_ROOT="$HOME/path/to/R-Judge"
-```
-
-Configure OpenClaw for canonical trace capture and auto-diagnosis:
-
-```bash
-conda activate transpect-py311
-python scripts/runtime/setup_runtime.py --mode core
-python scripts/validate/doctor.py
-```
-
-If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested OpenClaw scopes first, then rerun `doctor.py`.
-
-Run the trace-first task flow:
-
-```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
-python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
-python scripts/runtime/start_trace.py
-```
-
-Run one or more R-Judge tasks with the batch helper:
-
-```bash
-python scripts/runtime/run_rjudge_batch.py --source-path data/Program --count 5 --concurrency 2
-python scripts/runtime/run_rjudge_batch.py --source-path data/Application/chatbot.json --count 3 --label 1
-python scripts/runtime/run_rjudge_batch.py --task-id "data/Application/chatbot.json#37"
-```
-
-Use `--dry-run --no-start-runtime` to preview the selected tasks without launching agents.
-
-Run the staged attack defense demo:
-
-```bash
-python scripts/demo/run_showcase.py
-```
-
-The demo task gives the agent only a normal browsing prompt. The local HTTP site contains the split attack chain: Xiaohongshu topic viewing, low-trust comment injection, watering-hole navigation, deceptive “详情” click, and a demo photo upload attempt. During the real OpenClaw run, Transpect security guards inspect input, plan-like LLM output, tool calls, and network requests. High-risk execution decisions can block the real tool/API call before it runs. The post-run path merges OpenClaw and Frida evidence, exports the merged trace to CodeTracer, and writes the final Agent Defense judgment.
-
-The showcase wrapper starts the demo site and viewer when needed, runs the staged attack trace with Frida in auto mode, refreshes CodeTracer diagnosis, writes `final_judgment.json`, marks the run as showcase, and prints a direct viewer URL such as `http://127.0.0.1:8711/viewer/index.html?view=traces&run=<runId>`.
-
-For a live fallback without launching a new agent, use `python scripts/demo/run_showcase.py --reuse-latest` or `python scripts/demo/run_showcase.py --no-openclaw-run --run-dir live/runs/<runId>`.
-
-## Product Showcase
-
-For product demos, generate the real run once, freeze it, build report models, and replay it from the Next.js Console without rerunning the agent:
-
-```bash
-python scripts/demo/freeze_showcase_run.py \
-  --run-dir live/runs/<runId> \
-  --id staged_attack_block \
-  --title "Cross-step Waterhole Attack" \
-  --description "低可信评论诱导外部跳转并触发敏感上传，最终被阻断"
-python scripts/demo/build_showcase_reports.py
-python scripts/demo/validate_showcase.py
-python scripts/demo/validate_showcase.py --require-report-model
 cd apps/console
-npm install
-npm run dev
+npm ci
+cd ../..
+
+python scripts/validate/deployment_doctor.py --mode replay
+python scripts/demo/validate_showcase.py --require-report-model
+python scripts/demo/start_console.py --port 5000
 ```
 
 Open:
 
 ```text
-http://127.0.0.1:3000
+http://127.0.0.1:5000
 ```
 
-The Console reads `state/showcase/index.json` plus each frozen run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages. The old static viewer remains available as a fallback/debug surface:
+The Console reads committed frozen data under `state/showcase/` and each run's `report_model.json`, then presents Overview, Showcase Gallery, Agent Security Report, and Artifact Viewer pages.
+
+## Deployment Levels
+
+### Level 0: Frozen Showcase Replay
+
+Use this for GitHub clone demos, product review, and offline report browsing.
+
+Required:
+
+- Python 3.10+ and Node.js 20+
+- `python -m pip install -r requirements.txt`
+- `cd apps/console && npm ci`
+- committed `state/showcase/index.json` and `report_model.json` files
+
+Checks:
+
+```bash
+python scripts/validate/deployment_doctor.py --mode replay
+python scripts/validate/check_portability.py
+python scripts/demo/validate_showcase.py --require-report-model
+```
+
+Start:
+
+```bash
+python scripts/demo/start_console.py --host 127.0.0.1 --port 5000
+```
+
+### Level 1: Local Demo Services
+
+Use this when you also want the static debug viewer or staged attack website. It still does not require rerunning an Agent.
 
 ```bash
 python scripts/runtime/serve_viewer.py --host 127.0.0.1 --port 8711
+python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
 ```
+
+Static fallback/debug viewer:
 
 ```text
 http://127.0.0.1:8711/viewer/index.html?view=showcase
 ```
 
+### Level 2: OpenClaw Agent Live Run
+
+Use this to generate new real Agent traces. This level requires OpenClaw gateway access, behavior mediator hooks, and model/provider configuration.
+
+```bash
+python scripts/runtime/setup_runtime.py --mode core
+python scripts/validate/discover_openclaw_native_sources.py
+python scripts/validate/doctor.py
+python scripts/demo/run_showcase.py --verbose
+```
+
+If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested OpenClaw scopes first, then rerun `doctor.py`.
+
+### Level 3: Full Evidence Run
+
+Use this for OS-level Frida evidence and CodeTracer diagnosis. Frida and CodeTracer are important for full evidence, but missing components are reported as `degraded` or `unavailable` rather than breaking Level 0 replay.
+
+Optional environment variables:
+
+```bash
+python -m pip install -r requirements-frida.txt
+export CODETRACER_ROOT="$HOME/path/to/CodeTracer"
+export CODETRACER_SRC="$CODETRACER_ROOT/src"
+```
+
+Build derived trace artifacts for a run:
+
+```bash
+python scripts/validate/discover_openclaw_native_sources.py --run-dir live/runs/<runId>
+python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
+python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
+python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
+python scripts/validate/validate_openinference_export.py --path live/runs/<runId>/exports/openinference_spans.json
+```
+
+If CodeTracer is not installed, `scripts/diagnosis/run_codetracer_diagnosis.py` writes a structured `diagnosis_report.json` with `status: "unavailable"` and a setup suggestion. The run can still produce final judgment, canonical trace, and replayable report data.
+
+### Level 4: R-Judge Batch Evaluation
+
+R-Judge is optional and only needed when you explicitly run `--repo rjudge`.
+
+```bash
+export R_JUDGE_ROOT="$HOME/path/to/R-Judge"
+python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
+python scripts/runtime/run_rjudge_batch.py --source-path data/Program --count 5 --concurrency 2
+```
+
+Missing R-Judge does not affect `staged_attack`, Console replay, static viewer replay, or frozen showcase validation.
+
+## Product Showcase
+
+For product demos, generate the real run once, freeze it, build report models, and replay it without rerunning the Agent:
+
+```bash
+python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
+python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
+python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
+python scripts/demo/freeze_showcase_run.py \
+  --run-dir live/runs/<runId> \
+  --id staged_attack_confirm_frida \
+  --title "Suspicious External Navigation" \
+  --description "系统发现外部跳转和低层运行时证据，并将 native OpenClaw trace、Frida、CodeTracer 与最终判断统一为 deep trace。"
+python scripts/demo/build_showcase_reports.py
+python scripts/demo/validate_showcase.py --require-report-model
+```
+
+`scripts/demo/freeze_showcase_run.py` sanitizes machine-local paths in frozen artifacts. To check portability before publishing:
+
+```bash
+python scripts/demo/sanitize_showcase_paths.py --check
+python scripts/validate/check_portability.py
+```
+
+Current frozen showcase data includes replayable reports with real Frida evidence, CodeTracer diagnosis bundles, canonical trace summaries, and OpenInference-style exports. Reference screenshots:
+
+![Transpect Console overview](docs/images/console-overview-dashboard.png)
+
+![Transpect showcase gallery](docs/images/console-showcase-gallery.png)
+
 See `docs/product-showcase-guide.md` for the full workflow.
+
+`canonical_trace.json` is a derived standard trace view. It does not replace raw `behavior-events.jsonl`, native OpenClaw source files, Frida events, CodeTracer output, or `final_judgment.json`.
 
 ## Canonical Run Contents
 
 Each canonical run directory may contain:
 
 - `behavior-events.jsonl`
+- `openclaw-lifecycle.jsonl`
+- `openclaw-assistant.jsonl`
+- `openclaw-tools.jsonl`
+- `openclaw-plugin-hooks.jsonl`
+- `session_transcript.json`
 - `frida-events.jsonl`
 - `trace_index.json`
 - `merged-trace.jsonl`
+- `canonical_trace.json`
+- `trace_quality.json`
+- `exports/openinference_spans.json`
 - `manifest.json`
 - `task_input.json`
 - `runtime_status.json`
@@ -214,12 +262,14 @@ node --check viewer/app.js
 node --check viewer/shared.js
 node --check vendor/runtime-hooks/openclaw-behavior-mediator/index.js
 python -m unittest discover -s tests -p 'test_*.py' -v
+python scripts/validate/check_portability.py
+python scripts/validate/deployment_doctor.py --mode replay
 python scripts/validate/check_repo.py --skip-start
 python scripts/validate/doctor.py
 python scripts/validate/run_acceptance.py
 ```
 
-Diagnosis execution also requires the `codetracer` Python module plus a resolvable source tree via `CODETRACER_ROOT`, `CODETRACER_SRC`, or a sibling `../CodeTracer/src`, which matches `scripts/diagnosis/run_codetracer_diagnosis.py`.
+Diagnosis execution can use the `codetracer` Python module plus a resolvable source tree via `CODETRACER_ROOT`, `CODETRACER_SRC`, or a sibling `../CodeTracer/src`. If it is missing, `scripts/diagnosis/run_codetracer_diagnosis.py` writes a structured unavailable report and the replay path continues.
 
 ## Notes
 
@@ -235,6 +285,7 @@ Diagnosis execution also requires the `codetracer` Python module plus a resolvab
 - [Directory Layout](docs/directory-layout.md)
 - [Runtime Storage Plan](docs/runtime-storage-plan.md)
 - [Observability Notes](docs/observability.md)
+- [Agent Trace Backbone v1](docs/agent-trace-backbone-v1.md)
 - [Frida Notes](docs/frida.md)
 - [Task Repo Adapters](docs/task-repo-adapters.md)
 - [Staged Attack Defense Demo](docs/staged-attack-defense-demo.md)

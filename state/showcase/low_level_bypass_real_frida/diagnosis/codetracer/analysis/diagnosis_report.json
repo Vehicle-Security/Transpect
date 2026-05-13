@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "transpect.diagnosis-report.v1",
+  "generatedAt": "2026-05-12T09:45:01Z",
+  "runId": "3597896c-c742-44a2-804d-d6b12b4026ca",
+  "diagnosisLayer": "codetracer",
+  "role": "trajectory_diagnosis_not_benchmark_evaluation",
+  "ok": true,
+  "status": "success",
+  "profile": "detailed",
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/frida-events.jsonl",
+    "source/merged-trace.jsonl",
+    "source/trace_index.json"
+  ],
+  "fridaIncluded": true,
+  "paths": {
+    "runDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
+    "bundleDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "analysisTrajectory": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
+    "diagnosisRun": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_run.json"
+  },
+  "analysis": {
+    "root_cause_chain": [
+      "Trajectory contains only a synthetic diagnostic step (step 1), indicating a platform-level execution failure. No agent actions were executed."
+    ],
+    "critical_decision_points": [],
+    "correct_strategy": "Re-run with stable environment and higher timeouts.",
+    "stage_labels": [
+      {
+        "stage_id": "setup_context",
+        "incorrect_step_ids": [],
+        "unuseful_step_ids": [
+          1
+        ],
+        "reasoning": "Step 1 is a synthetic diagnostic, not a meaningful agent action."
+      }
+    ],
+    "summary": "Truncated trajectory; only synthetic step exists. No agent logic failure can be identified."
+  },
+  "diagnosisRun": {
+    "returncode": 0,
+    "analysisExists": true,
+    "analysisValid": true,
+    "invalidAnalysisReason": null,
+    "analysisRecovered": true,
+    "model": "deepseek-v4-pro",
+    "apiBase": "https://api.deepseek.com",
+    "startedAt": "2026-05-12T09:42:46Z",
+    "completedAt": "2026-05-12T09:45:01Z"
+  }
+}

@@ -7,7 +7,7 @@
   "payload": {
     "path": "~/.openclaw/workspace/skills/openclaw-agent-browser-clawdbot/SKILL.md"
   },
-  "runtimeArtifact": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/artifacts/call_00_cxn14QRI6Zi6tRyei4q0w6U9/input.json",
+  "runtimeArtifact": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/artifacts/call_00_cxn14QRI6Zi6tRyei4q0w6U9/input.json",
   "sourceRows": [
     {
       "originalLine": 13,

@@ -15,12 +15,12 @@
   ],
   "fridaIncluded": false,
   "paths": {
-    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39",
-    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
-    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis",
-    "analysis": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "runDir": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39",
+    "bundleDir": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/codetracer_analysis.json",
     "analysisTrajectory": null,
-    "diagnosisRun": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_run.json"
+    "diagnosisRun": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_run.json"
   },
   "analysis": null,
   "diagnosisRun": {
