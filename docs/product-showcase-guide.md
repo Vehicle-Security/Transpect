@@ -1,8 +1,31 @@
 # Product Showcase Guide
 
-Transpect is an Agent Runtime Security prototype. It shows how an agent can be observed and defended with runtime traces, Frida low-level evidence, CodeTracer diagnosis, and a final auditable judgment.
+Transpect is an Agent Runtime Security prototype. It shows how an agent can be observed and defended with runtime traces, optional Frida low-level evidence, optional CodeTracer diagnosis, and a final auditable judgment.
 
-The product showcase flow is designed for replay. Run the real agent once on your Mac, freeze the resulting run into `state/showcase/`, build front-end report models, then show the Console without rerunning the agent live.
+The product showcase flow is designed for replay. A fresh GitHub clone can open the committed frozen reports without OpenClaw, Frida, CodeTracer, or R-Judge. Those components are only required when you want to generate new live evidence.
+
+## Clone Replay Quick Start
+
+From a clean clone:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+cd apps/console
+npm ci
+cd ../..
+
+python scripts/validate/deployment_doctor.py --mode replay
+python scripts/demo/validate_showcase.py --require-report-model
+python scripts/demo/start_console.py --port 5000
+```
+
+Open `http://127.0.0.1:5000`.
+
+Replay mode must work without CodeTracer or R-Judge. If those components are missing, Transpect reports `unavailable` for the affected diagnosis or evaluation layer and continues serving the Console.
 
 ## Generate a Real Run
 
@@ -13,7 +36,7 @@ python scripts/validate/doctor.py
 python scripts/demo/run_showcase.py --verbose
 ```
 
-The important health states are OpenClaw gateway, behavior mediator, CodeTracer, and Frida. Frida may be `degraded` on macOS when permissions or `frida-tools` are missing; that state is still useful because Transpect records the degraded low-level evidence capability instead of hiding it.
+The important health states are OpenClaw gateway, behavior mediator, CodeTracer, and Frida. Frida may be `degraded` on macOS when permissions or `frida-tools` are missing; CodeTracer may be `unavailable` if `CODETRACER_ROOT` or `CODETRACER_SRC` is not configured. These states are recorded instead of being hidden.
 
 `run_showcase.py` now also builds `canonical_trace.json`, writes `trace_quality.json`, and exports `exports/openinference_spans.json` during artifact completion.
 
@@ -48,6 +71,13 @@ low_level_bypass_evidence        curated low-level evidence fallback
 
 The freeze script copies run-local evidence into `state/showcase/<id>/` and updates `state/showcase/index.json`.
 
+It also sanitizes machine-local paths so frozen reports can be committed:
+
+```bash
+python scripts/demo/sanitize_showcase_paths.py --check
+python scripts/validate/check_portability.py
+```
+
 For deep trace demos, verify native OpenClaw source coverage before freezing:
 
 ```bash
@@ -77,8 +107,14 @@ Start the enterprise Console:
 
 ```bash
 cd apps/console
-npm install
+npm ci
 npm run dev -- --hostname 127.0.0.1 --port 5000
+```
+
+The helper script performs the same startup with prerequisite checks:
+
+```bash
+python scripts/demo/start_console.py --port 5000
 ```
 
 Open:

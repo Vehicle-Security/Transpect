@@ -243,8 +243,8 @@
           "External navigation from low-trust content requires confirmation because sensitive upload evidence is absent."
         ],
         "evidence": {
-          "traceIndexPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/trace_index.json",
-          "mergedTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/merged-trace.jsonl",
+          "traceIndexPath": "<transpect_root>/live/runs/showcase-confirm-designed/trace_index.json",
+          "mergedTracePath": "<transpect_root>/live/runs/showcase-confirm-designed/merged-trace.jsonl",
           "onlineDecision": "require_confirmation",
           "securityInterventionCount": 2,
           "fridaIncluded": false,
@@ -252,7 +252,7 @@
           "fridaCriticalEvidenceCount": 0,
           "frida": {
             "status": "degraded",
-            "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/frida-events.jsonl",
+            "path": "<transpect_root>/live/runs/showcase-confirm-designed/frida-events.jsonl",
             "eventCount": 0,
             "riskTags": [],
             "criticalEvidenceCount": 0,
@@ -268,10 +268,10 @@
           "codeTracer": {
             "status": "ok",
             "ok": true,
-            "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/diagnosis/codetracer/bundle",
-            "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis",
-            "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
-            "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
+            "bundlePath": "<transpect_root>/live/runs/showcase-confirm-designed/diagnosis/codetracer/bundle",
+            "analysisDir": "<transpect_root>/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis",
+            "analysisPath": "<transpect_root>/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
+            "diagnosisReportPath": "<transpect_root>/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
             "summary": "CodeTracer links the low-trust comment, external navigation, and confirm-only detail action."
           },
           "inputTraceSources": [

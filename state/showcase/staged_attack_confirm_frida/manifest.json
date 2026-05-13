@@ -51,8 +51,8 @@
     "lastStage": "planning",
     "realInteraction": null,
     "lastRunAt": "2026-05-13T02:52:40Z",
-    "decisionPath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/security-reasoning/defense_decision.json",
-    "statePath": "/Users/qwer/Documents/code/Transpect/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/security-reasoning/security_state.json",
+    "decisionPath": "<transpect_root>/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/security-reasoning/defense_decision.json",
+    "statePath": "<transpect_root>/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/security-reasoning/security_state.json",
     "finalJudgment": {
       "decision": "block",
       "riskLevel": "critical",

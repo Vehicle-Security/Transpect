@@ -68,7 +68,7 @@
     "eventCount": 6,
     "quality": {
       "schemaVersion": "transpect.trace-quality.v1",
-      "evaluatedAt": "2026-05-13T11:00:10Z",
+      "evaluatedAt": "2026-05-13T11:50:21Z",
       "ok": true,
       "traceDepth": "moderate",
       "substantiveAgentBehavior": true,
@@ -242,7 +242,7 @@
       "path": "security-reasoning/final_judgment.json",
       "displayPath": "state/showcase/normal_browsing_allow/security-reasoning/final_judgment.json",
       "kind": "json",
-      "sizeBytes": 3800
+      "sizeBytes": 3640
     },
     {
       "name": "security_state.json",
@@ -278,7 +278,7 @@
       "path": "trace_index.json",
       "displayPath": "state/showcase/normal_browsing_allow/trace_index.json",
       "kind": "json",
-      "sizeBytes": 589
+      "sizeBytes": 549
     },
     {
       "name": "canonical_trace.json",
@@ -287,7 +287,7 @@
       "path": "canonical_trace.json",
       "displayPath": "state/showcase/normal_browsing_allow/canonical_trace.json",
       "kind": "json",
-      "sizeBytes": 14170
+      "sizeBytes": 14030
     },
     {
       "name": "trace_quality.json",
@@ -377,7 +377,7 @@
       "path": "diagnosis/codetracer/analysis/diagnosis_report.json",
       "displayPath": "state/showcase/normal_browsing_allow/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
-      "sizeBytes": 684
+      "sizeBytes": 624
     },
     {
       "name": "codetracer_analysis.json",
@@ -395,7 +395,7 @@
       "path": "exports/openinference_spans.json",
       "displayPath": "state/showcase/normal_browsing_allow/exports/openinference_spans.json",
       "kind": "json",
-      "sizeBytes": 8871
+      "sizeBytes": 8731
     }
   ],
   "previews": {

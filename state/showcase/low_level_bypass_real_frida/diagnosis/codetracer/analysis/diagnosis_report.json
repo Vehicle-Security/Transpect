@@ -15,12 +15,12 @@
   ],
   "fridaIncluded": true,
   "paths": {
-    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
-    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/bundle",
-    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis",
-    "analysis": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.json",
-    "analysisTrajectory": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
-    "diagnosisRun": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_run.json"
+    "runDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
+    "bundleDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "analysisTrajectory": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
+    "diagnosisRun": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_run.json"
   },
   "analysis": {
     "root_cause_chain": [

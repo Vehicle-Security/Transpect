@@ -51,7 +51,7 @@
     "eventCount": 32,
     "quality": {
       "schemaVersion": "transpect.trace-quality.v1",
-      "evaluatedAt": "2026-05-13T11:00:10Z",
+      "evaluatedAt": "2026-05-13T11:50:21Z",
       "ok": true,
       "traceDepth": "deep",
       "substantiveAgentBehavior": true,
@@ -192,7 +192,7 @@
       "path": "manifest.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/manifest.json",
       "kind": "json",
-      "sizeBytes": 2674
+      "sizeBytes": 2634
     },
     {
       "name": "task_input.json",
@@ -210,7 +210,7 @@
       "path": "security-reasoning/final_judgment.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/security-reasoning/final_judgment.json",
       "kind": "json",
-      "sizeBytes": 4510
+      "sizeBytes": 4310
     },
     {
       "name": "security_state.json",
@@ -246,7 +246,7 @@
       "path": "trace_index.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/trace_index.json",
       "kind": "json",
-      "sizeBytes": 819
+      "sizeBytes": 759
     },
     {
       "name": "canonical_trace.json",
@@ -255,7 +255,7 @@
       "path": "canonical_trace.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/canonical_trace.json",
       "kind": "json",
-      "sizeBytes": 48651
+      "sizeBytes": 48471
     },
     {
       "name": "trace_quality.json",
@@ -273,7 +273,7 @@
       "path": "behavior-events.jsonl",
       "displayPath": "state/showcase/staged_attack_confirm_frida/behavior-events.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 20077
+      "sizeBytes": 19837
     },
     {
       "name": "merged-trace.jsonl",
@@ -282,7 +282,7 @@
       "path": "merged-trace.jsonl",
       "displayPath": "state/showcase/staged_attack_confirm_frida/merged-trace.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 46442
+      "sizeBytes": 46202
     },
     {
       "name": "frida-events.jsonl",
@@ -318,7 +318,7 @@
       "path": "diagnosis/codetracer/bundle/manifest.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/diagnosis/codetracer/bundle/manifest.json",
       "kind": "json",
-      "sizeBytes": 2537
+      "sizeBytes": 2457
     },
     {
       "name": "openclaw_runtime.json",
@@ -327,7 +327,7 @@
       "path": "diagnosis/codetracer/bundle/openclaw_runtime.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/diagnosis/codetracer/bundle/openclaw_runtime.json",
       "kind": "json",
-      "sizeBytes": 1746
+      "sizeBytes": 1706
     },
     {
       "name": "stage_ranges.json",
@@ -345,7 +345,7 @@
       "path": "diagnosis/codetracer/analysis/diagnosis_report.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
-      "sizeBytes": 4294
+      "sizeBytes": 4174
     },
     {
       "name": "codetracer_analysis.json",
@@ -363,7 +363,7 @@
       "path": "exports/openinference_spans.json",
       "displayPath": "state/showcase/staged_attack_confirm_frida/exports/openinference_spans.json",
       "kind": "json",
-      "sizeBytes": 39209
+      "sizeBytes": 39029
     }
   ],
   "previews": {

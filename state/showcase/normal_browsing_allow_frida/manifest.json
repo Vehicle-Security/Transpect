@@ -32,12 +32,12 @@
       "analysisOk": true,
       "lastRunAt": "2026-05-12T09:40:41Z",
       "status": "success",
-      "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/bundle",
-      "bundleManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/bundle/manifest.json",
-      "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/codetracer_analysis.json",
-      "analysisTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
-      "diagnosisRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/diagnosis_run.json",
-      "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/diagnosis_report.json"
+      "bundlePath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/bundle",
+      "bundleManifestPath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/bundle/manifest.json",
+      "analysisPath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/codetracer_analysis.json",
+      "analysisTracePath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/codetracer_analysis.traj.json",
+      "diagnosisRunPath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/diagnosis_run.json",
+      "diagnosisReportPath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/diagnosis/codetracer/analysis/diagnosis_report.json"
     }
   },
   "securityReasoning": {
@@ -52,8 +52,8 @@
     "lastStage": "planning",
     "realInteraction": null,
     "lastRunAt": "2026-05-12T09:38:51Z",
-    "decisionPath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/security-reasoning/defense_decision.json",
-    "statePath": "/Users/qwer/Documents/code/Transpect/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/security-reasoning/security_state.json",
+    "decisionPath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/security-reasoning/defense_decision.json",
+    "statePath": "<transpect_root>/live/runs/f7a2a12a-d9c4-4406-a06a-abec2a0190a5/security-reasoning/security_state.json",
     "finalJudgment": {
       "decision": "allow",
       "riskLevel": "low",

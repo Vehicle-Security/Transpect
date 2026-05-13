@@ -4,14 +4,14 @@
   "runId": "1c723e94-71e4-465c-87e0-6ac2e5ec2138",
   "sources": {
     "behavior": {
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/behavior-events.jsonl",
+      "path": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/behavior-events.jsonl",
       "status": "ok",
       "eventCount": 6,
       "warnings": [],
       "error": null
     },
     "frida": {
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/frida-events.jsonl",
+      "path": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/frida-events.jsonl",
       "status": "ok",
       "eventCount": 1790,
       "warnings": [],
@@ -19,7 +19,7 @@
     }
   },
   "merged": {
-    "path": "/Users/qwer/Documents/code/Transpect/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/merged-trace.jsonl",
+    "path": "<transpect_root>/live/runs/1c723e94-71e4-465c-87e0-6ac2e5ec2138/merged-trace.jsonl",
     "status": "ok",
     "eventCount": 1796
   }

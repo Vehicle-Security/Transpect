@@ -33,12 +33,12 @@
       "analysisOk": true,
       "lastRunAt": "2026-04-29T05:40:07Z",
       "status": "success",
-      "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
-      "bundleManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle/manifest.json",
-      "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/codetracer_analysis.json",
+      "bundlePath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
+      "bundleManifestPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle/manifest.json",
+      "analysisPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/codetracer_analysis.json",
       "analysisTracePath": null,
-      "diagnosisRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_run.json",
-      "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_report.json"
+      "diagnosisRunPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_run.json",
+      "diagnosisReportPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/analysis/diagnosis_report.json"
     }
   },
   "securityReasoning": {
@@ -53,8 +53,8 @@
     "lastStage": "execution",
     "realInteraction": null,
     "lastRunAt": "2026-05-09T04:08:19Z",
-    "decisionPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-reasoning/defense_decision.json",
-    "statePath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-reasoning/security_state.json",
+    "decisionPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-reasoning/defense_decision.json",
+    "statePath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-reasoning/security_state.json",
     "finalJudgment": {
       "decision": "block",
       "riskLevel": "critical",
@@ -73,8 +73,8 @@
     "riskLevel": "high",
     "score": 7,
     "lastRunAt": "2026-04-29T05:39:47Z",
-    "reportPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-context/context_report.json",
-    "timelinePath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-context/security_context_timeline.json"
+    "reportPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-context/context_report.json",
+    "timelinePath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/security-context/security_context_timeline.json"
   },
   "bundleId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
   "traceBackbone": {

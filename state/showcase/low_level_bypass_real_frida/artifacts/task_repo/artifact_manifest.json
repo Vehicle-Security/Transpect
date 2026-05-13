@@ -5,7 +5,7 @@
       "logicalName": "source:task",
       "sourceKind": "source",
       "declaredPath": "artifacts/task_repo/source_task.json",
-      "collectedPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/source_task.json",
+      "collectedPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/source_task.json",
       "status": "collected",
       "sizeBytes": 1549
     },
@@ -13,7 +13,7 @@
       "logicalName": "framework:harness_report",
       "sourceKind": "framework",
       "declaredPath": "artifacts/task_repo/harness_report.json",
-      "collectedPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/harness_report.json",
+      "collectedPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/harness_report.json",
       "status": "collected",
       "sizeBytes": 6141
     },
@@ -21,7 +21,7 @@
       "logicalName": "evaluation:inputs_seed",
       "sourceKind": "evaluation_seed",
       "declaredPath": "artifacts/task_repo/evaluation_inputs_seed.json",
-      "collectedPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/evaluation_inputs_seed.json",
+      "collectedPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/evaluation_inputs_seed.json",
       "status": "collected",
       "sizeBytes": 3469
     }

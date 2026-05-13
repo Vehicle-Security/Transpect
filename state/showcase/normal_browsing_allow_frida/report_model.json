@@ -68,7 +68,7 @@
     "eventCount": 9,
     "quality": {
       "schemaVersion": "transpect.trace-quality.v1",
-      "evaluatedAt": "2026-05-13T11:00:10Z",
+      "evaluatedAt": "2026-05-13T11:50:21Z",
       "ok": true,
       "traceDepth": "moderate",
       "substantiveAgentBehavior": true,
@@ -191,7 +191,7 @@
       "path": "manifest.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/manifest.json",
       "kind": "json",
-      "sizeBytes": 3398
+      "sizeBytes": 3238
     },
     {
       "name": "task_input.json",
@@ -209,7 +209,7 @@
       "path": "security-reasoning/final_judgment.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/security-reasoning/final_judgment.json",
       "kind": "json",
-      "sizeBytes": 3972
+      "sizeBytes": 3772
     },
     {
       "name": "security_state.json",
@@ -245,7 +245,7 @@
       "path": "trace_index.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/trace_index.json",
       "kind": "json",
-      "sizeBytes": 822
+      "sizeBytes": 762
     },
     {
       "name": "canonical_trace.json",
@@ -254,7 +254,7 @@
       "path": "canonical_trace.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/canonical_trace.json",
       "kind": "json",
-      "sizeBytes": 20655
+      "sizeBytes": 20475
     },
     {
       "name": "trace_quality.json",
@@ -272,7 +272,7 @@
       "path": "behavior-events.jsonl",
       "displayPath": "state/showcase/normal_browsing_allow_frida/behavior-events.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 7400
+      "sizeBytes": 7280
     },
     {
       "name": "merged-trace.jsonl",
@@ -281,7 +281,7 @@
       "path": "merged-trace.jsonl",
       "displayPath": "state/showcase/normal_browsing_allow_frida/merged-trace.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 1906002
+      "sizeBytes": 1905966
     },
     {
       "name": "frida-events.jsonl",
@@ -290,7 +290,7 @@
       "path": "frida-events.jsonl",
       "displayPath": "state/showcase/normal_browsing_allow_frida/frida-events.jsonl",
       "kind": "jsonl",
-      "sizeBytes": 1053397
+      "sizeBytes": 1053465
     },
     {
       "name": "steps.json",
@@ -317,7 +317,7 @@
       "path": "diagnosis/codetracer/bundle/manifest.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/diagnosis/codetracer/bundle/manifest.json",
       "kind": "json",
-      "sizeBytes": 2441
+      "sizeBytes": 2361
     },
     {
       "name": "openclaw_runtime.json",
@@ -326,7 +326,7 @@
       "path": "diagnosis/codetracer/bundle/openclaw_runtime.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/diagnosis/codetracer/bundle/openclaw_runtime.json",
       "kind": "json",
-      "sizeBytes": 1743
+      "sizeBytes": 1703
     },
     {
       "name": "stage_ranges.json",
@@ -344,7 +344,7 @@
       "path": "diagnosis/codetracer/analysis/diagnosis_report.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/diagnosis/codetracer/analysis/diagnosis_report.json",
       "kind": "json",
-      "sizeBytes": 3368
+      "sizeBytes": 3248
     },
     {
       "name": "codetracer_analysis.json",
@@ -362,7 +362,7 @@
       "path": "exports/openinference_spans.json",
       "displayPath": "state/showcase/normal_browsing_allow_frida/exports/openinference_spans.json",
       "kind": "json",
-      "sizeBytes": 14620
+      "sizeBytes": 14440
     }
   ],
   "previews": {

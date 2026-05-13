@@ -301,8 +301,8 @@
           "Frida low-level evidence correlated with staged inducement from low-trust content."
         ],
         "evidence": {
-          "traceIndexPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/trace_index.json",
-          "mergedTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/merged-trace.jsonl",
+          "traceIndexPath": "<transpect_root>/live/runs/showcase-lowlevel-designed/trace_index.json",
+          "mergedTracePath": "<transpect_root>/live/runs/showcase-lowlevel-designed/merged-trace.jsonl",
           "onlineDecision": "block",
           "securityInterventionCount": 2,
           "fridaIncluded": true,
@@ -314,7 +314,7 @@
           "fridaCriticalEvidenceCount": 2,
           "frida": {
             "status": "ok",
-            "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/frida-events.jsonl",
+            "path": "<transpect_root>/live/runs/showcase-lowlevel-designed/frida-events.jsonl",
             "eventCount": 2,
             "riskTags": [
               "non_browser_network_bypass",
@@ -360,10 +360,10 @@
           "codeTracer": {
             "status": "ok",
             "ok": true,
-            "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/bundle",
-            "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis",
-            "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
-            "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
+            "bundlePath": "<transpect_root>/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/bundle",
+            "analysisDir": "<transpect_root>/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis",
+            "analysisPath": "<transpect_root>/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis/codetracer_analysis.json",
+            "diagnosisReportPath": "<transpect_root>/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis/diagnosis_report.json",
             "summary": "CodeTracer shows the browser-visible chain and Frida records the low-level evidence markers."
           },
           "inputTraceSources": [

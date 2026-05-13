@@ -11,7 +11,7 @@
   "frameworkSuccess": true,
   "agentRunSuccess": false,
   "agentRunId": "3597896c-c742-44a2-804d-d6b12b4026ca",
-  "resolvedRunDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
+  "resolvedRunDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
   "agentLaunched": true,
   "runIdObtained": true,
   "phase": "timeout_with_trace",
@@ -45,12 +45,12 @@
         "available": true,
         "package_available": true,
         "attach_ready": true,
-        "python_executable": "/Users/qwer/Documents/code/Transpect/.venv-frida-arm64/bin/python",
+        "python_executable": "<python_env>/bin/python",
         "python_arch": "arm64",
         "system_arch": "arm64",
         "arch_mismatch": false,
         "import_ok": true,
-        "module_path": "/Users/qwer/Documents/code/Transpect/.venv-frida-arm64/lib/python3.13/site-packages/frida/__init__.py",
+        "module_path": "<python_env>/lib/python3.13/site-packages/frida/__init__.py",
         "version": "17.9.8",
         "has_attach": true,
         "has_get_local_device": true,
@@ -60,9 +60,9 @@
           "frida_trace_found": true,
           "frida_ls_devices_found": true,
           "paths": {
-            "frida-ps": "/opt/anaconda3/bin/frida-ps",
-            "frida-trace": "/opt/anaconda3/bin/frida-trace",
-            "frida-ls-devices": "/opt/anaconda3/bin/frida-ls-devices"
+            "frida-ps": "<python_env>/bin/frida-ps",
+            "frida-trace": "<python_env>/bin/frida-trace",
+            "frida-ls-devices": "<python_env>/bin/frida-ls-devices"
           }
         },
         "shadowed": false,
@@ -113,26 +113,26 @@
       }
     ],
     "summary": {
-      "repoRoot": "/Users/qwer/Documents/code/Transpect/task_repos/staged_attack",
+      "repoRoot": "<transpect_root>/task_repos/staged_attack",
       "sourceCapable": true
     }
   },
   "traceMerge": {
     "ok": true,
-    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
-    "mergedTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/merged-trace.jsonl",
-    "traceIndexPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/trace_index.json",
+    "runDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
+    "mergedTracePath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/merged-trace.jsonl",
+    "traceIndexPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/trace_index.json",
     "eventCount": 1790,
     "sources": {
       "behavior": {
-        "path": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/behavior-events.jsonl",
+        "path": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/behavior-events.jsonl",
         "status": "ok",
         "eventCount": 6,
         "warnings": [],
         "error": null
       },
       "frida": {
-        "path": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/frida-events.jsonl",
+        "path": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/frida-events.jsonl",
         "status": "ok",
         "eventCount": 1784,
         "warnings": [],
@@ -142,22 +142,22 @@
   },
   "diagnosis": {
     "ok": false,
-    "runDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
-    "bundleDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/bundle",
-    "analysisDir": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis",
-    "analysisPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.json",
+    "runDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca",
+    "bundleDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis",
+    "analysisPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/codetracer_analysis.json",
     "analysisTrajPath": null,
-    "diagnosisRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_run.json",
-    "diagnosisReportPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_report.json",
+    "diagnosisRunPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_run.json",
+    "diagnosisReportPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/diagnosis/codetracer/analysis/diagnosis_report.json",
     "returncode": 1,
     "analysisExists": false,
     "analysisValid": false,
     "invalidAnalysisReason": "analysis_output_missing",
     "stdout": "",
-    "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/Users/qwer/Documents/code/CodeTracer/src/codetracer/__main__.py\", line 1, in <module>\n    from codetracer.cli import app\n  File \"/Users/qwer/Documents/code/CodeTracer/src/codetracer/cli/__init__.py\", line 3, in <module>\n    from codetracer.cli.commands import app\n  File \"/Users/qwer/Documents/code/CodeTracer/src/codetracer/cli/commands.py\", line 9, in <module>\n    import typer\nModuleNotFoundError: No module named 'typer'\n",
+    "stderr": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"<user_home>/Documents/code/CodeTracer/src/codetracer/__main__.py\", line 1, in <module>\n    from codetracer.cli import app\n  File \"<user_home>/Documents/code/CodeTracer/src/codetracer/cli/__init__.py\", line 3, in <module>\n    from codetracer.cli.commands import app\n  File \"<user_home>/Documents/code/CodeTracer/src/codetracer/cli/commands.py\", line 9, in <module>\n    import typer\nModuleNotFoundError: No module named 'typer'\n",
     "status": "failed"
   },
-  "artifactManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/artifact_manifest.json",
+  "artifactManifestPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/artifacts/task_repo/artifact_manifest.json",
   "securityContext": {
     "schemaVersion": "transpect.security-context-report.v1",
     "generatedAt": "2026-05-12T08:53:20Z",
@@ -176,8 +176,8 @@
     },
     "evidence": [],
     "securityReasoning": {
-      "decisionPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/defense_decision.json",
-      "statePath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/security_state.json",
+      "decisionPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/defense_decision.json",
+      "statePath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/security_state.json",
       "crossStepCorrelation": null,
       "decisionPointEventSeq": null,
       "hardBlockTriggered": false,
@@ -193,8 +193,8 @@
     "status": "success"
   },
   "securityReasoning": {
-    "decisionPath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/defense_decision.json",
-    "statePath": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/security_state.json",
+    "decisionPath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/defense_decision.json",
+    "statePath": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/security_state.json",
     "crossStepCorrelation": null,
     "decisionPointEventSeq": null,
     "hardBlockTriggered": false,
@@ -205,6 +205,6 @@
     "ok": true,
     "decision": "block",
     "riskLevel": "critical",
-    "path": "/Users/qwer/Documents/code/Transpect/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/final_judgment.json"
+    "path": "<transpect_root>/live/runs/3597896c-c742-44a2-804d-d6b12b4026ca/security-reasoning/final_judgment.json"
   }
 }

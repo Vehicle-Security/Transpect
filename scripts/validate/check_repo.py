@@ -29,6 +29,7 @@ STABLE_SCREENSHOTS = [
 REQUIRED_PATHS = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "requirements.txt",
+    REPO_ROOT / "requirements-frida.txt",
     REPO_ROOT / "docs" / "architecture" / "canonical-layout.md",
     REPO_ROOT / "docs" / "architecture" / "overview.md",
     REPO_ROOT / "docs" / "directory-layout.md",
@@ -48,7 +49,10 @@ REQUIRED_PATHS = [
     REPO_ROOT / "scripts" / "runtime" / "start_trace.py",
     REPO_ROOT / "scripts" / "runtime" / "setup_runtime.py",
     REPO_ROOT / "scripts" / "validate" / "doctor.py",
+    REPO_ROOT / "scripts" / "validate" / "deployment_doctor.py",
+    REPO_ROOT / "scripts" / "validate" / "check_portability.py",
     REPO_ROOT / "scripts" / "validate" / "run_acceptance.py",
+    REPO_ROOT / "scripts" / "demo" / "sanitize_showcase_paths.py",
     REPO_ROOT / "scripts" / "export" / "export_codetracer_bundle.py",
     REPO_ROOT / "scripts" / "diagnosis" / "run_codetracer_diagnosis.py",
     REPO_ROOT / "tests" / "validate" / "test_codetracer_export.py",
@@ -206,6 +210,29 @@ def check_compat_entrypoints() -> dict[str, Any]:
     return {"ok": ok, "entries": entries}
 
 
+def run_portability_check() -> dict[str, Any]:
+    result = run_command(
+        [python_executable(), str(REPO_ROOT / "scripts" / "validate" / "check_portability.py")],
+        cwd=REPO_ROOT,
+        timeout=120,
+        check=False,
+    )
+    parsed = None
+    parse_error = None
+    if result.stdout.strip():
+        try:
+            parsed = json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            parse_error = str(error)
+    return {
+        "ok": result.returncode == 0 and isinstance(parsed, dict) and bool(parsed.get("ok")),
+        "returncode": result.returncode,
+        "parsed": parsed,
+        "parseError": parse_error,
+        "stderr": result.stderr.strip(),
+    }
+
+
 def run_start(host: str, port: int) -> dict[str, Any]:
     result = run_command(
         [
@@ -283,6 +310,7 @@ def main() -> None:
         "requiredPaths": check_required_paths(),
         "gitignore": check_gitignore(),
         "hardcodedPaths": scan_hardcoded_paths(),
+        "portability": run_portability_check(),
         "compatEntryPoints": check_compat_entrypoints(),
     }
 
@@ -301,6 +329,7 @@ def main() -> None:
             report["requiredPaths"],
             report["gitignore"],
             report["hardcodedPaths"],
+            report["portability"],
             report["compatEntryPoints"],
             report["startRuntime"],
             report["doctor"],

@@ -4,14 +4,14 @@
   "sources": {
     "behavior": {
       "status": "ok",
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/behavior-events.jsonl",
+      "path": "<transpect_root>/live/runs/showcase-allow-designed/behavior-events.jsonl",
       "eventCount": 4,
       "warnings": [],
       "error": null
     },
     "frida": {
       "status": "unavailable",
-      "path": "/Users/qwer/Documents/code/Transpect/live/runs/showcase-allow-designed/frida-events.jsonl",
+      "path": "<transpect_root>/live/runs/showcase-allow-designed/frida-events.jsonl",
       "eventCount": 0,
       "warnings": [
         "frida_unavailable"

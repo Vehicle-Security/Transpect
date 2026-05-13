@@ -3,8 +3,8 @@
   "exportedAt": "2026-05-09T04:08:26Z",
   "bundleId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
   "bundleDirName": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
-  "bundlePath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
-  "sourceTracePath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/merged-trace.jsonl",
+  "bundlePath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/diagnosis/codetracer/bundle",
+  "sourceTracePath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/merged-trace.jsonl",
   "inputTraceSources": {
     "behavior": {
       "path": "source/behavior-events.jsonl",
@@ -28,8 +28,8 @@
     }
   },
   "sourceKind": "run",
-  "sourceRunPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39",
-  "sourceRunManifestPath": "/Users/qwer/Documents/code/Transpect/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/manifest.json",
+  "sourceRunPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39",
+  "sourceRunManifestPath": "<transpect_root>/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/manifest.json",
   "primaryRunId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
   "primaryTraceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
   "rowCount": 24,

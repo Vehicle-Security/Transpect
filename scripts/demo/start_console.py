@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import urljoin
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -31,7 +31,9 @@ def http_status(url: str) -> int | None:
     try:
         with urlopen(request, timeout=2) as response:
             return int(response.status)
-    except URLError:
+    except HTTPError as exc:
+        return int(exc.code)
+    except (OSError, TimeoutError, URLError):
         return None
 
 
@@ -40,7 +42,7 @@ def read_url(url: str) -> str | None:
     try:
         with urlopen(request, timeout=3) as response:
             return response.read().decode("utf-8", errors="replace")
-    except URLError:
+    except (OSError, TimeoutError, URLError):
         return None
 
 
@@ -63,7 +65,7 @@ def check_console_app() -> list[str]:
     if not (CONSOLE_DIR / "package.json").exists():
         issues.append(f"Missing {CONSOLE_DIR / 'package.json'}")
     if not (CONSOLE_DIR / "node_modules").exists():
-        issues.append("Missing apps/console/node_modules. Run: cd apps/console && npm install")
+        issues.append("Missing apps/console/node_modules. Run: cd apps/console && npm ci")
     return issues
 
 

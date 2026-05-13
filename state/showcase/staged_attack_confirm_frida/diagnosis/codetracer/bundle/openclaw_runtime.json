@@ -10,7 +10,7 @@
     "ok": true,
     "method": "behavior-mediator.status",
     "active": false,
-    "runsDirectory": "/Users/qwer/Documents/code/Transpect/live/runs",
+    "runsDirectory": "<transpect_root>/live/runs",
     "artifactsEnabled": true,
     "autoDiagnosisEnabled": true,
     "capturePreviewChars": 2000,
@@ -18,7 +18,7 @@
     "traceEval": false,
     "securityEnabled": true,
     "securityMode": "enforce",
-    "policyPath": "/Users/qwer/Documents/code/Transpect/config/agent-defense-policy.json",
+    "policyPath": "<transpect_root>/config/agent-defense-policy.json",
     "llmJudge": {
       "enabled": true,
       "mode": "gray_zone_only"
