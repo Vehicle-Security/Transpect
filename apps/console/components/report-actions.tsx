@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Copy, Database, ExternalLink } from "lucide-react";
+import { Copy, Database, ExternalLink, ShieldAlert } from "lucide-react";
 
 export function ReportActions({ showcaseId }: { showcaseId: string }) {
   async function copyLink() {
@@ -18,6 +18,13 @@ export function ReportActions({ showcaseId }: { showcaseId: string }) {
         <Copy className="h-4 w-4" aria-hidden="true" />
         Copy Link
       </button>
+      <Link
+        href={`/showcases/${showcaseId}/defense`}
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-white/15"
+      >
+        <ShieldAlert className="h-4 w-4" aria-hidden="true" />
+        Defense Walkthrough
+      </Link>
       <Link
         href={`/artifacts/${showcaseId}?path=security-reasoning%2Ffinal_judgment.json`}
         className="inline-flex h-10 items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-white/15"

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import re
 import json
+import shutil
 import socket
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from urllib.request import Request, urlopen
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONSOLE_DIR = REPO_ROOT / "apps" / "console"
 SHOWCASE_ROOT = REPO_ROOT / "state" / "showcase"
+NEXT_CACHE = CONSOLE_DIR / ".next"
 
 
 def can_connect(host: str, port: int) -> bool:
@@ -44,6 +46,26 @@ def read_url(url: str) -> str | None:
             return response.read().decode("utf-8", errors="replace")
     except (OSError, TimeoutError, URLError):
         return None
+
+
+def clean_next_cache() -> None:
+    shutil.rmtree(NEXT_CACHE, ignore_errors=True)
+
+
+def stop_port_listeners(port: int) -> None:
+    try:
+        result = subprocess.run(
+            ["lsof", f"-tiTCP:{port}", "-sTCP:LISTEN", "-n", "-P"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        return
+    pids = [pid.strip() for pid in result.stdout.splitlines() if pid.strip()]
+    if not pids:
+        return
+    subprocess.run(["kill", *pids], check=False)
 
 
 def stylesheet_status(url: str) -> tuple[bool, str]:
@@ -105,9 +127,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1", help="Host for Next.js dev server.")
     parser.add_argument("--port", type=int, default=5000, help="Port for Next.js dev server.")
     parser.add_argument("--check-only", action="store_true", help="Only check prerequisites and server state.")
+    parser.add_argument("--clean", action="store_true", help="Remove apps/console/.next before starting.")
+    parser.add_argument("--restart", action="store_true", help="Stop any listener on the target port before starting.")
     args = parser.parse_args(argv)
 
     url = f"http://{args.host}:{args.port}"
+    if args.restart:
+        stop_port_listeners(args.port)
+    if args.clean or args.restart:
+        clean_next_cache()
+
     app_issues = check_console_app()
     showcase_issues, showcase_count = check_showcase_reports()
     server_running = can_connect(args.host, args.port)
@@ -130,14 +159,26 @@ def main(argv: list[str] | None = None) -> int:
         if status == 200 and styles_ok:
             print(f"\nOpen: {url}")
             return 0
-        if status == 200:
-            print(
-                "- Console HTML is reachable, but its stylesheet is not. "
-                "Stop the dev server, remove apps/console/.next, and restart.",
-                file=sys.stderr,
-            )
+        if not args.check_only:
+            print("- Existing Console server is unhealthy. Restarting with a clean Next.js cache.", file=sys.stderr)
+            stop_port_listeners(args.port)
+            clean_next_cache()
+            server_running = False
+        else:
+            if status == 200:
+                print(
+                    "- Console HTML is reachable, but its stylesheet is not. "
+                    "Restart with: python scripts/demo/start_console.py --port "
+                    f"{args.port} --restart",
+                    file=sys.stderr,
+                )
+                return 3
+            print(f"- Port {args.port} is in use, but {url} did not return HTTP 200.", file=sys.stderr)
             return 3
-        print(f"- Port {args.port} is in use, but {url} did not return HTTP 200.", file=sys.stderr)
+
+    if server_running:
+        # This branch is intentionally unreachable after the restart path above,
+        # but keeps the control flow explicit for future edits.
         return 3
 
     if args.check_only:
