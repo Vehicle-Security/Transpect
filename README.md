@@ -65,10 +65,10 @@ The lowest supported deployment path is **frozen showcase replay**. It does not 
 git clone <repo-url> Transpect
 cd Transpect
 
-python -m venv .venv
+uv venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+uv pip install --upgrade pip
+uv pip install -r requirements.txt
 
 cd apps/console
 npm ci
