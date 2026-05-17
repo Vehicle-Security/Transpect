@@ -9,7 +9,7 @@ Layer 1 task/scenario source
   -> Layer 4 contextual security reasoning
 ```
 
-Layer 4 不替换前三层。它只读取 `live/runs/<runId>/` 里的真实运行产物，压缩安全上下文，再输出可解释防御决策。
+Layer 4 不替换前三层。它只读取 `monitor/live/runs/<runId>/` 里的真实运行产物，压缩安全上下文，再输出可解释防御决策。
 
 ## 场景
 
@@ -42,26 +42,26 @@ data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001
 Layer 3 仍然输出：
 
 ```text
-live/runs/<runId>/behavior-events.jsonl
-live/runs/<runId>/frida-events.jsonl
-live/runs/<runId>/trace_index.json
-live/runs/<runId>/merged-trace.jsonl
-live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
+monitor/live/runs/<runId>/behavior-events.jsonl
+monitor/live/runs/<runId>/frida-events.jsonl
+monitor/live/runs/<runId>/trace_index.json
+monitor/live/runs/<runId>/merged-trace.jsonl
+monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
 ```
 
 新增 Layer 4 输出：
 
 ```text
-live/runs/<runId>/security-reasoning/security_state.json
-live/runs/<runId>/security-reasoning/defense_decision.json
-live/runs/<runId>/security-reasoning/final_judgment.json
+monitor/live/runs/<runId>/security-reasoning/security_state.json
+monitor/live/runs/<runId>/security-reasoning/defense_decision.json
+monitor/live/runs/<runId>/security-reasoning/final_judgment.json
 ```
 
 旧兼容输出仍然保留：
 
 ```text
-live/runs/<runId>/security-context/security_context_timeline.json
-live/runs/<runId>/security-context/context_report.json
+monitor/live/runs/<runId>/security-context/security_context_timeline.json
+monitor/live/runs/<runId>/security-context/context_report.json
 ```
 
 `security_state.json` 是长上下文压缩结果，包含：
@@ -106,7 +106,7 @@ live/runs/<runId>/security-context/context_report.json
 现场演示推荐只运行一个入口：
 
 ```bash
-python scripts/demo/run_showcase.py
+python tools/demo/run_showcase.py
 ```
 
 脚本会检查并启动 staged attack site 和 viewer，运行 staged attack agent trace，启用 Frida auto 模式，合并 behavior + Frida trace，运行 defense reasoner，导出并运行 CodeTracer 诊断，生成 `final_judgment.json`，并补齐 Agent Trace Backbone 产物：
@@ -120,9 +120,9 @@ exports/openinference_spans.json
 现场产品展示推荐使用已经冻结的 Next.js Console，而不是每次重新跑 Agent：
 
 ```bash
-python scripts/demo/build_showcase_reports.py
-python scripts/demo/validate_showcase.py --require-report-model
-cd apps/console
+python tools/demo/build_showcase_reports.py
+python tools/demo/validate_showcase.py --require-report-model
+cd dashboard/console
 npm run dev -- --hostname 127.0.0.1 --port 5000
 ```
 
@@ -141,28 +141,28 @@ http://127.0.0.1:8711/viewer/index.html?view=showcase
 现场兜底回放：
 
 ```bash
-python scripts/demo/run_showcase.py --reuse-latest
-python scripts/demo/run_showcase.py --no-openclaw-run --run-dir live/runs/<runId>
+python tools/demo/run_showcase.py --reuse-latest
+python tools/demo/run_showcase.py --no-openclaw-run --run-dir monitor/live/runs/<runId>
 ```
 
 内部调试仍可单独运行：
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode list-tasks
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001
+python tools/runtime/run_task_repo.py --repo staged_attack --mode list-tasks
+python tools/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001
 ```
 
 只重跑 Layer 4：
 
 ```bash
-python scripts/security_reasoning/run_defense_reasoner.py --run-dir live/runs/$RUN_ID
+python tools/security_reasoning/run_defense_reasoner.py --run-dir monitor/live/runs/$RUN_ID
 ```
 
 兼容旧报告：
 
 ```bash
-python scripts/security_context/run_context_judge.py --run-dir live/runs/$RUN_ID
-jq . live/runs/$RUN_ID/security-context/context_report.json
+python tools/security_context/run_context_judge.py --run-dir monitor/live/runs/$RUN_ID
+jq . monitor/live/runs/$RUN_ID/security-context/context_report.json
 ```
 
 ## 演示时怎么讲

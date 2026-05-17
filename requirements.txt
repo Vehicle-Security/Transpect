@@ -1,6 +1,0 @@
-jsonschema>=4.0.0
-python-dotenv>=1.0.0
-
-# Frida is optional and is only required for full OS-level evidence capture.
-# Install it with:
-#   python -m pip install -r requirements-frida.txt

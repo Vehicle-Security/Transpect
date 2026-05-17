@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "openclaw.run.runtime.v1",
+  "capturedAt": "2026-05-12T08:55:42.430Z",
+  "ids": {
+    "runId": "1c723e94-71e4-465c-87e0-6ac2e5ec2138",
+    "traceId": "trace_bfc5f53fa4364a6998c81857997600ef",
+    "sessionKey": "agent:main:explicit:1c723e94-71e4-465c-87e0-6ac2e5ec2138"
+  },
+  "behaviorMediator": {
+    "ok": true,
+    "method": "behavior-mediator.status",
+    "active": false,
+    "runsDirectory": "<transpect_root>/monitor/live/runs",
+    "artifactsEnabled": true,
+    "autoDiagnosisEnabled": true,
+    "capturePreviewChars": 2000,
+    "captureNetwork": true,
+    "traceEval": false,
+    "securityEnabled": true,
+    "securityMode": "enforce",
+    "policyPath": "<transpect_root>/config/agent-defense-policy.json",
+    "llmJudge": {
+      "enabled": true,
+      "mode": "gray_zone_only"
+    },
+    "hooksRegistered": 10,
+    "hookNames": [
+      "message_received",
+      "before_agent_start",
+      "before_tool_call",
+      "after_tool_call",
+      "llm_input",
+      "llm_output",
+      "subagent_spawning",
+      "subagent_spawned",
+      "subagent_ended",
+      "agent_end"
+    ],
+    "hookEventsObserved": 2,
+    "firstHookEventTs": "2026-05-12T08:55:04.662Z",
+    "lastHookEventTs": "2026-05-12T08:55:42.142Z",
+    "eventsWritten": 6,
+    "lastEventTs": "2026-05-12T08:55:42.430Z",
+    "lastWriteOk": true,
+    "lastWriteError": null,
+    "artifactsWritten": 0,
+    "diagnosesTriggered": 0,
+    "diagnosisInFlight": 0,
+    "lastDiagnosisError": null,
+    "securityBridgeFailures": 0,
+    "lastSecurityDecision": "warn",
+    "lastSecurityError": null,
+    "runStoreCount": 1,
+    "openRequests": 1,
+    "openTurns": 1,
+    "openTools": 0,
+    "openLlms": 0,
+    "openTasks": 0
+  }
+}

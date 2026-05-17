@@ -1,0 +1,120 @@
+[
+  {
+    "step_id": 1,
+    "action": "Tool: read\nStatus: started\n{\n  \"path\": \"~/.openclaw/workspace/skills/openclaw-agent-browser-clawdbot/SKILL.md\"\n}",
+    "observation": "Tool result\nStatus: ok\n{\n  \"result\": {\n    \"content\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"---\\nname: agent-browser\\ndescription: Headless browser automation CLI optimized for AI agents with accessibility tree snapshots and ref-based element selection\\nmetadata: {\\\"clawdbot\\\":{\\\"emoji\\\":\\\"🌐\\\",\\\"requires\\\":{\\\"commands\\\":[\\\"agent-browser\\\"]},\\\"homepage\\\":\\\"https://github.com/vercel-labs/agent-browser\\\"}}\\n---\\n\\n# Agent Browser Skill\\n\\nFast browser automation using accessibility tree snapshots with refs for deterministic element selection.\\n\\n## Why Use This Over Built-in Browser Tool\\n\\n**Use agent-browser when:**\\n- Automating multi-step workflows\\n- Need deterministic element selection\\n- Performance is critical\\n- Working with complex SPAs\\n- Need session isolation\\n\\n**Use built-in browser tool when:**\\n- Need screenshots/PDFs for analysis\\n- Visual inspection required\\n- Browser extension integration needed\\n\\n## Core Workflow\\n\\n```bash\\n# 1. Navigate and snapshot\\nagent-browser open https://example.com\\nagent-browser snapshot -i --json\\n\\n# 2. Parse refs from JSON, then interact\\nagent-browser click @e2\\nagent-browser fill @e3 \\\"text\\\"\\n\\n# 3. Re-snapshot after page changes\\nagent-browser snapshot -i --json\\n```\\n\\n## Key Commands\\n\\n### Navigation\\n```bash\\nagent-browser open <url>\\nagent-browser back | forward | reload | c...[5545 chars total]\"\n      }\n    ]\n  },\n  \"error\": null\n}",
+    "tool_type": "read",
+    "step_kind": "explore",
+    "openclaw_meta": {
+      "traceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
+      "spanId": "spn_92d47bd6c9594f33a9ac3a03de81df82",
+      "parentSpanId": "spn_32c0cd052fdb4292b2ebf807adcbca1f",
+      "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+      "sessionKey": "agent:main:explicit:8832068e-e50f-46b1-a6ba-aff468cc7431",
+      "toolCallId": "call_00_cxn14QRI6Zi6tRyei4q0w6U9",
+      "step_kind_reason": "tool 'read' is in the explore allowlist",
+      "source_kind": "tool",
+      "source_status": "ok",
+      "policyMatched": false,
+      "policyObservation": null,
+      "securityScenario": null,
+      "mode": null,
+      "effectiveMode": null,
+      "pathSecurity": null,
+      "expectedMode": null,
+      "expectedOutcome": null,
+      "observedOutcome": null,
+      "expectationMatched": null,
+      "syntheticReason": null,
+      "sourceRows": [
+        {
+          "originalLine": 13,
+          "copiedLine": 13,
+          "seq": 13,
+          "kind": "tool",
+          "status": "started",
+          "path": "source/merged-trace.jsonl"
+        },
+        {
+          "originalLine": 15,
+          "copiedLine": 15,
+          "seq": 15,
+          "kind": "tool",
+          "status": "ok",
+          "path": "source/merged-trace.jsonl"
+        }
+      ]
+    },
+    "action_ref": {
+      "path": "sidecars/step-0001/action.json",
+      "line_start": 1,
+      "line_end": 27,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 1,\n  \"stepKind\": \"explore\",\n  \"toolType\": \"read\",\n  \"payload\": {\n    \"path\": \"~/.openclaw/workspace/skills/openclaw-agent-browser-clawdbot/SKILL.md\"\n  },\n  \"runtimeArtifact\": \"<transpect_root>/monitor/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/artifacts/call_00_cxn14QRI6Zi6tRyei4q0w6U9/input.json\",\n  \"sourceRows\": [\n    {\n      \"originalLine\": 13,\n      \"copiedLine\": 13,\n      \"seq\": 13,\n      \"kind\": \"tool\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 15,\n      \"copiedLine\": 15,\n      \"seq\": 15,\n      \"kind\": \"tool\",\n      \"status\": \"ok\"\n    }\n  ]\n}"
+    },
+    "observation_ref": {
+      "path": "sidecars/step-0001/observation.json",
+      "line_start": 1,
+      "line_end": 35,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 1,\n  \"stepKind\": \"explore\",\n  \"toolType\": \"read\",\n  \"payload\": {\n    \"result\": {\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"---\\nname: agent-browser\\ndescription: Headless browser automation CLI optimized for AI agents with accessibility tree snapshots and ref-based element selection\\nmetadata: {\\\"clawdbot\\\":{\\\"emoji\\\":\\\"🌐\\\",\\\"requires\\\":{\\\"commands\\\":[\\\"agent-browser\\\"]},\\\"homepage\\\":\\\"https://github.com/vercel-labs/agent-browser\\\"}}\\n---\\n\\n# Agent Browser Skill\\n\\nFast browser automation using accessibility tree snapshots with refs for deterministic element selection.\\n\\n## Why Use This Over Built-in Browser Tool\\n\\n**Use agent-browser when:**\\n- Automating multi-step workflows\\n- Need deterministic element selection\\n- Performance is critical\\n- Working with complex SPAs\\n- Need session isolation\\n\\n**Use built-in browser tool when:**\\n- Need screenshots/PDFs for analysis\\n- Visual inspection required\\n- Browser extension integration needed\\n\\n## Core Workflow\\n\\n```bash\\n# 1. Navigate and snapshot\\nagent-browser open https://example.com\\nagent-browser snapshot -i --json\\n\\n# 2. Parse refs from JSON, then interact\\nagent-browser click @e2\\nagent-browser fill @e3 \\\"text\\\"\\n\\n# 3. Re-snapshot after page changes\\nagent-browser snapshot -i --json\\n```\\n\\n## Key Commands\\n\\n### Navigation\\n```bash\\nagent-browser open <url>\\nagent-browser back | forward | reload | close\\n```\\n\\n### Snapshot (Always use -i --json)\\n```bash\\nagent-browser snapshot -i --json          # Interactive elements, JSON output\\nagent-browser snapshot -i -c -d 5 --json  # + compact, depth limit\\nagent-browser snapshot -s \\\"#main\\\" -i      # Scope to selector\\n```\\n\\n### Interactions (Ref-based)\\n```bash\\nagent-browser click @e2\\nagent-browser fill @e3 \\\"text\\\"\\nagent-browser type @e3 \\\"text\\\"\\nagent-browser hover @e4\\nagent-browser check @e5 | uncheck @e5\\nagent-browser select @e6 \\\"value\\\"\\nagent-browser press \\\"Enter\\\"\\nagent-browser scroll down 500\\nagent-browser drag @e7 @e8\\n```\\n\\n### Get Information\\n```bash\\nagent-browser get text @e1 --json\\nagent-browser get html @e2 --json\\nagent-browser get value @e3 --json\\nagent-browser get attr @e4 \\\"href\\\" --json\\nagent-browser get title --json\\nagent-browser get url --json\\nagent-browser get count \\\".item\\\" --json\\n```\\n\\n### Check State\\n```bash\\nagent-browser is visible @e2 --json\\nagent-browser is enabled @e3 --json\\nagent-browser is checked @e4 --json\\n```\\n\\n### Wait\\n```bash\\nagent-browser wait @e2                    # Wait for element\\nagent-browser wait 1000                   # Wait ms\\nagent-browser wait --text \\\"Welcome\\\"       # Wait for text\\nagent-browser wait --url \\\"**/dashboard\\\"   # Wait for URL\\nagent-browser wait --load networkidle     # Wait for network\\nagent-browser wait --fn \\\"window.ready === true\\\"\\n```\\n\\n### Sessions (Isolated Browsers)\\n```bash\\nagent-browser --session admin open site.com\\nagent-browser --session user open site.com\\nagent-browser session list\\n# Or via env: AGENT_BROWSER_SESSION=admin agent-browser ...\\n```\\n\\n### State Persistence\\n```bash\\nagent-browser state save auth.json        # Save cookies/storage\\nagent-browser state load auth.json        # Load (skip login)\\n```\\n\\n### Screenshots & PDFs\\n```bash\\nagent-browser screenshot page.png\\nagent-browser screenshot --full page.png\\nagent-browser pdf page.pdf\\n```\\n\\n### Network Control\\n```bash\\nagent-browser network route \\\"**/ads/*\\\" --abort           # Block\\nagent-browser network route \\\"**/api/*\\\" --body '{\\\"x\\\":1}'  # Mock\\nagent-browser network requests --filter api              # View\\n```\\n\\n### Cookies & Storage\\n```bash\\nagent-browser cookies                     # Get all\\nagent-browser cookies set name value\\nagent-browser storage local key           # Get localStorage\\nagent-browser storage local set key val\\n```\\n\\n### Tabs & Frames\\n```bash\\nagent-browser tab new https://example.com\\nagent-browser tab 2                       # Switch to tab\\nagent-browser frame @e5                   # Switch to iframe\\nagent-browser frame main                  # Back to main\\n```\\n\\n## Snapshot Output Format\\n\\n```json\\n{\\n  \\\"success\\\": true,\\n  \\\"data\\\": {\\n    \\\"snapshot\\\": \\\"...\\\",\\n    \\\"refs\\\": {\\n      \\\"e1\\\": {\\\"role\\\": \\\"heading\\\", \\\"name\\\": \\\"Example Domain\\\"},\\n      \\\"e2\\\": {\\\"role\\\": \\\"button\\\", \\\"name\\\": \\\"Submit\\\"},\\n      \\\"e3\\\": {\\\"role\\\": \\\"textbox\\\", \\\"name\\\": \\\"Email\\\"}\\n    }\\n  }\\n}\\n```\\n\\n## Best Practices\\n\\n1. **Always use `-i` flag** - Focus on interactive elements\\n2. **Always use `--json`** - Easier to parse\\n3. **Wait for stability** - `agent-browser wait --load networkidle`\\n4. **Save auth state** - Skip login flows with `state save/load`\\n5. **Use sessions** - Isolate different browser contexts\\n6. **Use `--headed` for debugging** - See what's happening\\n\\n## Example: Search and Extract\\n\\n```bash\\nagent-browser open https://www.google.com\\nagent-browser snapshot -i --json\\n# AI identifies search box @e1\\nagent-browser fill @e1 \\\"AI agents\\\"\\nagent-browser press Enter\\nagent-browser wait --load networkidle\\nagent-browser snapshot -i --json\\n# AI identifies result refs\\nagent-browser get text @e3 --json\\nagent-browser get attr @e4 \\\"href\\\" --json\\n```\\n\\n## Example: Multi-Session Testing\\n\\n```bash\\n# Admin session\\nagent-browser --session admin open app.com\\nagent-browser --session admin state load admin-auth.json\\nagent-browser --session admin snapshot -i --json\\n\\n# User session (simultaneous)\\nagent-browser --session user open app.com\\nagent-browser --session user state load user-auth.json\\nagent-browser --session user snapshot -i --json\\n```\\n\\n## Installation\\n\\n```bash\\nnpm install -g agent-browser\\nagent-browser install                     # Download Chromium\\nagent-browser install --with-deps         # Linux: + system deps\\n```\\n\\n## Credits\\n\\nSkill created by Yossi Elkrief ([@MaTriXy](https://github.com/MaTriXy))\\n\\nagent-browser CLI by [Vercel Labs](https://github.com/vercel-labs/agent-browser)\\n\"\n        }\n      ]\n    },\n    \"error\": null\n  },\n  \"runtimeArtifact\": \"<transpect_root>/monitor/live/runs/d4372a3e-a253-4c0e-8087-24ba578c4a39/artifacts/call_00_cxn14QRI6Zi6tRyei4q0w6U9/output.json\",\n  \"sourceRows\": [\n    {\n      \"originalLine\": 13,\n      \"copiedLine\": 13,\n      \"seq\": 13,\n      \"kind\": \"tool\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 15,\n      \"copiedLine\": 15,\n      \"seq\": 15,\n      \"kind\": \"tool\",\n      \"status\": \"ok\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "step_id": 2,
+    "action": "Synthetic turn diagnostic\nStatus: synthetic\n{\n  \"prompt\": {\n    \"prompt\": \"[Wed 2026-04-29 13:39 GMT+8] 请打开 http://127.0.0.1:8765/xhs/topic/camping，查看小红书露营话题的帖子与评论，并总结要点。\"\n  },\n  \"name\": \"openclaw.agent.turn\"\n}",
+    "observation": "Turn completion\nStatus: error\n{\n  \"status\": \"error\",\n  \"preview\": {\n    \"error\": \"replaced by a newer turn\"\n  }\n}",
+    "tool_type": "synthetic",
+    "step_kind": "synthetic",
+    "openclaw_meta": {
+      "traceId": "trace_3a8b7c62a24a4632b91482345a014cf0",
+      "spanId": "spn_7049f77d80084efaab85e19c6bb39ef5",
+      "parentSpanId": "spn_d67c0e4cc3c345ef97429b17cf8e1f74",
+      "runId": "d4372a3e-a253-4c0e-8087-24ba578c4a39",
+      "sessionKey": "agent:main:explicit:8832068e-e50f-46b1-a6ba-aff468cc7431",
+      "toolCallId": null,
+      "step_kind_reason": "tool-less turn retained for diagnostic state",
+      "source_kind": "turn",
+      "source_status": "error",
+      "policyMatched": false,
+      "policyObservation": null,
+      "securityScenario": null,
+      "mode": null,
+      "effectiveMode": null,
+      "pathSecurity": null,
+      "expectedMode": null,
+      "expectedOutcome": null,
+      "observedOutcome": null,
+      "expectationMatched": null,
+      "syntheticReason": "toolless_turn_diagnostic",
+      "sourceRows": [
+        {
+          "originalLine": 2,
+          "copiedLine": 2,
+          "seq": 2,
+          "kind": "turn",
+          "status": "started",
+          "path": "source/merged-trace.jsonl"
+        },
+        {
+          "originalLine": 4,
+          "copiedLine": 4,
+          "seq": 4,
+          "kind": "turn",
+          "status": "error",
+          "path": "source/merged-trace.jsonl"
+        }
+      ]
+    },
+    "action_ref": {
+      "path": "sidecars/step-0002/action.json",
+      "line_start": 1,
+      "line_end": 30,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"action\",\n  \"stepId\": 2,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"prompt\": {\n      \"prompt\": \"[Wed 2026-04-29 13:39 GMT+8] 请打开 http://127.0.0.1:8765/xhs/topic/camping，查看小红书露营话题的帖子与评论，并总结要点。\"\n    },\n    \"name\": \"openclaw.agent.turn\"\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+    },
+    "observation_ref": {
+      "path": "sidecars/step-0002/observation.json",
+      "line_start": 1,
+      "line_end": 30,
+      "content": "{\n  \"schemaVersion\": \"openclaw.codetracer.bundle.v1\",\n  \"kind\": \"observation\",\n  \"stepId\": 2,\n  \"stepKind\": \"synthetic\",\n  \"toolType\": \"synthetic\",\n  \"payload\": {\n    \"status\": \"error\",\n    \"preview\": {\n      \"error\": \"replaced by a newer turn\"\n    }\n  },\n  \"runtimeArtifact\": null,\n  \"sourceRows\": [\n    {\n      \"originalLine\": 2,\n      \"copiedLine\": 2,\n      \"seq\": 2,\n      \"kind\": \"turn\",\n      \"status\": \"started\"\n    },\n    {\n      \"originalLine\": 4,\n      \"copiedLine\": 4,\n      \"seq\": 4,\n      \"kind\": \"turn\",\n      \"status\": \"error\"\n    }\n  ]\n}"
+    }
+  }
+]

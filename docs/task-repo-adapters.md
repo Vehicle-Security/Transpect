@@ -7,31 +7,31 @@ Transpect treats task repositories primarily as sources of benchmark tasks or sc
 3. **Trace + Diagnosis**: attach source metadata, preserve trace/policy evidence, and run CodeTracer diagnosis.
 4. **Security Reasoning / Benchmark Evaluation**: staged attack defense reasoner now; broader ATBench-style trajectory evaluator later.
 
-Layers 1-3 are implemented for all agent-trace task repos. Layer 4 has a first concrete implementation for the staged attack defense demo through `scripts/security_reasoning/run_defense_reasoner.py`; broader benchmark scoring is still deferred.
+Layers 1-3 are implemented for all agent-trace task repos. Layer 4 has a first concrete implementation for the staged attack defense demo through `tools/security_reasoning/run_defense_reasoner.py`; broader benchmark scoring is still deferred.
 
 The preferred path is:
 
 1. load a source task from the external repository
 2. run that task through the real OpenClaw agent harness
-3. analyze the resulting trace in the canonical `live/runs/<runId>/` directory
+3. analyze the resulting trace in the canonical `monitor/live/runs/<runId>/` directory
 4. prepare evaluation inputs for a later trajectory-level benchmark evaluator
 
 Repo-native execution is still supported as an explicit baseline mode through `--mode repo-native`. For backward compatibility, omitting `--mode` also uses `repo-native`.
 
 ## Structure
 
-Each external task repository lives under `task_repos/<repo>/` with:
+Each external task repository lives under `monitor/task_repos/<repo>/` with:
 
 - `manifest.json`: declarative configuration
 - `adapter.py`: repository-specific source and optional repo-native logic
 - `source_preflight.py`: optional source-mode preflight checks
 
-The shared schema lives at `task_repos/manifest.schema.json`.
+The shared schema lives at `monitor/task_repos/manifest.schema.json`.
 
 The shared runtime entrypoint is:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo <repo> --mode <mode>
+python tools/runtime/run_task_repo.py --repo <repo> --mode <mode>
 ```
 
 Supported modes:
@@ -55,23 +55,23 @@ For `agent-trace`, the runner builds an agent-facing prompt from the source task
 
 The real run remains canonical:
 
-- `live/runs/<runId>/task_input.json`
-- `live/runs/<runId>/manifest.json`
-- `live/runs/<runId>/behavior-events.jsonl`
-- `live/runs/<runId>/frida-events.jsonl`
-- `live/runs/<runId>/trace_index.json`
-- `live/runs/<runId>/merged-trace.jsonl`
-- `live/runs/<runId>/artifacts/task_repo/source_task.json`
-- `live/runs/<runId>/artifacts/task_repo/harness_report.json`
-- `live/runs/<runId>/artifacts/task_repo/artifact_manifest.json`
-- `live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json`
-- `live/runs/<runId>/diagnosis/codetracer/bundle/...`
-- `live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json`
-- `live/runs/<runId>/security-reasoning/security_state.json`
-- `live/runs/<runId>/security-reasoning/defense_decision.json`
-- `live/runs/<runId>/security-reasoning/final_judgment.json`
-- `live/runs/<runId>/security-context/context_report.json`
-- `live/runs/<runId>/security-context/security_context_timeline.json`
+- `monitor/live/runs/<runId>/task_input.json`
+- `monitor/live/runs/<runId>/manifest.json`
+- `monitor/live/runs/<runId>/behavior-events.jsonl`
+- `monitor/live/runs/<runId>/frida-events.jsonl`
+- `monitor/live/runs/<runId>/trace_index.json`
+- `monitor/live/runs/<runId>/merged-trace.jsonl`
+- `monitor/live/runs/<runId>/artifacts/task_repo/source_task.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/harness_report.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/artifact_manifest.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/bundle/...`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json`
+- `monitor/live/runs/<runId>/security-reasoning/security_state.json`
+- `monitor/live/runs/<runId>/security-reasoning/defense_decision.json`
+- `monitor/live/runs/<runId>/security-reasoning/final_judgment.json`
+- `monitor/live/runs/<runId>/security-context/context_report.json`
+- `monitor/live/runs/<runId>/security-context/security_context_timeline.json`
 
 If the agent cannot be launched or no `runId` is returned, the runner emits a lightweight harness failure report and does not create a primary taskrepo run.
 
@@ -92,7 +92,7 @@ This step does not implement those classifiers. It only makes the evidence path 
 
 ## Repo-Native Baseline
 
-Repo-native mode preserves the earlier manifest-driven command execution path. It creates a taskrepo run under `live/runs/<runId>/`, writes adapter reports, executes manifest commands, and collects declared artifacts.
+Repo-native mode preserves the earlier manifest-driven command execution path. It creates a taskrepo run under `monitor/live/runs/<runId>/`, writes adapter reports, executes manifest commands, and collects declared artifacts.
 
 Repo-native preflight includes:
 
@@ -105,12 +105,12 @@ Repo-native preflight includes:
 
 Command execution logs are written under:
 
-- `live/runs/<runId>/artifacts/task_repo/commands/<command>/stdout.log`
-- `live/runs/<runId>/artifacts/task_repo/commands/<command>/stderr.log`
+- `monitor/live/runs/<runId>/artifacts/task_repo/commands/<command>/stdout.log`
+- `monitor/live/runs/<runId>/artifacts/task_repo/commands/<command>/stderr.log`
 
 Manifest-declared result paths are copied into:
 
-- `live/runs/<runId>/artifacts/task_repo/repo_outputs/...`
+- `monitor/live/runs/<runId>/artifacts/task_repo/repo_outputs/...`
 
 ## Manifest Model
 
@@ -149,7 +149,7 @@ For model-oriented repositories, common aliases are normalized before execution:
 
 ## R-Judge
 
-`task_repos/rjudge/manifest.json` configures R-Judge as both a source adapter and a repo-native baseline.
+`monitor/task_repos/rjudge/manifest.json` configures R-Judge as both a source adapter and a repo-native baseline.
 
 Recommended local layout:
 
@@ -194,7 +194,7 @@ Recommended macOS environments:
 
 ## Staged Attack Demo
 
-`task_repos/staged_attack/` provides a small built-in source repo for the advisor demo. It does not require an external checkout.
+`monitor/task_repos/staged_attack/` provides a small built-in source repo for the advisor demo. It does not require an external checkout.
 
 The included task is:
 
@@ -223,21 +223,21 @@ low_trust_source_induced_navigation
 Run the demo:
 
 ```bash
-python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
+python tools/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
+python tools/runtime/run_task_repo.py --repo staged_attack --mode agent-trace --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
 ```
 
 Inspect only the source task:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode list-tasks
-python scripts/runtime/run_task_repo.py --repo staged_attack --mode show-task --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
+python tools/runtime/run_task_repo.py --repo staged_attack --mode list-tasks
+python tools/runtime/run_task_repo.py --repo staged_attack --mode show-task --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
 ```
 
 Run the security reasoner against an existing run:
 
 ```bash
-python scripts/security_reasoning/run_defense_reasoner.py --run-dir live/runs/<runId>
+python tools/security_reasoning/run_defense_reasoner.py --run-dir monitor/live/runs/<runId>
 ```
 
 ## Commands
@@ -246,13 +246,13 @@ List available source tasks:
 
 ```bash
 conda activate transpect-py311
-python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
+python tools/runtime/run_task_repo.py --repo rjudge --mode list-tasks
 ```
 
 Show one source task:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
+python tools/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
 ```
 
 Run one source task through the real agent trace harness:
@@ -260,14 +260,14 @@ Run one source task through the real agent trace harness:
 ```bash
 export CODETRACER_ROOT="${CODETRACER_ROOT:-$(cd .. && pwd)/CodeTracer}"
 export R_JUDGE_ROOT="${R_JUDGE_ROOT:-$(cd .. && pwd)/R-Judge}"
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
+python tools/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
 ```
 
 Before the first `agent-trace` run on macOS, prepare OpenClaw in core mode:
 
 ```bash
-python scripts/runtime/setup_runtime.py --mode core
-python scripts/validate/doctor.py
+python tools/runtime/setup_runtime.py --mode core
+python tools/validate/doctor.py
 ```
 
 If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested scopes in OpenClaw and rerun `doctor.py`.
@@ -275,46 +275,46 @@ If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, a
 Run one source task without diagnosis:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
+python tools/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
 ```
 
 Run one source task without the Layer-4 context judge:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-context-judge
+python tools/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-context-judge
 ```
 
 Run repo-native preflight:
 
 ```bash
 conda activate rjudge-py310
-python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
+python tools/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
 ```
 
 Run a repo-native baseline command:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --command safety_judgment
+python tools/runtime/run_task_repo.py --repo rjudge --mode repo-native --command safety_judgment
 ```
 
 Backward-compatible repo-native invocation:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --command safety_judgment_smoke
+python tools/runtime/run_task_repo.py --repo rjudge --command safety_judgment_smoke
 ```
 
 Inspect structured outputs:
 
 ```bash
-ls -td live/runs/* | head -n 1
-cat live/runs/<runId>/adapter/preflight_report.json
-cat live/runs/<runId>/adapter/run_report.json
-find live/runs/<runId>/artifacts/task_repo -type f | sort
-cat live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
-cat live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
-cat live/runs/<runId>/security-reasoning/security_state.json
-cat live/runs/<runId>/security-reasoning/defense_decision.json
-cat live/runs/<runId>/security-context/context_report.json
+ls -td monitor/live/runs/* | head -n 1
+cat monitor/live/runs/<runId>/adapter/preflight_report.json
+cat monitor/live/runs/<runId>/adapter/run_report.json
+find monitor/live/runs/<runId>/artifacts/task_repo -type f | sort
+cat monitor/live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
+cat monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
+cat monitor/live/runs/<runId>/security-reasoning/security_state.json
+cat monitor/live/runs/<runId>/security-reasoning/defense_decision.json
+cat monitor/live/runs/<runId>/security-context/context_report.json
 ```
 
 ## Failure Reasons
@@ -345,8 +345,8 @@ Repo-native reasons include:
 
 ## Adding Another Repository
 
-1. Create `task_repos/<repo>/manifest.json`.
-2. Add source methods to `task_repos/<repo>/adapter.py`.
+1. Create `monitor/task_repos/<repo>/manifest.json`.
+2. Add source methods to `monitor/task_repos/<repo>/adapter.py`.
 3. Add `source_preflight.py` if generic source capability checks are not enough.
 4. Use `--mode list-tasks` and `--mode show-task` first.
 5. Add repo-specific tests for custom adapter behavior.

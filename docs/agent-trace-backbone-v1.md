@@ -36,8 +36,8 @@ These files are intentionally smaller than the raw OpenClaw process state. They 
 Use discovery before and after a run:
 
 ```bash
-python scripts/validate/discover_openclaw_native_sources.py
-python scripts/validate/discover_openclaw_native_sources.py --run-dir live/runs/<runId>
+python tools/validate/discover_openclaw_native_sources.py
+python tools/validate/discover_openclaw_native_sources.py --run-dir monitor/live/runs/<runId>
 ```
 
 ## Canonical Trace
@@ -45,13 +45,13 @@ python scripts/validate/discover_openclaw_native_sources.py --run-dir live/runs/
 Build the canonical trace after merge, Frida, CodeTracer, and final judgment are available:
 
 ```bash
-python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
+python monitor/trace_model/build_canonical_trace.py --run-dir monitor/live/runs/<runId>
 ```
 
 Output:
 
 ```text
-live/runs/<runId>/canonical_trace.json
+monitor/live/runs/<runId>/canonical_trace.json
 ```
 
 Top-level fields:
@@ -120,8 +120,8 @@ The raw evidence remains in `frida-events.jsonl`.
 Evaluate and optionally persist quality:
 
 ```bash
-python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId>
-python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
+python tools/validate/evaluate_trace_quality.py --run-dir monitor/live/runs/<runId>
+python tools/validate/evaluate_trace_quality.py --run-dir monitor/live/runs/<runId> --write
 ```
 
 `trace_quality.json` records:
@@ -143,7 +143,7 @@ Depth policy:
 Audit trace health:
 
 ```bash
-python scripts/validate/audit_canonical_trace.py --run-dir live/runs/<runId>
+python tools/validate/audit_canonical_trace.py --run-dir monitor/live/runs/<runId>
 ```
 
 The audit checks span kinds, sources, display tiers, parent coverage, artifact reference coverage, duplicate rate, Frida dominance, and missing native sources.
@@ -153,8 +153,8 @@ The audit checks span kinds, sources, display tiers, parent coverage, artifact r
 Export a local OpenInference-style artifact:
 
 ```bash
-python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
-python scripts/validate/validate_openinference_export.py --path live/runs/<runId>/exports/openinference_spans.json
+python tools/export/export_openinference_trace.py --run-dir monitor/live/runs/<runId>
+python tools/validate/validate_openinference_export.py --path monitor/live/runs/<runId>/exports/openinference_spans.json
 ```
 
 Mapping:
@@ -175,18 +175,18 @@ The exporter does not require Phoenix, Langfuse, or an OTLP collector. It writes
 Before freezing a showcase, generate the trace backbone artifacts:
 
 ```bash
-python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
-python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
-python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
-python scripts/validate/validate_openinference_export.py --path live/runs/<runId>/exports/openinference_spans.json
+python monitor/trace_model/build_canonical_trace.py --run-dir monitor/live/runs/<runId>
+python tools/validate/evaluate_trace_quality.py --run-dir monitor/live/runs/<runId> --write
+python tools/export/export_openinference_trace.py --run-dir monitor/live/runs/<runId>
+python tools/validate/validate_openinference_export.py --path monitor/live/runs/<runId>/exports/openinference_spans.json
 ```
 
 Then freeze:
 
 ```bash
-python scripts/demo/freeze_showcase_run.py --run-dir live/runs/<runId> --id <showcase_id> --title "<title>" --description "<description>"
-python scripts/demo/build_showcase_reports.py
-python scripts/demo/validate_showcase.py --require-report-model
+python tools/demo/freeze_showcase_run.py --run-dir monitor/live/runs/<runId> --id <showcase_id> --title "<title>" --description "<description>"
+python tools/demo/build_showcase_reports.py
+python tools/demo/validate_showcase.py --require-report-model
 ```
 
 `report_model.json` reads canonical trace first when available and exposes `traceBackbone` summary fields for the Console.

@@ -41,11 +41,10 @@ CONDA_SUBDIR=osx-arm64 conda create -y \
 conda activate transpect-frida-arm64
 
 # Install Transpect's runtime deps and official Frida bindings/CLI.
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-frida.txt
+uv sync --extra frida
 
 # Optional: install local CodeTracer into the same env for dry-run diagnosis.
-python -m pip install -e "$CODETRACER_ROOT"
+uv pip install -e "$CODETRACER_ROOT"
 
 # Grant Terminal / IDE the "Developer Tools" or "Full Disk Access" permission
 # in System Preferences → Security & Privacy → Privacy.
@@ -77,16 +76,16 @@ Expected local shape on Apple Silicon:
 ### 1. Standalone smoke test
 
 ```bash
-python scripts/run_frida_trace.py \
+python tools/run_frida_trace.py \
   --target auto \
   --duration 30 \
-  --output live/frida/frida-smoke.jsonl
+  --output monitor/live/frida/frida-smoke.jsonl
 ```
 
 ### 2. Agent trace with Frida enabled
 
 ```bash
-python scripts/runtime/run_task_repo.py \
+python tools/runtime/run_task_repo.py \
   --repo staged_attack \
   --mode agent-trace \
   --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001" \
@@ -97,7 +96,7 @@ python scripts/runtime/run_task_repo.py \
 ### 3. Specific PID
 
 ```bash
-python scripts/runtime/run_task_repo.py \
+python tools/runtime/run_task_repo.py \
   --repo staged_attack \
   --mode agent-trace \
   --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001" \
@@ -185,13 +184,13 @@ If you encounter issues with Frida attaching on macOS, or if you simply want to 
 
 ```bash
 # 1. Check repository and runtime setup safely
-python scripts/validate/check_repo.py --skip-start
-python scripts/validate/doctor.py
+python tools/validate/check_repo.py --skip-start
+python tools/validate/doctor.py
 
 # 2. Check macOS self-attach permissions specifically
 # (Useful if you suspect task_for_pid or SIP is blocking tracing.)
 python - <<'PY'
-from app.instrumentation.frida import FridaResolver
+from monitor.instrumentation.frida import FridaResolver
 print(FridaResolver().resolve().to_dict())
 PY
 ```
@@ -208,14 +207,14 @@ To verify the Frida layer end-to-end, follow these three steps:
 Verify Frida can attach to Node and write events before hitting the full scenario runner.
 
 ```bash
-python scripts/run_frida_trace.py \
+python tools/run_frida_trace.py \
   --target node \
   --duration 30 \
-  --output live/frida/frida-smoke.jsonl
+  --output monitor/live/frida/frida-smoke.jsonl
 
 # Validate basic output
-cat live/frida/frida-smoke.jsonl | head
-jq -s 'length' live/frida/frida-smoke.jsonl
+cat monitor/live/frida/frida-smoke.jsonl | head
+jq -s 'length' monitor/live/frida/frida-smoke.jsonl
 ```
 
 ### 2. Full Scenario Run
@@ -223,10 +222,10 @@ Run a local demo server and trace the full agent scenario:
 
 ```bash
 # Terminal 1: Run demo server
-python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
+python tools/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
 
 # Terminal 2: Run trace
-python scripts/runtime/run_task_repo.py \
+python tools/runtime/run_task_repo.py \
   --repo staged_attack \
   --mode agent-trace \
   --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001" \
@@ -238,9 +237,9 @@ python scripts/runtime/run_task_repo.py \
 Use `jq` to verify the JSON structures are correct:
 
 ```bash
-jq '.sources.frida' live/runs/<runId>/trace_index.json
-jq '.evidence.fridaIncluded' live/runs/<runId>/security-reasoning/final_judgment.json
-jq '.evidence.fridaRiskTags' live/runs/<runId>/security-reasoning/final_judgment.json
+jq '.sources.frida' monitor/live/runs/<runId>/trace_index.json
+jq '.evidence.fridaIncluded' monitor/live/runs/<runId>/security-reasoning/final_judgment.json
+jq '.evidence.fridaRiskTags' monitor/live/runs/<runId>/security-reasoning/final_judgment.json
 ```
 
 ---
@@ -261,7 +260,7 @@ When Frida is enabled, `report.json` includes additional sections (notice the sp
     "event_count_total": 50,
     "event_count_in_window": 12,
     "event_count_used_by_analyzer": 12,
-    "path": "live/runs/<runId>/frida-events.jsonl",
+    "path": "monitor/live/runs/<runId>/frida-events.jsonl",
     "warnings": []
   },
   "frida_events_summary": {
@@ -304,7 +303,7 @@ When Frida is enabled, `report.json` includes additional sections (notice the sp
 ## Running Tests
 
 ```bash
-python -m unittest tests/validate/test_frida_trace_integration.py -v
+python -m unittest monitor/tests/validate/test_frida_trace_integration.py -v
 ```
 
 All tests can run without Frida installed — the test suite mocks the `frida` import where needed.

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "status": "ok",
+  "analysis": {
+    "summary": "CodeTracer shows the browser-visible chain and Frida records the low-level evidence markers."
+  },
+  "paths": {
+    "bundleDir": "<transpect_root>/monitor/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/monitor/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/monitor/live/runs/showcase-lowlevel-designed/diagnosis/codetracer/analysis/codetracer_analysis.json"
+  },
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/merged-trace.jsonl"
+  ],
+  "fridaIncluded": false
+}

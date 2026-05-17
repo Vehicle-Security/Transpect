@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "openclaw.codetracer.bundle.v1",
+  "exportedAt": "2026-05-12T22:35:39Z",
+  "bundleId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "bundleDirName": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "bundlePath": "<transpect_root>/monitor/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/diagnosis/codetracer/bundle",
+  "sourceTracePath": "<transpect_root>/monitor/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/merged-trace.jsonl",
+  "inputTraceSources": {
+    "behavior": {
+      "path": "source/behavior-events.jsonl",
+      "status": "ok",
+      "eventCount": 14
+    },
+    "frida": {
+      "path": "source/frida-events.jsonl",
+      "status": "ok",
+      "eventCount": 18
+    },
+    "merged": {
+      "path": "source/merged-trace.jsonl",
+      "status": "ok",
+      "eventCount": 32
+    },
+    "traceIndex": {
+      "path": "source/trace_index.json",
+      "status": "ok",
+      "eventCount": null
+    }
+  },
+  "sourceKind": "run",
+  "sourceRunPath": "<transpect_root>/monitor/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "sourceRunManifestPath": "<transpect_root>/monitor/live/runs/5d0480be-daf7-4bfe-b1d9-d4a44121e21d/manifest.json",
+  "primaryRunId": "5d0480be-daf7-4bfe-b1d9-d4a44121e21d",
+  "primaryTraceId": "trace_c6a4debc1bef4119b0e3c26ff776d927",
+  "rowCount": 32,
+  "stepCount": 2,
+  "syntheticStepCount": 2,
+  "policyMatchedStepCount": 0,
+  "files": {
+    "steps": "steps.json",
+    "task": "task.md",
+    "stageRanges": "stage_ranges.json",
+    "runtime": "openclaw_runtime.json",
+    "sourceTrace": "source/merged-trace.jsonl",
+    "behaviorTrace": "source/behavior-events.jsonl",
+    "fridaTrace": "source/frida-events.jsonl",
+    "mergedTrace": "source/merged-trace.jsonl",
+    "traceIndex": "source/trace_index.json",
+    "lineMap": "source/line-map.json"
+  },
+  "traceSources": {
+    "behavior": {
+      "path": "source/behavior-events.jsonl",
+      "status": "ok",
+      "eventCount": 14
+    },
+    "frida": {
+      "path": "source/frida-events.jsonl",
+      "status": "ok",
+      "eventCount": 18
+    },
+    "merged": {
+      "path": "source/merged-trace.jsonl",
+      "status": "ok",
+      "eventCount": 32
+    },
+    "traceIndex": {
+      "path": "source/trace_index.json",
+      "status": "ok",
+      "eventCount": null
+    }
+  },
+  "stages": [
+    {
+      "stage": "setup_context",
+      "start_step_id": 1,
+      "end_step_id": 1
+    },
+    {
+      "stage": "verification_completion",
+      "start_step_id": 2,
+      "end_step_id": 2
+    }
+  ]
+}

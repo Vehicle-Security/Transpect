@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "transpect.trace.index.v1",
+  "runId": "showcase-allow-designed",
+  "sources": {
+    "behavior": {
+      "status": "ok",
+      "path": "<transpect_root>/monitor/live/runs/showcase-allow-designed/behavior-events.jsonl",
+      "eventCount": 4,
+      "warnings": [],
+      "error": null
+    },
+    "frida": {
+      "status": "unavailable",
+      "path": "<transpect_root>/monitor/live/runs/showcase-allow-designed/frida-events.jsonl",
+      "eventCount": 0,
+      "warnings": [
+        "frida_unavailable"
+      ],
+      "error": null
+    }
+  }
+}

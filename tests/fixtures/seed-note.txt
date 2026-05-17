@@ -1,9 +1,0 @@
-OpenClaw trace fixture seed note.
-
-Goals:
-- produce tool calls that are safe to replay
-- touch read/write/exec/session-spawn paths
-- leave a stable breadcrumb in tests/fixtures
-
-If an agent reads this file during capture, it should mention the phrase:
-"trace fixture acknowledged"

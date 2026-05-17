@@ -17,7 +17,7 @@
 
 ### 1.2 本系统应对的拆分攻击实例
 
-`task_repos/staged_attack/` 定义了 5 阶段攻击链：
+`monitor/task_repos/staged_attack/` 定义了 5 阶段攻击链：
 
 | 阶段 | 事件 | 单点判断 |
 |---|---|---|
@@ -123,7 +123,7 @@ cross_step_correlation = len(signals) >= 3 and (
 
 ### 3.2 实现方案：compress_context()
 
-位置：`app/security/context_state.py`
+位置：`guardrail/security/context_state.py`
 
 设计选择：
 - **固定 9 维特征向量**：不随事件数量增长
@@ -146,7 +146,7 @@ cross_step_correlation = len(signals) >= 3 and (
 
 ### 3.3 压缩评估
 
-运行 `python scripts/validate/evaluate_cross_step_detection.py` 得到：
+运行 `python tools/validate/evaluate_cross_step_detection.py` 得到：
 
 | 场景 | 单步最高分 | 跨步得分 | 融合得分 |
 |---|---|---|---|
@@ -217,7 +217,7 @@ cross_step_correlation = len(signals) >= 3 and (
 
 ### 5.1 跨步检测提升量化
 
-运行 `python scripts/validate/evaluate_cross_step_detection.py`：
+运行 `python tools/validate/evaluate_cross_step_detection.py`：
 
 ```
 Scenario                            Single-Step     Cross-Step         Fusion
@@ -265,25 +265,25 @@ FUSION (weighted)              93.7
 
 ```bash
 # 运行跨步检测评估
-python scripts/validate/evaluate_cross_step_detection.py
+python tools/validate/evaluate_cross_step_detection.py
 
 # 运行所有单元测试
-python -m pytest tests/ -v
+python -m pytest monitor/tests/ -v
 
 # 仓库健康检查
-python scripts/validate/check_repo.py --skip-start
+python tools/validate/check_repo.py --skip-start
 ```
 
 ## 8. 关键文件索引
 
 | 文件 | 角色 |
 |---|---|
-| `app/security/schemas.py` | 安全上下文数据结构定义 |
-| `app/security/context_state.py` | 在线状态管理 + compress_context() |
-| `app/security/trust_model.py` | 信息来源可信度分类 |
-| `app/security/risk_scoring.py` | 风险评分 + 链式升级检测 |
-| `app/agent_defense/engine.py` | 在线检测编排 |
-| `scripts/security_reasoning/state_builder.py` | 离线因果链重建 + 信号检测 |
-| `scripts/security_reasoning/reasoner.py` | 跨步关联判定 + 多维融合判定 |
-| `scripts/validate/evaluate_cross_step_detection.py` | 检测评估脚本 |
-| `task_repos/staged_attack/` | 拆分攻击场景定义 |
+| `guardrail/security/schemas.py` | 安全上下文数据结构定义 |
+| `guardrail/security/context_state.py` | 在线状态管理 + compress_context() |
+| `guardrail/security/trust_model.py` | 信息来源可信度分类 |
+| `guardrail/security/risk_scoring.py` | 风险评分 + 链式升级检测 |
+| `guardrail/agent_defense/engine.py` | 在线检测编排 |
+| `tools/security_reasoning/state_builder.py` | 离线因果链重建 + 信号检测 |
+| `tools/security_reasoning/reasoner.py` | 跨步关联判定 + 多维融合判定 |
+| `tools/validate/evaluate_cross_step_detection.py` | 检测评估脚本 |
+| `monitor/task_repos/staged_attack/` | 拆分攻击场景定义 |

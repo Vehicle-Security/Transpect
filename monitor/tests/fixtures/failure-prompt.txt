@@ -1,0 +1,10 @@
+Work only inside `monitor/tests/fixtures`.
+
+Steps:
+1. Try to read `missing-fixture-file.txt`.
+2. If that read fails, do not read any other file and do not retry.
+3. Reply with one short sentence saying this is an expected failure case.
+
+Goals:
+- trigger one controlled failed tool call
+- keep the behavior simple, repeatable, and safe

@@ -8,21 +8,47 @@ This document summarizes the repository layout after the runs-based cleanup pass
 
 ```text
 Transpect/
+├── dashboard/     UI applications
+├── monitor/       runtime monitoring, instrumentation, and trace model
+├── guardrail/     agent defense and security guard packages
 ├── config/        templates, rendered local config, and apply backups
 ├── docs/          architecture and operations documentation
-├── frida/         Frida JavaScript assets
-├── live/          runtime state (gitignored)
-├── scripts/       grouped operational scripts plus compat wrappers
-├── task_repos/    manifest-driven adapters for external task repositories
-├── tests/         validation and fixtures
-├── vendor/        runtime hooks and vendored dependencies
-└── viewer/        browser UI
+├── monitor/live/          runtime state (gitignored)
+├── tools/       grouped operational tooling plus compat wrappers
+├── monitor/task_repos/    manifest-driven adapters for external task repositories
+├── monitor/tests/         validation and fixtures
+└── monitor/vendor/        runtime hooks and vendored dependencies
 ```
 
-## `live/`
+## `dashboard/`
 
 ```text
-live/
+dashboard/
+├── console/       Next.js dashboard app
+└── viewer/        static fallback/debug viewer
+```
+
+## `monitor/`
+
+```text
+monitor/
+├── instrumentation/frida/   Frida tracing and JavaScript hook assets
+├── runtime/                 OpenClaw scenario helpers and trace ingest
+└── trace_model/             canonical trace model and builders
+```
+
+## `guardrail/`
+
+```text
+guardrail/
+├── agent_defense/           bridge, policy, trace merge, final judgment
+└── security/                intent/plan/action guards and risk decisions
+```
+
+## `monitor/live/`
+
+```text
+monitor/live/
 ├── runs/                   canonical per-run evidence
 │   ├── index.json
 │   └── <runId>/
@@ -46,26 +72,25 @@ live/
 
 `harvest/` is not part of the current layout contract.
 
-## `scripts/`
+## `tools/`
 
 ```text
-scripts/
+tools/
 ├── common/        shared path and utility helpers
-├── runtime/       setup, start, cleanup, viewer serving
+├── runtime/       setup, start, cleanup, viewer serving, shell/cmd launchers
 ├── export/        bundle generation
 ├── diagnosis/     diagnosis execution and legacy segmentation
 ├── validate/      repo checks, topology checks, acceptance tests
 ├── capture/       optional capture tooling
 ├── compat/        helper logic for legacy wrappers
-└── *.py           backward-compatible flat wrappers
 ```
 
-The grouped directories are the primary interface. Root-level `scripts/*.py` files remain as compatibility wrappers.
+The grouped directories are the primary interface.
 
-## `vendor/`
+## `monitor/vendor/`
 
 ```text
-vendor/
+monitor/vendor/
 ├── runtime-hooks/
 │   └── openclaw-behavior-mediator/
 └── external/

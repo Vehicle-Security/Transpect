@@ -9,18 +9,16 @@ The product showcase flow is designed for replay. A fresh GitHub clone can open 
 From a clean clone:
 
 ```bash
-python -m venv .venv
+uv sync
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
 
-cd apps/console
+cd dashboard/console
 npm ci
 cd ../..
 
-python scripts/validate/deployment_doctor.py --mode replay
-python scripts/demo/validate_showcase.py --require-report-model
-python scripts/demo/start_console.py --port 5000
+python tools/validate/deployment_doctor.py --mode replay
+python tools/demo/validate_showcase.py --require-report-model
+python tools/demo/start_console.py --port 5000
 ```
 
 Open `http://127.0.0.1:5000`.
@@ -45,8 +43,8 @@ From the repository root:
 
 ```bash
 cp .env.example .env  # fill BASE_URL/API_KEY/MODEL_ID for LLM-backed runs
-python scripts/validate/doctor.py
-python scripts/demo/run_showcase.py --verbose
+python tools/validate/doctor.py
+python tools/demo/run_showcase.py --verbose
 ```
 
 The important health states are OpenClaw gateway, behavior mediator, CodeTracer, and Frida. Frida may be `degraded` on macOS when permissions or `frida-tools` are missing; CodeTracer may be `unavailable` if `CODETRACER_ROOT` or `CODETRACER_SRC` is not configured. These states are recorded instead of being hidden.
@@ -58,12 +56,12 @@ The important health states are OpenClaw gateway, behavior mediator, CodeTracer,
 After `run_showcase.py` prints a run id, freeze it:
 
 ```bash
-python app/trace_model/build_canonical_trace.py --run-dir live/runs/<runId>
-python scripts/validate/evaluate_trace_quality.py --run-dir live/runs/<runId> --write
-python scripts/export/export_openinference_trace.py --run-dir live/runs/<runId>
-python scripts/validate/validate_openinference_export.py --path live/runs/<runId>/exports/openinference_spans.json
-python scripts/demo/freeze_showcase_run.py \
-  --run-dir live/runs/<runId> \
+python monitor/trace_model/build_canonical_trace.py --run-dir monitor/live/runs/<runId>
+python tools/validate/evaluate_trace_quality.py --run-dir monitor/live/runs/<runId> --write
+python tools/export/export_openinference_trace.py --run-dir monitor/live/runs/<runId>
+python tools/validate/validate_openinference_export.py --path monitor/live/runs/<runId>/exports/openinference_spans.json
+python tools/demo/freeze_showcase_run.py \
+  --run-dir monitor/live/runs/<runId> \
   --id staged_attack_confirm_frida \
   --title "Suspicious External Navigation" \
   --description "系统发现外部跳转和低层运行时证据，并将 native OpenClaw trace、Frida、CodeTracer 与最终判断统一为 deep trace。"
@@ -82,20 +80,20 @@ normal_browsing_allow            curated or older fallback allow demo
 low_level_bypass_evidence        curated low-level evidence fallback
 ```
 
-The freeze script copies run-local evidence into `state/showcase/<id>/` and updates `state/showcase/index.json`.
+The freeze script copies run-local evidence into `dashboard/state/showcase/<id>/` and updates `dashboard/state/showcase/index.json`.
 
 It also sanitizes machine-local paths so frozen reports can be committed:
 
 ```bash
-python scripts/demo/sanitize_showcase_paths.py --check
-python scripts/validate/check_portability.py
+python tools/demo/sanitize_showcase_paths.py --check
+python tools/validate/check_portability.py
 ```
 
 For deep trace demos, verify native OpenClaw source coverage before freezing:
 
 ```bash
-python scripts/validate/discover_openclaw_native_sources.py --run-dir live/runs/<runId>
-python scripts/validate/audit_canonical_trace.py --run-dir live/runs/<runId>
+python tools/validate/discover_openclaw_native_sources.py --run-dir monitor/live/runs/<runId>
+python tools/validate/audit_canonical_trace.py --run-dir monitor/live/runs/<runId>
 ```
 
 `traceDepth: deep` requires native lifecycle, assistant, and tool source files plus Agent Defense, Frida, CodeTracer, and final judgment evidence. Older runs without native source files remain replayable, but their trace quality is normally `moderate`.
@@ -105,12 +103,12 @@ python scripts/validate/audit_canonical_trace.py --run-dir live/runs/<runId>
 Run:
 
 ```bash
-python scripts/demo/build_showcase_reports.py
-python scripts/demo/validate_showcase.py
-python scripts/demo/validate_showcase.py --require-report-model
+python tools/demo/build_showcase_reports.py
+python tools/demo/validate_showcase.py
+python tools/demo/validate_showcase.py --require-report-model
 ```
 
-`build_showcase_reports.py` creates `state/showcase/<id>/report_model.json`. This is a derived product model for the front end; it does not replace `final_judgment.json` as the audit record.
+`build_showcase_reports.py` creates `dashboard/state/showcase/<id>/report_model.json`. This is a derived product model for the front end; it does not replace `final_judgment.json` as the audit record.
 
 The validator checks that every showcase has a readable `final_judgment.json`, a behavior or merged trace, displayable Frida status, displayable CodeTracer status, and a risk chain source. With `--require-report-model`, it also verifies that each Console report model exists. Missing Frida or CodeTracer data is reported as `degraded` or `unavailable` instead of crashing the replay page.
 
@@ -119,7 +117,7 @@ The validator checks that every showcase has a readable `final_judgment.json`, a
 Start the enterprise Console:
 
 ```bash
-cd apps/console
+cd dashboard/console
 npm ci
 npm run dev -- --hostname 127.0.0.1 --port 5000
 ```
@@ -127,7 +125,7 @@ npm run dev -- --hostname 127.0.0.1 --port 5000
 The helper script performs the same startup with prerequisite checks:
 
 ```bash
-python scripts/demo/start_console.py --port 5000
+python tools/demo/start_console.py --port 5000
 ```
 
 Open:
@@ -163,7 +161,7 @@ The current overview screenshot shows 8 frozen reports, 5 blocked cases, 1 confi
 Start the static viewer:
 
 ```bash
-python scripts/runtime/serve_viewer.py --host 127.0.0.1 --port 8711
+python tools/runtime/serve_viewer.py --host 127.0.0.1 --port 8711
 ```
 
 Open:
@@ -206,4 +204,4 @@ See `docs/agent-trace-backbone-v1.md` for the trace schema, quality policy, and 
 
 ## Replay Without Rerunning Agent
 
-Once `state/showcase/index.json`, frozen run directories, and `report_model.json` files exist, the Console is enough for demos. You do not need OpenClaw, Frida, or CodeTracer running during replay; those systems are only needed to generate or refresh the frozen data.
+Once `dashboard/state/showcase/index.json`, frozen run directories, and `report_model.json` files exist, the Console is enough for demos. You do not need OpenClaw, Frida, or CodeTracer running during replay; those systems are only needed to generate or refresh the frozen data.

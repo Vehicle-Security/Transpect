@@ -5,25 +5,25 @@ Transpect includes optional Frida capture support for Windows gateway processes.
 ## Requirements
 
 - Windows
-- Python `frida`
+- Transpect's optional `frida` dependency group
 - a running OpenClaw gateway process
 
 Install the optional dependency with:
 
 ```powershell
-pip install -r requirements.txt
+uv sync --extra frida
 ```
 
 ## Usage
 
 ```powershell
-python scripts/capture/capture_frida.py
-python scripts/capture/capture_frida.py --pid <gateway-pid>
+python tools/capture/capture_frida.py
+python tools/capture/capture_frida.py --pid <gateway-pid>
 ```
 
 ## Output
 
-Frida writes optional host-side capture output under `live/frida/`, including:
+Frida writes optional host-side capture output under `monitor/live/frida/`, including:
 
 - `frida-control.jsonl`
 - `frida-process.jsonl`
@@ -33,6 +33,6 @@ Frida writes optional host-side capture output under `live/frida/`, including:
 
 ## Notes
 
-- `frida/openclaw_gateway_windows.js` contains the Windows-specific instrumentation logic.
+- `monitor/instrumentation/frida/tools/openclaw_gateway_windows.js` contains the Windows-specific instrumentation logic.
 - If PID auto-detection fails, start the gateway first and provide `--pid`.
-- Frida output is supplementary. It does not replace the canonical run evidence under `live/runs/<runId>/`.
+- Frida output is supplementary. It does not replace the canonical run evidence under `monitor/live/runs/<runId>/`.

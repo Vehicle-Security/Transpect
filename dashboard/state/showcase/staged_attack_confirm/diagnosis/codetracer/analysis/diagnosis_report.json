@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "status": "ok",
+  "analysis": {
+    "summary": "CodeTracer links the low-trust comment, external navigation, and confirm-only detail action."
+  },
+  "paths": {
+    "bundleDir": "<transpect_root>/monitor/live/runs/showcase-confirm-designed/diagnosis/codetracer/bundle",
+    "analysisDir": "<transpect_root>/monitor/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis",
+    "analysis": "<transpect_root>/monitor/live/runs/showcase-confirm-designed/diagnosis/codetracer/analysis/codetracer_analysis.json"
+  },
+  "inputTraceSources": [
+    "source/behavior-events.jsonl",
+    "source/merged-trace.jsonl"
+  ],
+  "fridaIncluded": false
+}

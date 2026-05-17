@@ -14,14 +14,14 @@ __pycache__/
 !.env.example
 
 # Runtime outputs
-live/**
-!live/.gitkeep
-!live/otel/
-!live/otel/.gitkeep
-captures/**
-!captures/.gitkeep
-bin/**
-!bin/.gitkeep
+monitor/live/**
+!monitor/live/.gitkeep
+!monitor/live/otel/
+!monitor/live/otel/.gitkeep
+monitor/captures/**
+!monitor/captures/.gitkeep
+monitor/bin/**
+!monitor/bin/.gitkeep
 .playwright-mcp/
 tmp-*.log
 tmp-*.jsonl
@@ -31,7 +31,7 @@ config/applied/**
 config/*.local.yaml
 
 # Optional vendor dependencies
-vendor/external/openclaw-observability-plugin/node_modules/
+monitor/vendor/external/openclaw-observability-plugin/node_modules/
 
 # Keep only repository screenshots
 docs/images/*.png

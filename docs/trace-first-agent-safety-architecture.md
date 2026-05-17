@@ -23,7 +23,7 @@ first task source:
 R-Judge task
   -> normalized agent-facing prompt
   -> real OpenClaw / Transpect agent run
-  -> canonical live/runs/<runId>/ trace
+  -> canonical monitor/live/runs/<runId>/ trace
   -> source metadata + diagnosis artifacts
   -> online security guard events + security-reasoning/defense_decision.json
   -> evaluation_inputs_seed.json for broader future Layer 4 scoring
@@ -45,12 +45,12 @@ Purpose:
 
 Current implementation:
 
-- Runner: `scripts/runtime/run_task_repo.py`
-- Shared helpers: `scripts/common/task_repo_common.py`
-- R-Judge adapter: `task_repos/rjudge/adapter.py`
-- R-Judge source preflight: `task_repos/rjudge/source_preflight.py`
-- Manifest schema: `task_repos/manifest.schema.json`
-- Staged attack adapter: `task_repos/staged_attack/adapter.py`
+- Runner: `tools/runtime/run_task_repo.py`
+- Shared helpers: `tools/common/task_repo_common.py`
+- R-Judge adapter: `monitor/task_repos/rjudge/adapter.py`
+- R-Judge source preflight: `monitor/task_repos/rjudge/source_preflight.py`
+- Manifest schema: `monitor/task_repos/manifest.schema.json`
+- Staged attack adapter: `monitor/task_repos/staged_attack/adapter.py`
 
 The source adapter interface is:
 
@@ -88,31 +88,31 @@ Purpose:
 
 - run the actual OpenClaw / Transpect agent
 - obtain a real canonical `runId`
-- resolve the canonical run directory under `live/runs/<runId>/`
+- resolve the canonical run directory under `monitor/live/runs/<runId>/`
 - avoid creating a parallel primary taskrepo run when a real run exists
 
 Current implementation:
 
 - Runner mode: `--mode agent-trace`
-- OpenClaw bridge: `scripts/common/trace_common.py::run_openclaw_agent`
-- Run resolution/polling: `scripts/common/task_repo_common.py::wait_for_agent_trace_run`
+- OpenClaw bridge: `tools/common/trace_common.py::run_openclaw_agent`
+- Run resolution/polling: `tools/common/task_repo_common.py::wait_for_agent_trace_run`
 - Source metadata attachment:
-  `scripts/common/task_repo_common.py::attach_source_metadata_to_run`
+  `tools/common/task_repo_common.py::attach_source_metadata_to_run`
 
 The runner calls the real OpenClaw agent path and then polls the canonical run
 directory. If a real `runId` is resolved, that run is the only primary artifact.
 Task source metadata is merged into:
 
-- `live/runs/<runId>/task_input.json`
-- `live/runs/<runId>/manifest.json`
-- `live/runs/<runId>/artifacts/task_repo/source_task.json`
-- `live/runs/<runId>/artifacts/task_repo/harness_report.json`
-- `live/runs/<runId>/artifacts/task_repo/artifact_manifest.json`
+- `monitor/live/runs/<runId>/task_input.json`
+- `monitor/live/runs/<runId>/manifest.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/source_task.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/harness_report.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/artifact_manifest.json`
 
 The harness also handles an OpenClaw CLI edge case: the CLI process may time out
 after the canonical run has already been created. In agent-trace no-wait mode,
 the harness can infer the real run from the known session id and continue
-polling `live/runs/<runId>/`.
+polling `monitor/live/runs/<runId>/`.
 
 ## Layer 3: Trace + Diagnosis
 
@@ -128,20 +128,20 @@ Purpose:
 Current implementation:
 
 - CodeTracer diagnosis runner:
-  `scripts/diagnosis/run_codetracer_diagnosis.py`
+  `tools/diagnosis/run_codetracer_diagnosis.py`
 - CodeTracer bundle export:
-  `scripts/export/export_codetracer_bundle.py`
+  `tools/export/export_codetracer_bundle.py`
 - Seed input builder:
-  `scripts/common/task_repo_common.py::build_evaluation_inputs_seed`
+  `tools/common/task_repo_common.py::build_evaluation_inputs_seed`
 
 Artifacts currently produced or updated:
 
-- `live/runs/<runId>/behavior-events.jsonl`
-- `live/runs/<runId>/diagnosis/codetracer/bundle/*`
-- `live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_run.json`
-- `live/runs/<runId>/diagnosis/codetracer/analysis/codetracer_analysis.json`
-- `live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json`
-- `live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json`
+- `monitor/live/runs/<runId>/behavior-events.jsonl`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/bundle/*`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_run.json`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/analysis/codetracer_analysis.json`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json`
 
 CodeTracer belongs to the diagnosis layer. It is not the final benchmark judge.
 Its role is trajectory diagnosis: failure onset localization, evidence
@@ -158,27 +158,27 @@ watering-hole attack. It is not the full benchmark evaluator yet.
 
 Current implementation:
 
-- Online security core: `app/agent_defense/`
-- Runtime hook bridge: `vendor/runtime-hooks/openclaw-behavior-mediator/`
-- Compatibility CLI: `scripts/security_reasoning/run_defense_reasoner.py`
-- Compatibility context judge: `scripts/security_context/run_context_judge.py`
-- Demo task repo: `task_repos/staged_attack/`
-- Viewer summary: `securityReasoning` fields in `live/runs/index.json`
+- Online security core: `guardrail/agent_defense/`
+- Runtime hook bridge: `monitor/vendor/runtime-hooks/openclaw-behavior-mediator/`
+- Compatibility CLI: `tools/security_reasoning/run_defense_reasoner.py`
+- Compatibility context judge: `tools/security_context/run_context_judge.py`
+- Demo task repo: `monitor/task_repos/staged_attack/`
+- Viewer summary: `securityReasoning` fields in `monitor/live/runs/index.json`
 
 The current judge consumes:
 
-- `live/runs/<runId>/behavior-events.jsonl`
-- `live/runs/<runId>/task_input.json`
-- `live/runs/<runId>/artifacts/task_repo/source_task.json`
-- `live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json` when present
+- `monitor/live/runs/<runId>/behavior-events.jsonl`
+- `monitor/live/runs/<runId>/task_input.json`
+- `monitor/live/runs/<runId>/artifacts/task_repo/source_task.json`
+- `monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json` when present
 
 It writes:
 
-- `live/runs/<runId>/security-reasoning/security_state.json`
-- `live/runs/<runId>/security-reasoning/defense_decision.json`
-- `live/runs/<runId>/security-reasoning/evidence_summary.json`
-- `live/runs/<runId>/security-context/security_context_timeline.json`
-- `live/runs/<runId>/security-context/context_report.json` for compatibility
+- `monitor/live/runs/<runId>/security-reasoning/security_state.json`
+- `monitor/live/runs/<runId>/security-reasoning/defense_decision.json`
+- `monitor/live/runs/<runId>/security-reasoning/evidence_summary.json`
+- `monitor/live/runs/<runId>/security-context/security_context_timeline.json`
+- `monitor/live/runs/<runId>/security-context/context_report.json` for compatibility
 
 The first supported scenario is `xiaohongshu_waterhole_photo_upload`:
 
@@ -237,22 +237,22 @@ Current non-goals:
 List R-Judge tasks:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode list-tasks
+python tools/runtime/run_task_repo.py --repo rjudge --mode list-tasks
 ```
 
 Show one R-Judge task:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
+python tools/runtime/run_task_repo.py --repo rjudge --mode show-task --task-id "data/Application/chatbot.json#37"
 ```
 
 Run one sample through Layers 1-3:
 
 ```bash
 conda activate transpect-py311
-python scripts/runtime/setup_runtime.py --mode core
-python scripts/validate/doctor.py
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
+python tools/runtime/setup_runtime.py --mode core
+python tools/validate/doctor.py
+python tools/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37"
 ```
 
 If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, approve the requested OpenClaw scopes before retrying the run.
@@ -260,20 +260,20 @@ If `doctor.py` reports `scope upgrade pending approval` or `pairing required`, a
 Run agent-trace without CodeTracer diagnosis:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
+python tools/runtime/run_task_repo.py --repo rjudge --mode agent-trace --task-id "data/Application/chatbot.json#37" --skip-diagnosis
 ```
 
 Run the staged attack defense demo through Layers 1-4. Start the local demo site
 first in a separate terminal:
 
 ```bash
-python scripts/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
+python tools/demo/run_staged_attack_site.py --host 127.0.0.1 --port 8765
 ```
 
 Then run the real agent trace:
 
 ```bash
-python scripts/runtime/run_task_repo.py \
+python tools/runtime/run_task_repo.py \
   --repo staged_attack \
   --mode agent-trace \
   --task-id "data/xiaohongshu_waterhole_photo_upload.json#xhs-waterhole-photo-upload-001"
@@ -282,26 +282,26 @@ python scripts/runtime/run_task_repo.py \
 Run only the Layer-4 judge against an existing run:
 
 ```bash
-python scripts/security_reasoning/run_defense_reasoner.py --run-dir live/runs/<runId>
+python tools/security_reasoning/run_defense_reasoner.py --run-dir monitor/live/runs/<runId>
 ```
 
 Inspect the resulting run:
 
 ```bash
-ls -td live/runs/* | head -n 1
-cat live/runs/<runId>/manifest.json
-cat live/runs/<runId>/task_input.json
-cat live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
-cat live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
-cat live/runs/<runId>/security-reasoning/security_state.json
-cat live/runs/<runId>/security-reasoning/defense_decision.json
-cat live/runs/<runId>/security-context/context_report.json
+ls -td monitor/live/runs/* | head -n 1
+cat monitor/live/runs/<runId>/manifest.json
+cat monitor/live/runs/<runId>/task_input.json
+cat monitor/live/runs/<runId>/artifacts/task_repo/evaluation_inputs_seed.json
+cat monitor/live/runs/<runId>/diagnosis/codetracer/analysis/diagnosis_report.json
+cat monitor/live/runs/<runId>/security-reasoning/security_state.json
+cat monitor/live/runs/<runId>/security-reasoning/defense_decision.json
+cat monitor/live/runs/<runId>/security-context/context_report.json
 ```
 
 Legacy repo-native baseline mode remains available for compatibility:
 
 ```bash
-python scripts/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
+python tools/runtime/run_task_repo.py --repo rjudge --mode repo-native --preflight-only
 ```
 
 When `--mode` is omitted, the runner still defaults to `repo-native` for
