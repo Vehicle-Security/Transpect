@@ -127,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1", help="Host for Next.js dev server.")
     parser.add_argument("--port", type=int, default=5000, help="Port for Next.js dev server.")
     parser.add_argument("--check-only", action="store_true", help="Only check prerequisites and server state.")
-    parser.add_argument("--clean", action="store_true", help="Remove apps/console/.next before starting.")
+    parser.add_argument("--clean", action="store_true", help="Remove dashboard/console/.next before starting.")
     parser.add_argument("--restart", action="store_true", help="Stop any listener on the target port before starting.")
     args = parser.parse_args(argv)
 
