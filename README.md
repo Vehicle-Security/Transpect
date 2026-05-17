@@ -31,19 +31,24 @@ Transpect/
 │   └── viewer/          static debug viewer
 ├── monitor/
 │   ├── instrumentation/frida/
+│   ├── live/
+│   │   ├── runs/
+│   │   ├── logs/        runtime-support only
+│   │   ├── otel/        optional
+│   │   ├── frida/       optional
+│   │   ├── openclaw/    runtime-support only
+│   │   ├── ports/       runtime-support only
+│   │   └── archive/     legacy/optional
 │   ├── runtime/
-│   └── trace_model/
+│   ├── task_repos/
+│   ├── tests/
+│   ├── trace_model/
+│   └── vendor/
+│       ├── runtime-hooks/
+│       └── external/
 ├── guardrail/
 │   ├── agent_defense/
 │   └── security/
-├── monitor/live/
-│   ├── runs/
-│   ├── logs/        runtime-support only
-│   ├── otel/        optional
-│   ├── frida/       optional
-│   ├── openclaw/    runtime-support only
-│   ├── ports/       runtime-support only
-│   └── archive/     legacy/optional
 ├── tools/
 │   ├── common/
 │   ├── runtime/
@@ -54,10 +59,6 @@ Transpect/
 │   ├── validate/
 │   ├── capture/
 │   └── compat/
-├── monitor/task_repos/
-├── monitor/vendor/
-│   ├── runtime-hooks/
-│   └── external/
 ├── pyproject.toml
 ├── uv.lock
 └── CLAUDE.md
