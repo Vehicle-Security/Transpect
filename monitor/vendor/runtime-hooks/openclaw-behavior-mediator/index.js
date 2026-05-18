@@ -71,7 +71,7 @@ function parseConfig(value) {
     diagnosisScript:
       typeof config.diagnosisScript === "string" && config.diagnosisScript.trim()
         ? path.resolve(config.diagnosisScript)
-        : path.resolve(process.cwd(), "tools", "run_codetracer_diagnosis.py"),
+        : path.resolve(process.cwd(), "tools", "diagnosis", "run_codetracer_diagnosis.py"),
     diagnosisPython:
       typeof config.diagnosisPython === "string" && config.diagnosisPython.trim()
         ? config.diagnosisPython.trim()
@@ -99,7 +99,7 @@ function parseConfig(value) {
     securityBridgeScript:
       typeof config.securityBridgeScript === "string" && config.securityBridgeScript.trim()
         ? path.resolve(config.securityBridgeScript)
-        : path.resolve(process.cwd(), "app", "agent_defense", "bridge.py"),
+        : path.resolve(process.cwd(), "guardrail", "agent_defense", "bridge.py"),
     traceEval: config.traceEval === true,
     redactHeaders: Array.isArray(config.redactHeaders)
       ? config.redactHeaders.filter((item) => typeof item === "string" && item.trim()).map((item) => item.toLowerCase())
@@ -143,6 +143,19 @@ function headersToObject(headers) {
     return null;
   }
   return null;
+}
+
+function securityBridgeFailureResult(reason) {
+  return {
+    ok: false,
+    shouldBlock: true,
+    decision: {
+      decision: "block",
+      riskLevel: "critical",
+      reasons: [`security_bridge_failed: ${reason || "unknown error"}`],
+      suggestedUserMessage: "安全桥不可用，已阻断该动作。",
+    },
+  };
 }
 
 function sanitizeHeaders(headers, state) {
@@ -876,14 +889,14 @@ function callSecurityBridge(state, store, payload) {
     state.securityBridgeFailures += 1;
     state.lastSecurityError = completed.error?.message || completed.stderr || `security bridge exited ${completed.status}`;
     state.logger?.warn?.(`[behavior] security bridge failed: ${state.lastSecurityError}`);
-    return null;
+    return securityBridgeFailureResult(state.lastSecurityError);
   }
   try {
     const result = JSON.parse(completed.stdout || "{}");
     if (!result.ok) {
       state.securityBridgeFailures += 1;
       state.lastSecurityError = result.error || "security bridge returned ok=false";
-      return null;
+      return securityBridgeFailureResult(state.lastSecurityError);
     }
     state.lastSecurityDecision = result.decision?.decision || null;
     state.lastSecurityError = null;
@@ -893,7 +906,7 @@ function callSecurityBridge(state, store, payload) {
     state.securityBridgeFailures += 1;
     state.lastSecurityError = error?.message || String(error);
     state.logger?.warn?.(`[behavior] security bridge JSON parse failed: ${state.lastSecurityError}`);
-    return null;
+    return securityBridgeFailureResult(state.lastSecurityError);
   }
 }
 
@@ -1039,11 +1052,13 @@ function buildRuntimeStatus(state) {
     runsDirectory: state.runsDirectory,
     artifactsEnabled: state.config.artifactsEnabled,
     autoDiagnosisEnabled: state.config.autoDiagnosisEnabled,
+    diagnosisScript: state.config.diagnosisScript,
     capturePreviewChars: state.config.capturePreviewChars,
     captureNetwork: state.config.captureNetwork,
     traceEval: state.config.traceEval,
     securityEnabled: state.config.securityEnabled,
     securityMode: state.config.securityMode,
+    securityBridgeScript: state.config.securityBridgeScript,
     policyPath: state.config.policyPath,
     llmJudge: state.config.llmJudge,
     hooksRegistered: state.hookNames.size,

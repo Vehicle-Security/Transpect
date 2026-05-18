@@ -122,7 +122,7 @@ def configure_behavior_plugin(config: dict, *, enabled: bool) -> None:
                 "mode": "gray_zone_only",
             },
             "securityPython": sys.executable,
-            "securityBridgeScript": str((TRACE_ROOT / "app" / "agent_defense" / "bridge.py").resolve()),
+            "securityBridgeScript": str((TRACE_ROOT / "guardrail" / "agent_defense" / "bridge.py").resolve()),
             "traceEval": False,
             "redactHeaders": [
                 "authorization",

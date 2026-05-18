@@ -5,13 +5,15 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SCRIPTS_ROOT = SCRIPT_DIR.parents[2] / "tools"
 sys.path.insert(0, str(SCRIPT_DIR.parents[2] / "tools" / "validate"))
 
-from doctor import build_summary, inspect_behavior_evidence  # noqa: E402
+import doctor  # noqa: E402
+from doctor import build_summary, get_runtime_config, inspect_behavior_evidence  # noqa: E402
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -62,6 +64,80 @@ class DoctorTests(unittest.TestCase):
         self.assertTrue(evidence["ok"])
         self.assertEqual(evidence["latestEvidenceRun"]["runId"], "run-123")
         self.assertEqual(evidence["latestEvidenceRun"]["eventCount"], 2)
+
+    def test_runtime_config_aligns_with_github_main_behavior_paths(self) -> None:
+        config_path = Path(tempfile.mkdtemp(prefix="doctor-config-")) / "openclaw.json"
+        write_json(
+            config_path,
+            {
+                "plugins": {
+                    "load": {
+                        "paths": [str(doctor.BEHAVIOR_PLUGIN_VENDOR_PATH.resolve())],
+                    },
+                    "entries": {
+                        "behavior-mediator": {
+                            "enabled": True,
+                            "config": {
+                                "runsDirectory": str(doctor.TRACE_LIVE_RUNS_DIR.resolve()),
+                                "artifactsEnabled": True,
+                                "autoDiagnosisEnabled": True,
+                                "capturePreviewChars": 2000,
+                                "captureNetwork": True,
+                                "traceEval": False,
+                                "securityMode": "enforce",
+                                "policyPath": str((doctor.TRACE_ROOT / "config" / "agent-defense-policy.json").resolve()),
+                                "diagnosisScript": str((doctor.TRACE_ROOT / "tools" / "diagnosis" / "run_codetracer_diagnosis.py").resolve()),
+                                "securityBridgeScript": str((doctor.TRACE_ROOT / "guardrail" / "agent_defense" / "bridge.py").resolve()),
+                            },
+                        }
+                    },
+                },
+                "gateway": {"port": 18789},
+            },
+        )
+
+        with patch.object(doctor, "OPENCLAW_CONFIG_PATH", config_path):
+            runtime = get_runtime_config()
+
+        self.assertTrue(runtime["behaviorEnabled"])
+        self.assertTrue(runtime["behaviorConfigAligned"])
+
+    def test_runtime_config_rejects_legacy_app_agent_defense_bridge_path(self) -> None:
+        config_path = Path(tempfile.mkdtemp(prefix="doctor-config-")) / "openclaw.json"
+        write_json(
+            config_path,
+            {
+                "plugins": {
+                    "load": {
+                        "paths": [str(doctor.BEHAVIOR_PLUGIN_VENDOR_PATH.resolve())],
+                    },
+                    "entries": {
+                        "behavior-mediator": {
+                            "enabled": True,
+                            "config": {
+                                "runsDirectory": str(doctor.TRACE_LIVE_RUNS_DIR.resolve()),
+                                "artifactsEnabled": True,
+                                "autoDiagnosisEnabled": True,
+                                "capturePreviewChars": 2000,
+                                "captureNetwork": True,
+                                "traceEval": False,
+                                "securityMode": "enforce",
+                                "policyPath": str((doctor.TRACE_ROOT / "config" / "agent-defense-policy.json").resolve()),
+                                "diagnosisScript": str((doctor.TRACE_ROOT / "tools" / "diagnosis" / "run_codetracer_diagnosis.py").resolve()),
+                                "securityBridgeScript": str((doctor.TRACE_ROOT / "app" / "agent_defense" / "bridge.py").resolve()),
+                            },
+                        }
+                    },
+                },
+                "gateway": {"port": 18789},
+            },
+        )
+
+        with patch.object(doctor, "OPENCLAW_CONFIG_PATH", config_path):
+            runtime = get_runtime_config()
+
+        self.assertTrue(runtime["behaviorEnabled"])
+        self.assertFalse(runtime["behaviorConfigAligned"])
 
     def test_build_summary_degrades_when_rpc_needs_pairing_but_run_evidence_exists(self) -> None:
         report = {

@@ -1398,6 +1398,16 @@ def _safe_relative_artifact_path(repo_root: Path, candidate: Path, fallback_stem
         return Path("external") / f"{safe_slug(fallback_stem, 'artifact')}{suffix}"
 
 
+def _is_within_path(parent: Path, candidate: Path) -> bool:
+    parent = parent.resolve()
+    candidate = candidate.resolve()
+    try:
+        candidate.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
 def _copy_declared_artifact_file(
     *,
     repo_root: Path,
@@ -1424,6 +1434,7 @@ def collect_result_paths(
 ) -> list[dict[str, Any]]:
     import glob
 
+    repo_root = repo_root.resolve()
     artifact_config = manifest.get("artifacts", {}) or {}
     max_copy_files = int(artifact_config.get("max_copy_files") or DEFAULT_ARTIFACT_MAX_COPY_FILES)
     max_copy_bytes = int(artifact_config.get("max_copy_bytes") or DEFAULT_ARTIFACT_MAX_COPY_BYTES)
@@ -1431,15 +1442,24 @@ def collect_result_paths(
     repo_artifact_root = ensure_dir(run_dir / "artifacts" / "task_repo")
     for raw_pattern in artifact_config.get("result_paths", []):
         rendered = render_template(str(raw_pattern), template_env)
+        rendered_path = Path(rendered)
         absolute_pattern = str((repo_root / rendered).resolve())
-        matches = glob.glob(absolute_pattern)
-        if not matches and Path(absolute_pattern).exists():
-            matches = [absolute_pattern]
         declaration: dict[str, Any] = {
             "declaredPath": str(raw_pattern),
             "resolvedPattern": normalize_path(absolute_pattern),
             "matches": [],
         }
+        if rendered_path.is_absolute() or not _is_within_path(repo_root, Path(absolute_pattern)):
+            declaration["status"] = "rejected"
+            declaration["reason"] = "absolute_path" if rendered_path.is_absolute() else "outside_repo_root"
+            declaration["copiedFileCount"] = 0
+            declaration["copiedBytes"] = 0
+            declaration["artifactPaths"] = []
+            paths.append(declaration)
+            continue
+        matches = glob.glob(absolute_pattern)
+        if not matches and Path(absolute_pattern).exists():
+            matches = [absolute_pattern]
         if not matches:
             declaration["status"] = "missing"
             paths.append(declaration)
@@ -1450,6 +1470,17 @@ def collect_result_paths(
         status = "collected"
         for match in matches:
             candidate = Path(match).resolve()
+            if not _is_within_path(repo_root, candidate):
+                status = "rejected"
+                match_entry = {
+                    "sourcePath": normalize_path(candidate),
+                    "kind": "directory" if candidate.is_dir() else "file",
+                    "copiedFiles": [],
+                    "status": "rejected",
+                    "reason": "outside_repo_root",
+                }
+                declaration["matches"].append(match_entry)
+                continue
             match_entry: dict[str, Any] = {
                 "sourcePath": normalize_path(candidate),
                 "kind": "directory" if candidate.is_dir() else "file",
@@ -1468,6 +1499,17 @@ def collect_result_paths(
                 total_bytes += int(copied["sizeBytes"])
             elif candidate.is_dir():
                 for source_file in sorted(path for path in candidate.rglob("*") if path.is_file()):
+                    source_file = source_file.resolve()
+                    if not _is_within_path(repo_root, source_file):
+                        status = "partial"
+                        match_entry["copiedFiles"].append(
+                            {
+                                "sourcePath": normalize_path(source_file),
+                                "status": "rejected",
+                                "reason": "outside_repo_root",
+                            }
+                        )
+                        continue
                     file_size = source_file.stat().st_size
                     if total_files >= max_copy_files or total_bytes + file_size > max_copy_bytes:
                         status = "partial"

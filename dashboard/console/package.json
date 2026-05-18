@@ -20,6 +20,9 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.1.7"
   },
+  "overrides": {
+    "postcss": "8.5.14"
+  },
   "devDependencies": {
     "@types/node": "^22.15.17",
     "@types/react": "^19.0.0",

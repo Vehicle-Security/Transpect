@@ -44,10 +44,16 @@ EXPECTED_BEHAVIOR_CONFIG = {
     "runsDirectory": str(TRACE_LIVE_RUNS_DIR.resolve()),
     "artifactsEnabled": True,
     "autoDiagnosisEnabled": True,
+    "diagnosisScript": str((TRACE_ROOT / "tools" / "diagnosis" / "run_codetracer_diagnosis.py").resolve()),
     "capturePreviewChars": 2000,
     "captureNetwork": True,
+    "securityMode": "enforce",
+    "policyPath": str((TRACE_ROOT / "config" / "agent-defense-policy.json").resolve()),
+    "securityBridgeScript": str((TRACE_ROOT / "guardrail" / "agent_defense" / "bridge.py").resolve()),
     "traceEval": False,
 }
+BEHAVIOR_CONFIG_PATH_KEYS = {"runsDirectory", "diagnosisScript", "policyPath", "securityBridgeScript"}
+BEHAVIOR_CONFIG_EXISTING_PATH_KEYS = {"diagnosisScript", "policyPath", "securityBridgeScript"}
 APPROVAL_BLOCKED_TOKENS = (
     "scope upgrade pending approval",
     "pairing required",
@@ -113,6 +119,26 @@ def infer_mode(behavior_enabled: bool, otel_enabled: bool) -> str:
     return "unknown"
 
 
+def behavior_config_mismatches(config: dict[str, Any]) -> list[str]:
+    mismatches: list[str] = []
+    for key, expected in EXPECTED_BEHAVIOR_CONFIG.items():
+        actual = config.get(key)
+        if key in BEHAVIOR_CONFIG_PATH_KEYS:
+            if not actual:
+                mismatches.append(f"{key}:missing")
+                continue
+            actual_path = Path(str(actual)).expanduser().resolve()
+            expected_path = Path(str(expected)).expanduser().resolve()
+            if actual_path != expected_path:
+                mismatches.append(f"{key}:expected={expected_path}:actual={actual_path}")
+            elif key in BEHAVIOR_CONFIG_EXISTING_PATH_KEYS and not actual_path.exists():
+                mismatches.append(f"{key}:missing_path={actual_path}")
+            continue
+        if actual != expected:
+            mismatches.append(f"{key}:expected={expected!r}:actual={actual!r}")
+    return mismatches
+
+
 def get_runtime_config() -> dict[str, Any]:
     config = read_json(OPENCLAW_CONFIG_PATH, default={}) or {}
     plugins = config.get("plugins") if isinstance(config, dict) else {}
@@ -142,10 +168,11 @@ def get_runtime_config() -> dict[str, Any]:
     load_paths = {str(item).lower() for item in checks["loadPaths"]}
     behavior_path = str(BEHAVIOR_PLUGIN_VENDOR_PATH.resolve()).lower()
     observability_path = str(OBSERVABILITY_PLUGIN_VENDOR_PATH.resolve()).lower()
-    behavior_matches = all(behavior_config.get(key) == value for key, value in EXPECTED_BEHAVIOR_CONFIG.items())
+    behavior_mismatches = behavior_config_mismatches(behavior_config if isinstance(behavior_config, dict) else {})
     otel_matches = bool(otel_config.get("endpoint")) and bool(otel_config.get("protocol")) and bool(otel_config.get("serviceName"))
 
-    checks["behaviorConfigAligned"] = checks["behaviorEnabled"] and behavior_path in load_paths and behavior_matches
+    checks["behaviorConfigMismatches"] = behavior_mismatches
+    checks["behaviorConfigAligned"] = checks["behaviorEnabled"] and behavior_path in load_paths and not behavior_mismatches
     checks["otelConfigAligned"] = checks["otelPluginEnabled"] and observability_path in load_paths and otel_matches
     checks["mode"] = infer_mode(checks["behaviorEnabled"], checks["otelPluginEnabled"])
     return checks
@@ -235,11 +262,15 @@ def run_behavior_status(timeout_seconds: int) -> dict[str, Any]:
             "method",
             "active",
             "runsDirectory",
+            "diagnosisScript",
             "capturePreviewChars",
             "captureNetwork",
             "traceEval",
             "artifactsEnabled",
             "autoDiagnosisEnabled",
+            "securityMode",
+            "securityBridgeScript",
+            "policyPath",
             "diagnosesTriggered",
             "hooksRegistered",
             "hookNames",

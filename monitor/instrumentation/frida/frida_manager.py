@@ -165,7 +165,7 @@ class FridaTraceManager:
                 session.detach()
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"frida_detach_error:{exc!r}")
-        self._tools.clear()
+        self._scripts.clear()
         self._sessions.clear()
 
         event_count = self._writer.event_count if self._writer else 0
@@ -209,7 +209,7 @@ class FridaTraceManager:
             script = session.create_script(source)
             script.on("message", lambda msg, data, _t=target: self._on_message(msg, data, _t))
             script.load()
-            self._tools.append(script)
+            self._scripts.append(script)
             return True
         except Exception as exc:  # noqa: BLE001
             logger.warning("Failed to inject %s into pid %s: %s", script_path.name, target.pid, exc)

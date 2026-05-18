@@ -10,11 +10,18 @@ type ShowcaseIndex = {
   showcases?: ShowcaseIndexEntry[];
 };
 
+function isMissingFileError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
 async function readJson<T>(filePath: string, fallback: T): Promise<T> {
   try {
     const text = await fs.readFile(filePath, "utf8");
     return JSON.parse(text) as T;
-  } catch {
+  } catch (error) {
+    if (!isMissingFileError(error)) {
+      console.warn(`[showcase] failed to read JSON from ${filePath}:`, error);
+    }
     return fallback;
   }
 }
@@ -28,7 +35,8 @@ export async function readReportModel(id: string): Promise<ReportModel | null> {
   try {
     const dir = safeShowcaseDir(id);
     return await readJson<ReportModel | null>(path.join(dir, "report_model.json"), null);
-  } catch {
+  } catch (error) {
+    console.warn(`[showcase] failed to resolve report model for ${id}:`, error);
     return null;
   }
 }

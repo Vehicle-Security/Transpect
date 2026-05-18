@@ -200,6 +200,64 @@ test("behavior mediator writes native OpenClaw source files for trace backbone",
   await api.services[0].stop();
 });
 
+test("behavior mediator defaults resolve to GitHub-main tool paths", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "transpect-default-config-"));
+  const api = createFakeApi({
+    runsDirectory: path.join(root, "runs"),
+  });
+
+  behaviorMediatorPlugin.register(api);
+
+  let status = null;
+  api.methods.get("behavior-mediator.status")?.({
+    params: {},
+    respond(ok, payload) {
+      assert.equal(ok, true);
+      status = payload;
+    },
+  });
+
+  assert.equal(
+    status?.diagnosisScript,
+    path.resolve(process.cwd(), "tools", "diagnosis", "run_codetracer_diagnosis.py"),
+  );
+  assert.equal(status?.securityBridgeScript, path.resolve(process.cwd(), "guardrail", "agent_defense", "bridge.py"));
+  assert.equal(fs.existsSync(status?.diagnosisScript), true);
+  assert.equal(fs.existsSync(status?.securityBridgeScript), true);
+});
+
+test("behavior mediator blocks tool calls when the security bridge fails in enforce mode", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "transpect-bridge-fail-"));
+  const api = createFakeApi({
+    runsDirectory: path.join(root, "runs"),
+    autoDiagnosisEnabled: false,
+    captureNetwork: false,
+    securityEnabled: true,
+    securityMode: "enforce",
+    securityPython: process.execPath,
+    securityBridgeScript: path.join(root, "missing-security-bridge.js"),
+  });
+
+  behaviorMediatorPlugin.register(api);
+  await api.services[0].start();
+
+  const decision = api.hooks.get("before_tool_call")?.(
+    {
+      sessionKey: "sess-bridge-fail",
+      runId: "run-bridge-fail",
+      toolCallId: "tc-bridge-fail",
+      toolName: "exec",
+      params: { command: "rm -rf /tmp/demo" },
+    },
+    {},
+  );
+
+  assert.equal(decision?.blocked || decision?.block || decision?.ok === false, true);
+  assert.match(JSON.stringify(decision), /security_bridge_failed/i);
+
+  await api.services[0].stop();
+});
+
 test("behavior mediator writes online security events and blocks dangerous tool calls", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "transpect-behavior-security-"));
   const runsDirectory = path.join(root, "runs");
@@ -212,7 +270,7 @@ test("behavior mediator writes online security events and blocks dangerous tool 
     traceEval: false,
     securityEnabled: true,
     securityPython: process.env.PYTHON || "python",
-    securityBridgeScript: path.resolve(process.cwd(), "app", "agent_defense", "bridge.py"),
+    securityBridgeScript: path.resolve(process.cwd(), "guardrail", "agent_defense", "bridge.py"),
   });
 
   behaviorMediatorPlugin.register(api);

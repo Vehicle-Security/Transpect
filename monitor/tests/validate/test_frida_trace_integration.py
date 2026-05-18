@@ -88,6 +88,39 @@ class TestFridaUnavailable(unittest.TestCase):
         self.assertTrue(result.ok)
         self.assertEqual(result.event_count, 0)
 
+    def test_inject_script_tracks_loaded_scripts(self) -> None:
+        class FakeScript:
+            def __init__(self) -> None:
+                self.handlers: list[tuple[str, object]] = []
+                self.loaded = False
+
+            def on(self, event_name: str, handler: object) -> None:
+                self.handlers.append((event_name, handler))
+
+            def load(self) -> None:
+                self.loaded = True
+
+        class FakeSession:
+            def __init__(self) -> None:
+                self.script = FakeScript()
+
+            def create_script(self, source: str) -> FakeScript:
+                self.source = source
+                return self.script
+
+        root = Path(tempfile.mkdtemp(prefix="frida-script-"))
+        script_path = root / "node_trace.js"
+        script_path.write_text("send({kind: 'process_spawn'});", encoding="utf-8")
+        target = FridaTarget(pid=123, name="node", role="openclaw_gateway", attach_recommended=True)
+        session = FakeSession()
+        manager = FridaTraceManager(FridaTraceConfig(enabled=True, scripts_dir=root))
+
+        loaded = manager._inject_script(session, script_path, target)
+
+        self.assertTrue(loaded)
+        self.assertTrue(session.script.loaded)
+        self.assertEqual(manager._scripts, [session.script])
+
 
 class TestFridaEventParsing(unittest.TestCase):
     """FridaEventNormalizer parses command, network, and file events."""

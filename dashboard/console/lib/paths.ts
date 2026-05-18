@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Artifact } from "./report-model";
 
 export const REPO_ROOT = path.resolve(process.cwd(), "../..");
-export const SHOWCASE_ROOT = path.resolve(REPO_ROOT, "state", "showcase");
+export const SHOWCASE_ROOT = path.resolve(REPO_ROOT, "dashboard", "state", "showcase");
 
 export function isValidShowcaseId(id: string) {
   return /^[a-zA-Z0-9_-]+$/.test(id);

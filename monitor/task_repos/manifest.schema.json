@@ -208,7 +208,14 @@
         "result_paths": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "not": {
+              "anyOf": [
+                { "pattern": "^/" },
+                { "pattern": "^[A-Za-z]:" },
+                { "pattern": "(^|[\\\\/])\\.\\.([\\\\/]|$)" }
+              ]
+            }
           }
         },
         "max_copy_files": {

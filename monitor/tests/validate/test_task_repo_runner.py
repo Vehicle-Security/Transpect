@@ -199,8 +199,46 @@ class TaskRepoRunnerTests(unittest.TestCase):
             for entry in artifacts
             for artifact_path in entry.get("artifactPaths", [])
         ]
-        self.assertTrue(any("repo_outputs" in Path(path).parts and Path(path).name == "result.json.json" for path in copied_paths))
-        self.assertTrue(any("repo_outputs" in Path(path).parts and Path(path).name == "summary.json.json" for path in copied_paths))
+        self.assertTrue(
+            any(
+                "repo_outputs" in Path(path).parts
+                and Path(path).parts[-3:] == ("results", "demo", "result.json")
+                for path in copied_paths
+            )
+        )
+        self.assertTrue(
+            any(
+                "repo_outputs" in Path(path).parts
+                and Path(path).parts[-3:] == ("eval", "results", "summary.json")
+                for path in copied_paths
+            )
+        )
+
+    def test_declared_artifacts_reject_paths_outside_repo_root(self) -> None:
+        workspace = Path(tempfile.mkdtemp(prefix="task-repo-workspace-"))
+        repo_root = workspace / "repo"
+        repo_root.mkdir()
+        outside_file = workspace / "outside-secret.txt"
+        outside_file.write_text("do not collect\n", encoding="utf-8")
+        manifest = self.make_manifest(repo_root)
+        manifest["artifacts"] = {
+            "result_paths": ["../outside-secret.txt"],
+            "max_copy_files": 10,
+            "max_copy_bytes": 1024 * 1024,
+        }
+        run_dir = Path(tempfile.mkdtemp(prefix="task-run-"))
+
+        artifacts = collect_result_paths(
+            manifest,
+            repo_root,
+            template_env={},
+            run_dir=run_dir,
+        )
+
+        self.assertEqual(artifacts[0]["status"], "rejected")
+        self.assertEqual(artifacts[0]["reason"], "outside_repo_root")
+        self.assertEqual(artifacts[0]["matches"], [])
+        self.assertFalse(list((run_dir / "artifacts" / "task_repo").rglob("outside-secret.txt*")))
 
     def test_single_command_can_replace_global_preflight_requirements(self) -> None:
         repo_root = Path(tempfile.mkdtemp(prefix="task-repo-"))
